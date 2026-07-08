@@ -97,7 +97,6 @@ public class UserService {
         Map<String, Object> userInfo = new HashMap<>();
         userInfo.put("userName", user.getUserName());
         userInfo.put("realName", user.getRealName());
-        userInfo.put("nickName", user.getNickName());
         userInfo.put("phone", user.getPhone());
         userInfo.put("role", user.getRole());
         userInfo.put("avatar", user.getAvatar());

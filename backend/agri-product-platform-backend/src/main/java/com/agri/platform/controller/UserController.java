@@ -95,9 +95,6 @@ public class UserController {
             if (userInfo.getRealName() != null) {
                 user.setRealName(userInfo.getRealName());
             }
-            if (userInfo.getNickName() != null) {
-                user.setNickName(userInfo.getNickName());
-            }
             if (userInfo.getPhone() != null) {
                 user.setPhone(userInfo.getPhone());
             }

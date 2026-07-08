@@ -21,9 +21,15 @@ public class WebConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/user/login",       // 登录接口
                         "/user/register",    // 注册接口
-                        "/test/**",          // 测试接口
                         "/home/**",          // 首页
-                        "/banner/**"         // 轮播图
+                        "/banner/**",        // 轮播图
+                        "/product/**",       // 商品相关（公开）
+                        "/finance/product/**",  // 融资产品（公开）
+                        "/expert/list",      // 专家列表（公开）
+                        "/expert/*",         // 专家详情（公开）
+                        "/knowledge/list",   // 知识列表（公开）
+                        "/knowledge/*",      // 知识详情（公开）
+                        "/question/list"     // 问答列表（公开）
                 );
     }
 }

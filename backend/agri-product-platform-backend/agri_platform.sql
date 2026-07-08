@@ -16,7 +16,6 @@ CREATE TABLE `tb_user` (
   `user_name` varchar(64) NOT NULL COMMENT '用户名（主键）',
   `password` varchar(255) NOT NULL COMMENT '密码（加密存储）',
   `real_name` varchar(64) DEFAULT NULL COMMENT '真实姓名',
-  `nick_name` varchar(64) DEFAULT NULL COMMENT '昵称',
   `phone` varchar(20) DEFAULT NULL COMMENT '手机号',
   `identity_num` varchar(20) DEFAULT NULL COMMENT '身份证号',
   `address` varchar(255) DEFAULT NULL COMMENT '地址',
@@ -306,19 +305,19 @@ CREATE TABLE `tb_banner` (
 -- 初始化测试数据
 -- ========================================
 
--- 插入管理员账号（密码：admin123，需要前端加密）
-INSERT INTO `tb_user` (`user_name`, `password`, `real_name`, `nick_name`, `role`, `status`) VALUES
-('admin', '$2a$10$AC1gCsk1V5Ov7n.zvkxxvuMM4f3BnWmJqr4jNNYtVAm8j4nBdxIUq', '系统管理员', '管理员', 'admin', 1);
+-- 插入管理员账号（密码：admin123）
+INSERT INTO `tb_user` (`user_name`, `password`, `real_name`, `role`, `status`) VALUES
+('admin', '$2a$10$AC1gCsk1V5Ov7n.zvkxxvuMM4f3BnWmJqr4jNNYtVAm8j4nBdxIUq', '系统管理员', 'admin', 1);
 
 -- 插入测试农户账号
-INSERT INTO `tb_user` (`user_name`, `password`, `real_name`, `nick_name`, `phone`, `role`, `status`) VALUES
-('farmer01', '$2a$10$AC1gCsk1V5Ov7n.zvkxxvuMM4f3BnWmJqr4jNNYtVAm8j4nBdxIUq', '张三', '快乐农夫', '13800138001', 'farmer', 1),
-('farmer02', '$2a$10$AC1gCsk1V5Ov7n.zvkxxvuMM4f3BnWmJqr4jNNYtVAm8j4nBdxIUq', '李四', '丰收大户', '13800138002', 'farmer', 1);
+INSERT INTO `tb_user` (`user_name`, `password`, `real_name`, `phone`, `role`, `status`) VALUES
+('farmer01', '$2a$10$AC1gCsk1V5Ov7n.zvkxxvuMM4f3BnWmJqr4jNNYtVAm8j4nBdxIUq', '张三', '13800138001', 'farmer', 1),
+('farmer02', '$2a$10$AC1gCsk1V5Ov7n.zvkxxvuMM4f3BnWmJqr4jNNYtVAm8j4nBdxIUq', '李四', '13800138002', 'farmer', 1);
 
 -- 插入测试专家账号
-INSERT INTO `tb_user` (`user_name`, `password`, `real_name`, `nick_name`, `phone`, `role`, `status`) VALUES
-('expert01', '$2a$10$AC1gCsk1V5Ov7n.zvkxxvuMM4f3BnWmJqr4jNNYtVAm8j4nBdxIUq', '王教授', '农学专家', '13800138003', 'expert', 1),
-('expert02', '$2a$10$AC1gCsk1V5Ov7n.zvkxxvuMM4f3BnWmJqr4jNNYtVAm8j4nBdxIUq', '刘博士', '种植专家', '13800138004', 'expert', 1);
+INSERT INTO `tb_user` (`user_name`, `password`, `real_name`, `phone`, `role`, `status`) VALUES
+('expert01', '$2a$10$AC1gCsk1V5Ov7n.zvkxxvuMM4f3BnWmJqr4jNNYtVAm8j4nBdxIUq', '王教授', '13800138003', 'expert', 1),
+('expert02', '$2a$10$AC1gCsk1V5Ov7n.zvkxxvuMM4f3BnWmJqr4jNNYtVAm8j4nBdxIUq', '刘博士', '13800138004', 'expert', 1);
 
 -- 插入专家详细信息
 INSERT INTO `tb_expert` (`user_name`, `real_name`, `phone`, `profession`, `position`, `belong`) VALUES
