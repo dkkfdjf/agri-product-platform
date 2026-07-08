@@ -305,19 +305,27 @@ CREATE TABLE `tb_banner` (
 -- 初始化测试数据
 -- ========================================
 
--- 插入管理员账号（密码：admin123）
+-- 插入管理员账号（密码：123456）
 INSERT INTO `tb_user` (`user_name`, `password`, `real_name`, `role`, `status`) VALUES
-('admin', '$2a$10$AC1gCsk1V5Ov7n.zvkxxvuMM4f3BnWmJqr4jNNYtVAm8j4nBdxIUq', '系统管理员', 'admin', 1);
+('admin', '$2a$10$nJnOhRdK10BXg76ET3vafugVrU7vQdNAgWQmd2vyTehVlcaemty7', '系统管理员', 'admin', 1);
 
--- 插入测试农户账号
+-- 插入测试农户账号（密码：123456）
 INSERT INTO `tb_user` (`user_name`, `password`, `real_name`, `phone`, `role`, `status`) VALUES
-('farmer01', '$2a$10$AC1gCsk1V5Ov7n.zvkxxvuMM4f3BnWmJqr4jNNYtVAm8j4nBdxIUq', '张三', '13800138001', 'farmer', 1),
-('farmer02', '$2a$10$AC1gCsk1V5Ov7n.zvkxxvuMM4f3BnWmJqr4jNNYtVAm8j4nBdxIUq', '李四', '13800138002', 'farmer', 1);
+('farmer01', '$2a$10$nJnOhRdK10BXg76ET3vafugVrU7vQdNAgWQmd2vyTehVlcaemty7', '张三', '13800138001', 'farmer', 1),
+('farmer02', '$2a$10$nJnOhRdK10BXg76ET3vafugVrU7vQdNAgWQmd2vyTehVlcaemty7', '李四', '13800138002', 'farmer', 1);
 
--- 插入测试专家账号
+-- 插入测试买家账号（密码：123456）
 INSERT INTO `tb_user` (`user_name`, `password`, `real_name`, `phone`, `role`, `status`) VALUES
-('expert01', '$2a$10$AC1gCsk1V5Ov7n.zvkxxvuMM4f3BnWmJqr4jNNYtVAm8j4nBdxIUq', '王教授', '13800138003', 'expert', 1),
-('expert02', '$2a$10$AC1gCsk1V5Ov7n.zvkxxvuMM4f3BnWmJqr4jNNYtVAm8j4nBdxIUq', '刘博士', '13800138004', 'expert', 1);
+('buyer01', '$2a$10$nJnOhRdK10BXg76ET3vafugVrU7vQdNAgWQmd2vyTehVlcaemty7', '王五', '13800138005', 'buyer', 1);
+
+-- 插入测试银行账号（密码：123456）
+INSERT INTO `tb_user` (`user_name`, `password`, `real_name`, `phone`, `role`, `status`) VALUES
+('bank01', '$2a$10$nJnOhRdK10BXg76ET3vafugVrU7vQdNAgWQmd2vyTehVlcaemty7', '青岛银行', '0532-96588', 'bank', 1);
+
+-- 插入测试专家账号（密码：123456）
+INSERT INTO `tb_user` (`user_name`, `password`, `real_name`, `phone`, `role`, `status`) VALUES
+('expert01', '$2a$10$nJnOhRdK10BXg76ET3vafugVrU7vQdNAgWQmd2vyTehVlcaemty7', '王教授', '13800138003', 'expert', 1),
+('expert02', '$2a$10$nJnOhRdK10BXg76ET3vafugVrU7vQdNAgWQmd2vyTehVlcaemty7', '刘博士', '13800138004', 'expert', 1);
 
 -- 插入专家详细信息
 INSERT INTO `tb_expert` (`user_name`, `real_name`, `phone`, `profession`, `position`, `belong`) VALUES
