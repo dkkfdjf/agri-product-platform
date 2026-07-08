@@ -1,50 +1,46 @@
 <template>
   <div class="home-page">
     <!-- 顶部导航栏 -->
-    <header class="top-header">
-      <div class="header-container">
-        <!-- Logo -->
-        <div class="logo-section" @click="goTo('/home')">
-          <el-icon :size="32" color="#4CAF50"><Grid /></el-icon>
-          <span class="platform-name">农品通</span>
+    <header class="home-header">
+      <div class="header-inner">
+        <div class="logo" @click="goTo('/')">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 2L12 12M12 12L8 8M12 12L16 8M12 12L12 22M12 22L8 18M12 22L16 18" />
+              <circle cx="12" cy="3" r="1.5" fill="currentColor"/>
+            </svg>
+          </div>
+          <span class="logo-text">农融汇</span>
         </div>
 
-        <!-- 主导航 -->
-        <nav class="nav-menu">
-          <router-link to="/home" class="nav-item active">
-            <span>首页</span>
-          </router-link>
-          <router-link to="/market" class="nav-item">
-            <span>农产品</span>
-          </router-link>
-          <router-link to="/finance-products" class="nav-item">
-            <span>融资</span>
-          </router-link>
-          <router-link to="/expert-help" class="nav-item">
-            <span>专家</span>
-          </router-link>
-          <span class="nav-item">
-            <span>关于我们</span>
-          </span>
+        <nav class="main-nav">
+          <a href="#products" @click.prevent="scrollToSection('products')">农产品</a>
+          <a href="#financing" @click.prevent="scrollToSection('financing')">融资服务</a>
+          <a href="#experts" @click.prevent="scrollToSection('experts')">专家助力</a>
+          <a href="#knowledge" @click.prevent="scrollToSection('knowledge')">农业知识</a>
         </nav>
 
-        <!-- 右侧登录区 -->
-        <div class="auth-section">
+        <div class="header-actions">
           <template v-if="!userStore.isLoggedIn()">
-            <el-button class="login-btn" @click="goTo('/login')">登录</el-button>
-            <el-button class="register-btn" @click="goTo('/register')">注册</el-button>
+            <button class="btn-text" @click="goTo('/login')">登录</button>
+            <button class="btn-primary" @click="goTo('/register')">免费注册</button>
           </template>
           <template v-else>
-            <el-dropdown @command="handleUserCommand">
-              <div class="user-dropdown">
-                <el-icon><Avatar /></el-icon>
-                <span>{{ getUserDisplayName() }}</span>
-                <el-icon><ArrowDown /></el-icon>
+            <el-dropdown @command="handleUserCommand" trigger="click">
+              <div class="user-chip">
+                <span class="user-name">{{ getUserDisplayName() }}</span>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M4 6l4 4 4-4"/>
+                </svg>
               </div>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item :command="getDashboardPath()">个人中心</el-dropdown-item>
-                  <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+                  <el-dropdown-item :command="getDashboardPath()">
+                    个人中心
+                  </el-dropdown-item>
+                  <el-dropdown-item divided command="logout">
+                    退出登录
+                  </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -53,598 +49,349 @@
       </div>
     </header>
 
-    <!-- 主内容区 -->
-    <main class="main-wrapper">
-      <!-- 轮播图区域 -->
-      <section class="hero-banner">
-        <el-carousel height="420px" :interval="5000" arrow="hover">
-          <el-carousel-item v-for="banner in homeData.banners" :key="banner.bannerId">
-            <div class="banner-slide" @click="handleBannerClick(banner)">
-              <img :src="banner.pic_path" :alt="banner.title" />
-              <div class="banner-overlay" v-if="banner.title">
-                <div class="banner-content">
-                  <h1>{{ banner.title }}</h1>
-                  <p v-if="banner.desc">{{ banner.desc }}</p>
-                </div>
-              </div>
-            </div>
-          </el-carousel-item>
-        </el-carousel>
-        <div class="banner-placeholder" v-if="!homeData.banners || homeData.banners.length === 0">
-          <el-carousel height="420px">
-            <el-carousel-item>
-              <div class="default-banner-slide">
-                <div class="banner-content">
-                  <h1>智慧农业 · 融销一体平台</h1>
-                  <p>连接农户与市场，助力乡村振兴</p>
-                </div>
-              </div>
-            </el-carousel-item>
-          </el-carousel>
-        </div>
-      </section>
-
-      <!-- 功能入口 -->
-      <section class="feature-entry">
-        <div class="entry-container">
-          <div class="entry-item" @click="goTo('/market')">
-            <div class="entry-image">
-              <img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&h=300&fit=crop" alt="农产品交易" />
-              <div class="entry-overlay">
-                <div class="entry-content">
-                  <h4>农产品交易</h4>
-                  <p>货源发布 · 需求对接 · 在线交易</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="entry-item" @click="goTo('/finance-products')">
-            <div class="entry-image">
-              <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=300&fit=crop" alt="融资服务" />
-              <div class="entry-overlay">
-                <div class="entry-content">
-                  <h4>融资服务</h4>
-                  <p>农业贷款 · 快速审批 · 低息融资</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="entry-item" @click="goTo('/expert-help')">
-            <div class="entry-image">
-              <img src="https://images.unsplash.com/photo-1581092921461-eab62e97a782?w=400&h=300&fit=crop" alt="专家咨询" />
-              <div class="entry-overlay">
-                <div class="entry-content">
-                  <h4>专家咨询</h4>
-                  <p>技术咨询 · 在线问答 · 专家预约</p>
-                </div>
-              </div>
-            </div>
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-bg">
+        <div class="hero-pattern"></div>
+      </div>
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="hero-title">
+            <span class="title-line">连接农户与市场</span>
+            <span class="title-line title-accent">助力农业发展</span>
+          </h1>
+          <p class="hero-subtitle">
+            融销一体的农产品服务平台 — 源源直达，融资无忧，专家伴您丰收
+          </p>
+          <div class="hero-actions">
+            <button class="btn-hero btn-hero-primary" @click="goTo('/register')">
+              <span>立即开始</span>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 10h10M10 5l5 5-5 5"/>
+              </svg>
+            </button>
+            <button class="btn-hero btn-hero-secondary" @click="scrollToSection('products')">
+              浏览产品
+            </button>
           </div>
         </div>
-      </section>
+        <div class="hero-visual">
+          <div class="visual-card visual-card-1">
+            <div class="card-icon">🌾</div>
+            <div class="card-label">农产品交易</div>
+          </div>
+          <div class="visual-card visual-card-2">
+            <div class="card-icon">💰</div>
+            <div class="card-label">融资服务</div>
+          </div>
+          <div class="visual-card visual-card-3">
+            <div class="card-icon">👨‍🌾</div>
+            <div class="card-label">专家咨询</div>
+          </div>
+        </div>
+      </div>
 
-      <!-- 商品展示 -->
-      <section class="content-section" v-if="homeData.products && homeData.products.length > 0">
+      <!-- Trust Indicators -->
+      <div class="trust-bar">
+        <div class="trust-item">
+          <div class="trust-value">10,000+</div>
+          <div class="trust-label">注册农户</div>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-item">
+          <div class="trust-value">¥5亿+</div>
+          <div class="trust-label">融资总额</div>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-item">
+          <div class="trust-value">500+</div>
+          <div class="trust-label">合作专家</div>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-item">
+          <div class="trust-value">98%</div>
+          <div class="trust-label">用户满意度</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Products Section -->
+    <section id="products" class="products-section">
+      <div class="section-inner">
         <div class="section-header">
-          <h3 class="section-title">农产品供需</h3>
-          <router-link to="/market" class="view-more">
-            查看更多 <el-icon><ArrowRight /></el-icon>
-          </router-link>
+          <div class="section-eyebrow">优质货源</div>
+          <h2 class="section-title">精选农产品</h2>
+          <p class="section-subtitle">直接从农户到您的手中，新鲜、优质、价格透明</p>
         </div>
-        <div class="product-grid">
-          <div
-            class="product-card"
-            v-for="product in homeData.products.slice(0, 8)"
-            :key="product.order_id"
-            @click="goToProduct(product)"
-          >
+
+        <div class="products-grid">
+          <div v-for="product in featuredProducts" :key="product.id"
+               class="product-card"
+               @click="viewProductDetail(product)">
             <div class="product-image">
-              <img :src="product.picture || defaultProductImage" :alt="product.title" />
-              <span class="product-badge" :class="product.type === 'goods' ? 'badge-supply' : 'badge-demand'">
-                {{ product.type === 'goods' ? '货源' : '需求' }}
+              <img :src="product.image" :alt="product.name" />
+              <span v-if="product.badge" class="product-badge">{{ product.badge }}</span>
+            </div>
+            <div class="product-content">
+              <div class="product-category">{{ product.category }}</div>
+              <h3 class="product-name">{{ product.name }}</h3>
+              <p class="product-origin">{{ product.origin }}</p>
+              <div class="product-footer">
+                <div class="product-price">
+                  <span class="price-value">¥{{ product.price }}</span>
+                  <span class="price-unit">/{{ product.unit }}</span>
+                </div>
+                <button class="product-action">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 8h10M5 8l2 10h6l2-10M5 8V6a2 2 0 012-2h6a2 2 0 012 2v2"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-more">
+          <button class="btn-link" @click="goTo('/market')">
+            查看更多产品
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 8h10M10 5l3 3-3 3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Financing Section -->
+    <section id="financing" class="financing-section">
+      <div class="section-inner">
+        <div class="section-header">
+          <div class="section-eyebrow">金融支持</div>
+          <h2 class="section-title">融资服务</h2>
+          <p class="section-subtitle">与多家银行合作，为农户提供便捷的融资渠道</p>
+        </div>
+
+        <div class="financing-grid">
+          <div v-for="item in financingItems" :key="item.id" class="financing-card">
+            <div class="financing-icon">
+              <svg :width="40" :height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+              </svg>
+            </div>
+            <h3 class="financing-title">{{ item.title }}</h3>
+            <p class="financing-desc">{{ item.description }}</p>
+            <div class="financing-features">
+              <span v-for="feature in item.features" :key="feature" class="feature-tag">
+                {{ feature }}
               </span>
             </div>
-            <div class="product-info">
-              <h4 class="product-name">{{ product.title }}</h4>
-              <p class="product-desc">{{ product.content }}</p>
-              <div class="product-footer">
-                <div class="product-price" v-if="product.price">
-                  <span class="price-symbol">¥</span>
-                  <span class="price-amount">{{ product.price }}</span>
-                </div>
-                <span class="product-status" :class="'status-' + product.order_status">
-                  {{ getStatusText(product.order_status) }}
-                </span>
-              </div>
+            <div class="financing-range">
+              <span class="range-label">可贷额度</span>
+              <span class="range-value">{{ item.amount }}</span>
             </div>
           </div>
         </div>
-      </section>
 
-      <!-- 融资产品展示 -->
-      <section class="content-section" v-if="homeData.financeProducts && homeData.financeProducts.length > 0">
-        <div class="section-header">
-          <h3 class="section-title">融资产品</h3>
-          <router-link to="/finance-products" class="view-more">
-            查看更多 <el-icon><ArrowRight /></el-icon>
-          </router-link>
-        </div>
-        <div class="finance-grid">
-          <div
-            class="finance-card"
-            v-for="finance in homeData.financeProducts.slice(0, 6)"
-            :key="finance.product_id"
-            @click="goTo('/finance-products')"
-          >
-            <div class="finance-icon" style="background: linear-gradient(135deg, #2196F3 0%, #42A5F5 100%)">
-              <el-icon :size="32"><Money /></el-icon>
-            </div>
-            <div class="finance-info">
-              <h4 class="finance-name">{{ finance.bank_name }}</h4>
-              <p class="finance-desc">{{ finance.introduce }}</p>
-              <div class="finance-details">
-                <span class="detail-item">
-                  <em>可贷</em>
-                  <strong>{{ formatMoney(finance.money) }}元</strong>
-                </span>
-                <span class="detail-item">
-                  <em>利率</em>
-                  <strong>{{ finance.rate }}%</strong>
-                </span>
-                <span class="detail-item">
-                  <em>期限</em>
-                  <strong>{{ finance.repayment }}个月</strong>
-                </span>
-              </div>
-            </div>
+        <div class="financing-cta">
+          <div class="cta-content">
+            <h3>需要融资支持？</h3>
+            <p>智能匹配最适合您的融资产品，快速审批，放款便捷</p>
           </div>
+          <button class="btn-primary" @click="handleFinancingClick">
+            申请融资
+          </button>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- 专家展示 -->
-      <section class="content-section" v-if="homeData.experts && homeData.experts.length > 0">
+    <!-- Experts Section -->
+    <section id="experts" class="experts-section">
+      <div class="section-inner">
         <div class="section-header">
-          <h3 class="section-title">专家团队</h3>
-          <router-link to="/expert-help" class="view-more">
-            查看更多 <el-icon><ArrowRight /></el-icon>
-          </router-link>
+          <div class="section-eyebrow">专业指导</div>
+          <h2 class="section-title">专家助力</h2>
+          <p class="section-subtitle">农业专家在线答疑，为您提供专业的技术指导</p>
         </div>
-        <div class="expert-grid">
-          <div
-            class="expert-card"
-            v-for="expert in homeData.experts.slice(0, 6)"
-            :key="expert.user_name"
-            @click="goTo('/expert-help')"
-          >
+
+        <div class="experts-list">
+          <div v-for="expert in featuredExperts" :key="expert.id" class="expert-card">
             <div class="expert-avatar">
-              <el-icon :size="28"><UserFilled /></el-icon>
+              <img :src="expert.avatar" :alt="expert.name" />
+              <span class="expert-status" :class="{ online: expert.online }"></span>
             </div>
             <div class="expert-info">
-              <h4 class="expert-name">{{ expert.real_name }}</h4>
-              <p class="expert-title">{{ expert.profession }}</p>
-              <p class="expert-org" v-if="expert.belong">{{ expert.belong }}</p>
+              <h3 class="expert-name">{{ expert.name }}</h3>
+              <p class="expert-title">{{ expert.title }}</p>
+              <p class="expert-specialty">{{ expert.specialty }}</p>
+              <div class="expert-stats">
+                <span class="stat-item">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                    <path d="M7 2l1.5 3.5L12 7l-3 2.5L10.5 13 7 11 3.5 13 4.5 9.5l-3-2.5 3.5-1.5L7 2z"/>
+                  </svg>
+                  {{ expert.rating }}
+                </span>
+                <span class="stat-item">{{ expert.answers }} 回答</span>
+              </div>
             </div>
+            <button class="expert-action" @click="handleExpertClick(expert)">
+              咨询
+            </button>
           </div>
         </div>
-      </section>
 
-      <!-- 知识展示 -->
-      <section class="content-section" v-if="homeData.knowledges && homeData.knowledges.length > 0">
-        <div class="section-header">
-          <h3 class="section-title">农业知识</h3>
-          <router-link to="/expert-help" class="view-more">
-            查看更多 <el-icon><ArrowRight /></el-icon>
-          </router-link>
+        <div class="section-more">
+          <button class="btn-link" @click="goTo('/expert-help')">
+            查看所有专家
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 8h10M10 5l3 3-3 3"/>
+            </svg>
+          </button>
         </div>
-        <div class="knowledge-list">
-          <div
-            class="knowledge-item"
-            v-for="knowledge in homeData.knowledges.slice(0, 4)"
-            :key="knowledge.knowledge_id"
-            @click="goTo('/expert-help')"
-          >
-            <div class="knowledge-thumb" v-if="knowledge.pic_path">
-              <img :src="knowledge.pic_path" :alt="knowledge.title" />
+      </div>
+    </section>
+
+    <!-- Knowledge Section -->
+    <section id="knowledge" class="knowledge-section">
+      <div class="section-inner">
+        <div class="section-header">
+          <div class="section-eyebrow">知识库</div>
+          <h2 class="section-title">农业知识与问答</h2>
+          <p class="section-subtitle">专业农业知识分享，专家在线答疑解惑</p>
+        </div>
+
+        <div class="knowledge-grid">
+          <!-- Knowledge Articles -->
+          <div class="knowledge-articles">
+            <h3 class="subsection-title">最新文章</h3>
+            <div class="article-list">
+              <div v-for="article in knowledgeArticles" :key="article.id"
+                   class="article-card" @click="viewArticle(article)">
+                <div class="article-image">
+                  <img :src="article.image" :alt="article.title" />
+                </div>
+                <div class="article-content">
+                  <span class="article-category">{{ article.category }}</span>
+                  <h4 class="article-title">{{ article.title }}</h4>
+                  <p class="article-excerpt">{{ article.excerpt }}</p>
+                  <div class="article-meta">
+                    <span>{{ article.author }}</span>
+                    <span>{{ article.date }}</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="knowledge-content">
-              <h4 class="knowledge-title">{{ knowledge.title }}</h4>
-              <p class="knowledge-excerpt">{{ knowledge.content }}</p>
-              <div class="knowledge-meta">
-                <span class="meta-item">
-                  <el-icon><User /></el-icon>
-                  {{ knowledge.own_name }}
-                </span>
+          </div>
+
+          <!-- Q&A -->
+          <div class="knowledge-qa">
+            <h3 class="subsection-title">热门问答</h3>
+            <div class="qa-list">
+              <div v-for="qa in featuredQA" :key="qa.id" class="qa-card" @click="viewQA(qa)">
+                <div class="qa-status" :class="{ answered: qa.answered }">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <circle cx="8" cy="4" r="2"/>
+                    <path d="M4 8a4 4 0 018 0v2H4V8z"/>
+                  </svg>
+                </div>
+                <div class="qa-content">
+                  <h4 class="qa-title">{{ qa.title }}</h4>
+                  <p class="qa-question">{{ qa.question }}</p>
+                  <div class="qa-meta">
+                    <span class="qa-expert">{{ qa.expert }}</span>
+                    <span class="qa-answers">{{ qa.answers }} 个回答</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </section>
 
-      <!-- 问答展示 -->
-      <section class="content-section" v-if="homeData.questions && homeData.questions.length > 0">
-        <div class="section-header">
-          <h3 class="section-title">热门问答</h3>
-          <router-link to="/expert-help" class="view-more">
-            查看更多 <el-icon><ArrowRight /></el-icon>
-          </router-link>
+        <div class="section-more">
+          <button class="btn-link" @click="goTo('/expert-help')">
+            浏览更多知识
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 8h10M10 5l3 3-3 3"/>
+            </svg>
+          </button>
         </div>
-        <div class="qa-list">
-          <div
-            class="qa-item"
-            v-for="question in homeData.questions.slice(0, 4)"
-            :key="question.id"
-            @click="goTo('/expert-help')"
-          >
-            <div class="qa-badge" :class="question.status === 1 ? 'badge-answered' : 'badge-pending'">
-              {{ question.status === 1 ? '已回答' : '待回答' }}
-            </div>
-            <h4 class="qa-title">{{ question.title }}</h4>
-            <p class="qa-content">{{ question.question }}</p>
-            <div class="qa-meta">
-              <span class="meta-tag">
-                <el-icon><Grid /></el-icon>
-                {{ question.plant_name }}
-              </span>
-              <span class="meta-tag">
-                <el-icon><User /></el-icon>
-                {{ question.expert_name }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
+      </div>
+    </section>
 
-    <!-- 页脚 -->
-    <footer class="site-footer">
-      <div class="footer-top">
-        <div class="footer-brand">
+    <!-- CTA Section -->
+    <section class="cta-section">
+      <div class="cta-inner">
+        <div class="cta-content">
+          <h2 class="cta-title">开始您的农业之旅</h2>
+          <p class="cta-subtitle">无论您是农户还是买家，我们都能为您提供专业的服务</p>
+        </div>
+        <div class="cta-actions">
+          <button class="btn-cta btn-cta-primary" @click="goTo('/register')">
+            免费注册
+          </button>
+          <button class="btn-cta btn-cta-secondary" @click="goTo('/market')">
+            浏览产品
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="home-footer">
+      <div class="footer-inner">
+        <div class="footer-section">
           <div class="footer-logo">
-            <el-icon :size="28" color="#4CAF50"><Grid /></el-icon>
-            <span>农品通</span>
+            <span class="logo-icon">🌱</span>
+            <span>农融汇</span>
           </div>
-          <p class="footer-slogan">农产品融销一体平台</p>
-          <p class="footer-desc">连接农户与市场，助力乡村振兴</p>
+          <p class="footer-desc">连接农户与市场，助力农业发展</p>
         </div>
         <div class="footer-links">
-          <div class="link-column">
-            <h4>平台服务</h4>
-            <router-link to="/market">农产品交易</router-link>
-            <router-link to="/finance-products">融资服务</router-link>
-            <router-link to="/expert-help">专家助力</router-link>
+          <div class="footer-link-group">
+            <h4>产品服务</h4>
+            <a href="#products">农产品交易</a>
+            <a href="#financing">融资服务</a>
+            <a href="#experts">专家咨询</a>
           </div>
-          <div class="link-column">
+          <div class="footer-link-group">
             <h4>关于我们</h4>
-            <a>平台介绍</a>
-            <a>联系我们</a>
-            <a>服务条款</a>
-          </div>
-          <div class="link-column">
-            <h4>帮助中心</h4>
-            <a>用户指南</a>
-            <a>常见问题</a>
-            <a>隐私政策</a>
+            <a href="#">平台介绍</a>
+            <a href="#">联系我们</a>
+            <a href="#">帮助中心</a>
           </div>
         </div>
       </div>
       <div class="footer-bottom">
-        <p>© 2024 农品通 - 农产品融销一体平台 All Rights Reserved</p>
+        <p>&copy; 2024 农融汇. All rights reserved.</p>
       </div>
     </footer>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import {
-  Grid,
-  User,
-  Avatar,
-  ArrowDown,
-  ArrowRight,
-  Money,
-  UserFilled,
-  ShoppingCart,
-  Wallet,
-  ChatDotRound
-} from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
-import axios from 'axios'
 
 const router = useRouter()
 const userStore = useUserStore()
-
-// 首页数据
-const homeData = ref({
-  banners: [],
-  products: [],
-  financeProducts: [],
-  experts: [],
-  knowledges: [],
-  questions: []
-})
-
-// 默认商品图片
-const defaultProductImage = 'https://via.placeholder.com/200x200?text=农产品'
-
-// 加载首页数据
-const loadHomeData = async () => {
-  try {
-    const response = await axios.get('/api/home')
-    if (response.data.code === 200) {
-      homeData.value = response.data.data
-    }
-  } catch (error) {
-    console.error('加载首页数据失败:', error)
-    loadMockData()
-  }
-}
-
-// 模拟数据
-const loadMockData = () => {
-  homeData.value = {
-    banners: [
-      {
-        banner_id: 1,
-        title: '智慧农业 · 融销一体平台',
-        desc: '连接农户与市场，助力乡村振兴',
-        pic_path: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&h=420&fit=crop',
-        link_url: '/market'
-      },
-      {
-        banner_id: 2,
-        title: '农业融资服务',
-        desc: '低息贷款，快速审批，助力农业生产',
-        pic_path: 'https://images.unsplash.com/photo-1574943320219-55edc8c51b26?w=1200&h=420&fit=crop',
-        link_url: '/finance-products'
-      },
-      {
-        banner_id: 3,
-        title: '专家在线咨询',
-        desc: '专业技术指导，解答农业生产难题',
-        pic_path: 'https://images.unsplash.com/photo-1581092921461-eab62e97a782?w=1200&h=420&fit=crop',
-        link_url: '/expert-help'
-      }
-    ],
-    products: [
-      {
-        order_id: 1,
-        title: '优质五常大米',
-        content: '东北黑土地种植，口感香甜，营养丰富',
-        price: 5.8,
-        type: 'goods',
-        order_status: 0,
-        picture: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=200&h=200&fit=crop'
-      },
-      {
-        order_id: 2,
-        title: '求购新鲜蔬菜',
-        content: '长期采购各类时令蔬菜，量大从优',
-        type: 'demand',
-        order_status: 0,
-        picture: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=200&h=200&fit=crop'
-      },
-      {
-        order_id: 3,
-        title: '山东红富士苹果',
-        content: '脆甜多汁，产地直发，品质保证',
-        price: 8.0,
-        type: 'goods',
-        order_status: 1,
-        picture: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=200&h=200&fit=crop'
-      },
-      {
-        order_id: 4,
-        title: '散养土鸡蛋',
-        content: '农家散养，无添加剂，营养丰富',
-        price: 1.5,
-        type: 'goods',
-        order_status: 0,
-        picture: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=200&h=200&fit=crop'
-      },
-      {
-        order_id: 5,
-        title: '有机蔬菜',
-        content: '绿色种植，健康安全',
-        price: 6.0,
-        type: 'goods',
-        order_status: 0,
-        picture: 'https://images.unsplash.com/photo-1518459031867-a89b944bffe4?w=200&h=200&fit=crop'
-      },
-      {
-        order_id: 6,
-        title: '新鲜水果',
-        content: '时令水果，新鲜直达',
-        price: 12.0,
-        type: 'goods',
-        order_status: 0,
-        picture: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=200&h=200&fit=crop'
-      },
-      {
-        order_id: 7,
-        title: '求购大宗粮食',
-        content: '求购小麦、玉米等大宗粮食',
-        type: 'demand',
-        order_status: 0,
-        picture: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=200&h=200&fit=crop'
-      },
-      {
-        order_id: 8,
-        title: '绿色有机大米',
-        content: '无公害种植，品质保证',
-        price: 7.5,
-        type: 'goods',
-        order_status: 0,
-        picture: 'https://images.unsplash.com/photo-1536304929831-ee1ca9d44906?w=200&h=200&fit=crop'
-      }
-    ],
-    financeProducts: [
-      {
-        product_id: 1,
-        bank_name: '农业银行',
-        introduce: '惠农贷，专门为农户设计的低息贷款产品',
-        bank_phone: '400-123-4567',
-        money: 500000,
-        rate: 4.35,
-        repayment: 24
-      },
-      {
-        product_id: 2,
-        bank_name: '农村信用社',
-        introduce: '种植贷，支持农业生产全过程',
-        bank_phone: '400-234-5678',
-        money: 300000,
-        rate: 4.5,
-        repayment: 18
-      },
-      {
-        product_id: 3,
-        bank_name: '工商银行',
-        introduce: '农企贷，助力农业企业做大做强',
-        bank_phone: '400-345-6789',
-        money: 1000000,
-        rate: 4.2,
-        repayment: 36
-      }
-    ],
-    experts: [
-      {
-        user_name: 'expert1',
-        real_name: '张教授',
-        profession: '作物栽培学',
-        belong: '中国农业大学'
-      },
-      {
-        user_name: 'expert2',
-        real_name: '李专家',
-        profession: '植物保护',
-        belong: '农业科学院'
-      },
-      {
-        user_name: 'expert3',
-        real_name: '王研究员',
-        profession: '土壤肥料',
-        belong: '农业技术推广站'
-      },
-      {
-        user_name: 'expert4',
-        real_name: '赵高级农艺师',
-        profession: '果树栽培',
-        belong: '果树研究所'
-      },
-      {
-        user_name: 'expert5',
-        real_name: '刘专家',
-        profession: '畜牧兽医',
-        belong: '畜牧科学院'
-      },
-      {
-        user_name: 'expert6',
-        real_name: '陈研究员',
-        profession: '农业机械化',
-        belong: '农机研究所'
-      }
-    ],
-    knowledges: [
-      {
-        knowledge_id: 1,
-        title: '水稻种植技术要点',
-        content: '详细介绍水稻从选种到收获的全过程技术要点...',
-        own_name: '张教授',
-        pic_path: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=100&h=100&fit=crop'
-      },
-      {
-        knowledge_id: 2,
-        title: '果树病虫害防治',
-        content: '春季果树病虫害预防措施...',
-        own_name: '李专家'
-      },
-      {
-        knowledge_id: 3,
-        title: '有机蔬菜种植指南',
-        content: '如何种植绿色有机蔬菜...',
-        own_name: '王研究员'
-      },
-      {
-        knowledge_id: 4,
-        title: '土壤改良技术',
-        content: '提升土壤肥力的有效方法...',
-        own_name: '王研究员'
-      }
-    ],
-    questions: [
-      {
-        id: 1,
-        title: '水稻叶子发黄怎么办？',
-        question: '我家水稻最近叶子开始发黄，不知道是什么原因...',
-        plant_name: '水稻',
-        expert_name: '张教授',
-        status: 1
-      },
-      {
-        id: 2,
-        title: '苹果树什么时候修剪？',
-        question: '请问苹果树应该在什么季节进行修剪比较好？',
-        plant_name: '苹果',
-        expert_name: '赵高级农艺师',
-        status: 0
-      },
-      {
-        id: 3,
-        title: '蔬菜病虫害防治方法',
-        question: '大棚蔬菜经常有病虫害，有什么好的防治方法吗？',
-        plant_name: '蔬菜',
-        expert_name: '李专家',
-        status: 1
-      },
-      {
-        id: 4,
-        title: '土壤酸化怎么处理',
-        question: '检测发现土壤偏酸，应该怎么改良？',
-        plant_name: '通用',
-        expert_name: '王研究员',
-        status: 0
-      }
-    ]
-  }
-}
-
-// 格式化金额
-const formatMoney = (money) => {
-  return new Intl.NumberFormat('zh-CN').format(money)
-}
-
-// 获取状态文本
-const getStatusText = (status) => {
-  const statusMap = {
-    0: '待交易',
-    1: '交易中',
-    2: '已完成'
-  }
-  return statusMap[status] || '未知'
-}
 
 // 获取用户显示名称
 const getUserDisplayName = () => {
   const userInfo = userStore.userInfo
   if (!userInfo) return ''
-
   const role = userStore.role
   switch (role) {
     case 'farmer':
-      return userInfo.real_name || userInfo.user_name
+      return userInfo.farmName || userInfo.userName
     case 'expert':
-      return userInfo.real_name || userInfo.user_name
+      return userInfo.expertName || userInfo.userName
     case 'bank':
-      return userInfo.bank_name || userInfo.user_name
+      return userInfo.bankName || userInfo.userName
     case 'admin':
       return '管理员'
-    case 'buyer':
-      return userInfo.real_name || userInfo.user_name
     default:
-      return userInfo.user_name
+      return userInfo.userName
   }
 }
 
@@ -660,21 +407,19 @@ const getDashboardPath = () => {
       return '/bank/dashboard'
     case 'admin':
       return '/admin/dashboard'
-    case 'buyer':
-      return '/buyer/dashboard'
     default:
-      return '/login'
+      return '/'
   }
 }
 
-// 处理用户下拉菜单命令
+// 处理用户命令
 const handleUserCommand = (command) => {
   if (command === 'logout') {
     userStore.logout()
     ElMessage.success('已退出登录')
     location.reload()
   } else {
-    goTo(command)
+    router.push(command)
   }
 }
 
@@ -683,713 +428,1122 @@ const goTo = (path) => {
   router.push(path)
 }
 
-// 跳转到商品详情
-const goToProduct = (product) => {
-  goTo('/market')
-}
-
-// 轮播图点击
-const handleBannerClick = (banner) => {
-  if (banner.link_url) {
-    goTo(banner.link_url)
+// 滚动到指定区域
+const scrollToSection = (id) => {
+  const element = document.getElementById(id)
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth' })
   }
 }
 
+// 模拟数据 - 精选产品
+const featuredProducts = ref([
+  {
+    id: 1,
+    name: '五常有机大米',
+    category: '粮食',
+    origin: '黑龙江·五常',
+    price: '5.8',
+    unit: '斤',
+    image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop',
+    badge: '优选'
+  },
+  {
+    id: 2,
+    name: '寿光新鲜蔬菜',
+    category: '蔬菜',
+    origin: '山东·寿光',
+    price: '3.5',
+    unit: '斤',
+    image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=300&fit=crop',
+    badge: '直供'
+  },
+  {
+    id: 3,
+    name: '烟台红富士苹果',
+    category: '水果',
+    origin: '山东·烟台',
+    price: '8.5',
+    unit: '斤',
+    image: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400&h=300&fit=crop',
+    badge: null
+  },
+  {
+    id: 4,
+    name: '优质散养土鸡',
+    category: '畜禽',
+    origin: '湖南·湘西',
+    price: '45',
+    unit: '只',
+    image: 'https://images.unsplash.com/photo-1589974593766-7ac39ecdb4e1?w=400&h=300&fit=crop',
+    badge: '生态'
+  }
+])
+
+// 融资项目
+const financingItems = ref([
+  {
+    id: 1,
+    title: '农户种植贷款',
+    description: '为种植户提供生产资金支持，覆盖种子、化肥、农药等投入',
+    features: ['低利率', '手续简便', '放款快'],
+    amount: '5-50万'
+  },
+  {
+    id: 2,
+    title: '农业设施贷款',
+    description: '支持建设大棚、灌溉系统、仓储等农业基础设施',
+    features: ['期限长', '额度高', '可循环'],
+    amount: '10-100万'
+  },
+  {
+    id: 3,
+    title: '农产品收购贷款',
+    description: '为收购商提供季节性资金支持，助力农产品流通',
+    features: ['随借随还', '灵活使用'],
+    amount: '20-200万'
+  }
+])
+
+// 专家列表
+const featuredExperts = ref([
+  {
+    id: 1,
+    name: '李建国',
+    title: '高级农艺师',
+    specialty: '水稻种植与病虫害防治',
+    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&h=100&fit=crop',
+    rating: 4.9,
+    answers: 328,
+    online: true
+  },
+  {
+    id: 2,
+    name: '王淑芬',
+    title: '蔬菜栽培专家',
+    specialty: '温室蔬菜栽培技术',
+    avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=100&h=100&fit=crop',
+    rating: 4.8,
+    answers: 256,
+    online: true
+  },
+  {
+    id: 3,
+    name: '张明远',
+    title: '土壤肥料专家',
+    specialty: '土壤改良与科学施肥',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
+    rating: 4.9,
+    answers: 189,
+    online: false
+  },
+  {
+    id: 4,
+    name: '赵海燕',
+    title: '果树栽培专家',
+    specialty: '果树修剪与病虫害防治',
+    avatar: 'https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=100&h=100&fit=crop',
+    rating: 4.7,
+    answers: 143,
+    online: false
+  }
+])
+
+// 知识文章
+const knowledgeArticles = ref([
+  {
+    id: 1,
+    title: '春季小麦田间管理技术要点',
+    excerpt: '详细介绍春季小麦返青后的田间管理措施，包括施肥、浇水、病虫害防治等关键技术...',
+    category: '粮食作物',
+    image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=300&h=200&fit=crop',
+    author: '李建国',
+    date: '2024-03-15'
+  },
+  {
+    id: 2,
+    title: '温室蔬菜病虫害绿色防控技术',
+    excerpt: '介绍温室蔬菜主要病虫害的识别方法及绿色防控技术，减少农药使用，提高蔬菜品质...',
+    category: '蔬菜种植',
+    image: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=300&h=200&fit=crop',
+    author: '王淑芬',
+    date: '2024-03-12'
+  }
+])
+
+// 问答
+const featuredQA = ref([
+  {
+    id: 1,
+    title: '水稻稻瘟病如何防治？',
+    question: '我的水稻出现了稻瘟病，请问应该用什么药？什么时候喷药效果最好？',
+    expert: '李建国',
+    answered: true,
+    answers: 3
+  },
+  {
+    id: 2,
+    title: '番茄脐腐病怎么解决？',
+    question: '温室种植的番茄经常出现脐腐病，是缺钙吗？应该如何预防和治疗？',
+    expert: '王淑芬',
+    answered: true,
+    answers: 5
+  },
+  {
+    id: 3,
+    title: '苹果树什么时候修剪最好？',
+    question: '请问苹果树的最佳修剪时间是什么时候？应该如何修剪才能提高产量？',
+    expert: '赵海燕',
+    answered: true,
+    answers: 2
+  }
+])
+
+// 点击处理
+const viewProductDetail = (product) => {
+  if (!userStore.isLoggedIn()) {
+    ElMessage.info('请先登录')
+    router.push('/login')
+    return
+  }
+  // TODO: 跳转到产品详情
+  ElMessage.info('查看产品详情：' + product.name)
+}
+
+const handleFinancingClick = () => {
+  if (!userStore.isLoggedIn()) {
+    ElMessage.info('请先登录')
+    router.push('/login')
+    return
+  }
+  if (userStore.role === 'farmer') {
+    router.push('/farmer/finance')
+  } else {
+    ElMessage.info('融资服务仅对农户开放')
+  }
+}
+
+const handleExpertClick = (expert) => {
+  if (!userStore.isLoggedIn()) {
+    ElMessage.info('请先登录')
+    router.push('/login')
+    return
+  }
+  // TODO: 跳转到专家详情或发起咨询
+  ElMessage.info('咨询专家：' + expert.name)
+}
+
+const viewArticle = (article) => {
+  ElMessage.info('查看文章：' + article.title)
+}
+
+const viewQA = (qa) => {
+  ElMessage.info('查看问答：' + qa.title)
+}
+
 onMounted(() => {
-  loadHomeData()
+  // TODO: 从后端API加载数据
+  // loadHomeData()
 })
 </script>
 
 <style scoped>
-/* 全局样式 */
+/* ===== 全局变量扩展 ===== */
 .home-page {
-  min-height: 100vh;
-  background-color: #f8f9fa;
+  --color-primary: #2D5A3D;
+  --color-primary-light: #4A7C59;
+  --color-secondary: #C9A661;
+  --color-accent: #B85C38;
+  --color-bg: #F7F5F0;
+  --color-text: #1F2923;
+  --color-text-light: #6B7280;
+  --color-border: #E5E0D8;
+  --color-white: #FFFFFF;
+  --font-display: 'Noto Serif SC', serif;
+  --font-body: 'Noto Sans SC', sans-serif;
 }
 
-/* 顶部导航栏 */
-.top-header {
-  background: #fff;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.08);
-  position: sticky;
+/* ===== Header ===== */
+.home-header {
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--color-border);
   z-index: 1000;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.header-container {
-  max-width: 1400px;
+.header-inner {
+  max-width: 1280px;
   margin: 0 auto;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  height: 64px;
+  padding: 0 32px;
 }
 
-.logo-section {
+.logo {
   display: flex;
   align-items: center;
   gap: 12px;
   cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.logo:hover {
+  opacity: 0.8;
+}
+
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  color: var(--color-primary);
+}
+
+.logo-text {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.main-nav {
+  display: flex;
+  gap: 40px;
+}
+
+.main-nav a {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-light);
+  transition: color 0.2s;
+  position: relative;
+}
+
+.main-nav a:hover {
+  color: var(--color-primary);
+}
+
+.main-nav a::after {
+  content: '';
+  position: absolute;
+  bottom: -28px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-primary);
+  transform: scaleX(0);
   transition: transform 0.2s;
 }
 
-.logo-section:hover {
-  transform: scale(1.02);
+.main-nav a:hover::after {
+  transform: scaleX(1);
 }
 
-.platform-name {
-  font-size: 22px;
-  font-weight: 700;
-  color: #4CAF50;
-  letter-spacing: 0.5px;
-}
-
-.nav-menu {
+.header-actions {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 16px;
 }
 
-.nav-item {
+.btn-text {
   padding: 8px 20px;
-  color: #333;
-  text-decoration: none;
-  border-radius: 8px;
-  transition: all 0.25s ease;
-  cursor: pointer;
   font-size: 15px;
   font-weight: 500;
-  position: relative;
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
 }
 
-.nav-item::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 0;
-  height: 2px;
-  background: #4CAF50;
-  transition: all 0.3s ease;
-  transform: translateX(-50%);
+.btn-text:hover {
+  color: var(--color-primary);
 }
 
-.nav-item:hover::after,
-.nav-item.active::after {
-  width: calc(100% - 40px);
-}
-
-.nav-item:hover,
-.nav-item.active {
-  color: #4CAF50;
-  background: rgba(76, 175, 80, 0.08);
-}
-
-.auth-section {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.login-btn {
-  background: transparent !important;
-  color: #4CAF50 !important;
+.btn-primary {
+  padding: 10px 24px;
+  font-size: 15px;
   font-weight: 500;
-  padding: 8px 24px !important;
-  border: 1px solid #4CAF50 !important;
-  border-radius: 8px !important;
+  color: var(--color-white);
+  background: var(--color-primary);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-.login-btn:hover {
-  background: rgba(76, 175, 80, 0.1) !important;
+.btn-primary:hover {
+  background: var(--color-primary-dark, #1F4229);
 }
 
-.register-btn {
-  padding: 8px 24px !important;
-  font-weight: 500;
-  background: #4CAF50 !important;
-  color: #fff !important;
-  border-color: #4CAF50 !important;
-  border-radius: 8px !important;
-}
-
-.register-btn:hover {
-  background: #43a047 !important;
-}
-
-.user-dropdown {
+.user-chip {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #333;
-  cursor: pointer;
   padding: 8px 16px;
-  border-radius: 8px;
-  background: rgba(76, 175, 80, 0.08);
-  transition: all 0.25s ease;
+  background: var(--color-bg);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.user-chip:hover {
+  background: var(--color-border);
+}
+
+.user-name {
   font-size: 14px;
   font-weight: 500;
+  color: var(--color-text);
 }
 
-.user-dropdown:hover {
-  background: rgba(76, 175, 80, 0.15);
-}
-
-/* 主内容区 */
-.main-wrapper {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 24px;
-}
-
-/* 轮播图区域 */
-.hero-banner {
-  margin-bottom: 32px;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-}
-
-.banner-slide {
+/* ===== Hero Section ===== */
+.hero-section {
   position: relative;
-  width: 100%;
-  height: 100%;
-  cursor: pointer;
+  padding-top: 72px;
+  background: linear-gradient(180deg, #EBF5EE 0%, var(--color-bg) 100%);
+  overflow: hidden;
 }
 
-.banner-slide img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.banner-overlay {
+.hero-bg {
   position: absolute;
-  bottom: 0;
-  left: 0;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hero-pattern {
+  position: absolute;
+  top: 0;
   right: 0;
-  padding: 50px 40px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.5));
-}
-
-.banner-content {
-  max-width: 800px;
-  color: #fff;
-}
-
-.banner-content h1 {
-  font-size: 38px;
-  margin-bottom: 10px;
-  font-weight: 600;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-}
-
-.banner-content p {
-  font-size: 16px;
-  opacity: 0.95;
-}
-
-.default-banner-slide {
-  width: 100%;
+  width: 60%;
   height: 100%;
-  background: linear-gradient(135deg, #4CAF50 0%, #43a047 100%);
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(45, 90, 61, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(201, 166, 97, 0.08) 0%, transparent 50%);
+}
+
+.hero-content {
+  position: relative;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 80px 32px 60px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+}
+
+.hero-text {
+  max-width: 560px;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: 52px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--color-text);
+  margin: 0 0 24px;
+}
+
+.title-line {
+  display: block;
+}
+
+.title-accent {
+  color: var(--color-primary);
+}
+
+.hero-subtitle {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--color-text-light);
+  margin: 0 0 32px;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.btn-hero {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-/* 功能入口 */
-.feature-entry {
-  margin-bottom: 40px;
-}
-
-.entry-container {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-}
-
-.entry-item {
-  border-radius: 12px;
-  overflow: hidden;
+  gap: 8px;
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 500;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  background: #fff;
+  transition: all 0.2s;
 }
 
-.entry-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-  border-color: rgba(76, 175, 80, 0.15);
+.btn-hero-primary {
+  color: var(--color-white);
+  background: var(--color-primary);
+  border: none;
 }
 
-.entry-image {
+.btn-hero-primary:hover {
+  background: var(--color-primary-dark, #1F4229);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 90, 61, 0.3);
+}
+
+.btn-hero-secondary {
+  color: var(--color-primary);
+  background: transparent;
+  border: 2px solid var(--color-primary);
+}
+
+.btn-hero-secondary:hover {
+  background: rgba(45, 90, 61, 0.1);
+}
+
+.hero-visual {
   position: relative;
-  width: 100%;
-  height: 200px;
-  overflow: hidden;
+  height: 400px;
 }
 
-.entry-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.5s ease;
-}
-
-.entry-item:hover .entry-image img {
-  transform: scale(1.1);
-}
-
-.entry-overlay {
+.visual-card {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 40px 20px 20px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
-  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+  background: var(--color-white);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease;
 }
 
-.entry-content {
-  color: #fff;
+.visual-card:hover {
+  transform: translateY(-8px);
+}
+
+.visual-card-1 {
+  top: 20%;
+  left: 10%;
+  animation: float 6s ease-in-out infinite;
+}
+
+.visual-card-2 {
+  top: 40%;
+  right: 15%;
+  animation: float 6s ease-in-out infinite 2s;
+}
+
+.visual-card-3 {
+  bottom: 10%;
+  left: 30%;
+  animation: float 6s ease-in-out infinite 4s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+.card-icon {
+  font-size: 48px;
+}
+
+.card-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.trust-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 48px;
+  padding: 32px;
+  background: var(--color-white);
+  border-top: 1px solid var(--color-border);
+}
+
+.trust-item {
   text-align: center;
 }
 
-.entry-content h4 {
-  font-size: 20px;
-  color: #fff;
-  margin-bottom: 8px;
-  font-weight: 600;
+.trust-value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-primary);
 }
 
-.entry-content p {
+.trust-label {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1.5;
+  color: var(--color-text-light);
+  margin-top: 4px;
 }
 
-/* 内容区块 */
-.content-section {
-  margin-bottom: 48px;
+.trust-divider {
+  width: 1px;
+  height: 40px;
+  background: var(--color-border);
+}
+
+/* ===== Sections Common ===== */
+.products-section,
+.financing-section,
+.experts-section,
+.knowledge-section {
+  padding: 80px 32px;
+}
+
+.section-inner {
+  max-width: 1280px;
+  margin: 0 auto;
 }
 
 .section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.section-eyebrow {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+  margin-bottom: 12px;
 }
 
 .section-title {
-  font-size: 20px;
-  color: #333;
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 12px;
+}
+
+.section-subtitle {
+  font-size: 16px;
+  color: var(--color-text-light);
   margin: 0;
-  font-weight: 600;
 }
 
-.view-more {
-  display: flex;
+.section-more {
+  text-align: center;
+  margin-top: 32px;
+}
+
+.btn-link {
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  color: #4CAF50;
-  text-decoration: none;
-  font-size: 14px;
-  transition: gap 0.2s ease;
-}
-
-.view-more:hover {
   gap: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px 16px;
+  transition: gap 0.2s;
 }
 
-/* 商品网格 */
-.product-grid {
+.btn-link:hover {
+  gap: 12px;
+}
+
+/* ===== Products Section ===== */
+.products-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  gap: 24px;
 }
 
 .product-card {
+  background: var(--color-white);
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  transition: all 0.3s;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
 .product-card:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
-  border-color: rgba(76, 175, 80, 0.1);
+  transform: translateY(-8px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
 }
 
 .product-image {
   position: relative;
-  width: 100%;
-  height: 180px;
+  height: 200px;
+  overflow: hidden;
 }
 
 .product-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.product-card:hover .product-image img {
+  transform: scale(1.05);
 }
 
 .product-badge {
   position: absolute;
   top: 12px;
   left: 12px;
-  padding: 4px 10px;
-  border-radius: 4px;
+  padding: 4px 12px;
   font-size: 12px;
   font-weight: 500;
-  color: #fff;
+  color: var(--color-white);
+  background: var(--color-accent);
+  border-radius: 4px;
 }
 
-.badge-supply {
-  background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
+.product-content {
+  padding: 20px;
 }
 
-.badge-demand {
-  background: linear-gradient(135deg, #FF9800 0%, #FFB74D 100%);
-}
-
-.product-info {
-  padding: 14px;
+.product-category {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-secondary);
+  margin-bottom: 8px;
 }
 
 .product-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.product-desc {
-  font-size: 12px;
-  color: #999;
-  margin: 0 0 12px 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.product-origin {
+  font-size: 14px;
+  color: var(--color-text-light);
+  margin: 0 0 16px;
 }
 
 .product-footer {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
 .product-price {
   display: flex;
   align-items: baseline;
-  color: #f5222d;
 }
 
-.price-symbol {
-  font-size: 12px;
+.price-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-accent);
 }
 
-.price-amount {
-  font-size: 18px;
-  font-weight: 600;
+.price-unit {
+  font-size: 14px;
+  color: var(--color-text-light);
 }
 
-.product-status {
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 11px;
+.product-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: var(--color-primary);
+  background: rgba(45, 90, 61, 0.1);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.status-0 {
-  background: #e8f5e9;
-  color: #4CAF50;
+.product-action:hover {
+  background: var(--color-primary);
+  color: var(--color-white);
 }
 
-.status-1 {
-  background: #fff3e0;
-  color: #FF9800;
+/* ===== Financing Section ===== */
+.financing-section {
+  background: linear-gradient(180deg, rgba(74, 124, 89, 0.05) 0%, transparent 100%);
 }
 
-.status-2 {
-  background: #e0e0e0;
-  color: #666;
-}
-
-/* 融资产品网格 */
-.finance-grid {
+.financing-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  gap: 24px;
+  margin-bottom: 48px;
 }
 
-.finance-card {
-  display: flex;
-  padding: 20px;
+.financing-card {
+  padding: 32px;
+  background: var(--color-white);
   border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  gap: 16px;
+  border: 1px solid var(--color-border);
+  transition: all 0.3s;
 }
 
-.finance-card:hover {
-  box-shadow: 0 4px 20px rgba(33, 150, 243, 0.1);
-  transform: translateY(-2px);
-  border-color: rgba(33, 150, 243, 0.1);
+.financing-card:hover {
+  border-color: var(--color-secondary);
+  box-shadow: 0 8px 24px rgba(201, 166, 97, 0.15);
 }
 
-.finance-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
+.financing-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  color: var(--color-secondary);
+  background: rgba(201, 166, 97, 0.1);
+  border-radius: 12px;
+  margin-bottom: 20px;
 }
 
-.finance-info {
-  flex: 1;
-}
-
-.finance-name {
-  font-size: 15px;
+.financing-title {
+  font-size: 20px;
   font-weight: 600;
-  color: #333;
-  margin-bottom: 6px;
+  color: var(--color-text);
+  margin: 0 0 12px;
 }
 
-.finance-desc {
+.financing-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-light);
+  margin: 0 0 16px;
+}
+
+.financing-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.feature-tag {
+  padding: 4px 12px;
   font-size: 12px;
-  color: #999;
-  margin-bottom: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--color-primary);
+  background: rgba(45, 90, 61, 0.1);
+  border-radius: 4px;
 }
 
-.finance-details {
-  display: flex;
-  gap: 12px;
-}
-
-.detail-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.detail-item em {
-  font-size: 10px;
-  color: #999;
-  margin-bottom: 2px;
-  font-style: normal;
-}
-
-.detail-item strong {
-  font-size: 13px;
-  color: #333;
-  font-weight: 600;
-}
-
-/* 专家网格 */
-.expert-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 16px;
-}
-
-.expert-card {
-  text-align: center;
-  padding: 20px 12px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.04);
-}
-
-.expert-card:hover {
-  box-shadow: 0 4px 20px rgba(255, 152, 0, 0.1);
-  transform: translateY(-2px);
-  border-color: rgba(255, 152, 0, 0.1);
-}
-
-.expert-avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #FF9800 0%, #FFB74D 100%);
+.financing-range {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #fff;
-  margin: 0 auto 12px;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
 }
 
-.expert-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 4px;
+.range-label {
+  font-size: 14px;
+  color: var(--color-text-light);
 }
 
-.expert-title {
-  font-size: 11px;
-  color: #4CAF50;
-  margin-bottom: 4px;
+.range-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-accent);
 }
 
-.expert-org {
-  font-size: 10px;
-  color: #999;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.financing-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32px;
+  background: var(--color-primary);
+  border-radius: 12px;
+  color: var(--color-white);
 }
 
-/* 知识列表 */
-.knowledge-list {
+.cta-content h3 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.cta-content p {
+  font-size: 14px;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.financing-cta .btn-primary {
+  background: var(--color-white);
+  color: var(--color-primary);
+}
+
+.financing-cta .btn-primary:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* ===== Experts Section ===== */
+.experts-list {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
 }
 
-.knowledge-item {
+.expert-card {
   display: flex;
+  align-items: center;
   gap: 16px;
-  padding: 16px;
+  padding: 20px;
+  background: var(--color-white);
   border-radius: 12px;
+  border: 1px solid var(--color-border);
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  transition: all 0.3s;
 }
 
-.knowledge-item:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
-  border-color: rgba(76, 175, 80, 0.1);
+.expert-card:hover {
+  border-color: var(--color-primary-light);
+  box-shadow: 0 4px 16px rgba(45, 90, 61, 0.1);
 }
 
-.knowledge-thumb {
-  width: 100px;
-  height: 100px;
-  border-radius: 8px;
-  overflow: hidden;
+.expert-avatar {
+  position: relative;
+  width: 64px;
+  height: 64px;
   flex-shrink: 0;
 }
 
-.knowledge-thumb img {
+.expert-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.expert-status {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 12px;
+  height: 12px;
+  background: var(--color-text-light);
+  border: 2px solid var(--color-white);
+  border-radius: 50%;
+}
+
+.expert-status.online {
+  background: #10B981;
+}
+
+.expert-info {
+  flex: 1;
+}
+
+.expert-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 4px;
+}
+
+.expert-title {
+  font-size: 13px;
+  color: var(--color-secondary);
+  margin: 0 0 8px;
+}
+
+.expert-specialty {
+  font-size: 14px;
+  color: var(--color-text-light);
+  margin: 0 0 12px;
+}
+
+.expert-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--color-accent);
+}
+
+.expert-action {
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-white);
+  background: var(--color-primary);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.expert-action:hover {
+  background: var(--color-primary-dark, #1F4229);
+}
+
+/* ===== Knowledge Section ===== */
+.knowledge-section {
+  background: linear-gradient(180deg, rgba(201, 166, 97, 0.05) 0%, transparent 100%);
+}
+
+.knowledge-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+}
+
+.subsection-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--color-secondary);
+}
+
+.article-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.article-card {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: var(--color-white);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.article-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.article-image {
+  width: 120px;
+  height: 80px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.article-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.knowledge-content {
+.article-content {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-.knowledge-title {
-  font-size: 14px;
+.article-category {
+  font-size: 12px;
   font-weight: 500;
-  color: #333;
-  margin-bottom: 8px;
+  color: var(--color-secondary);
+  margin-bottom: 6px;
 }
 
-.knowledge-excerpt {
-  font-size: 12px;
-  color: #999;
-  margin-bottom: 12px;
-  flex: 1;
+.article-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.knowledge-meta {
+.article-excerpt {
+  font-size: 13px;
+  color: var(--color-text-light);
+  margin: 0 0 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.article-meta {
   display: flex;
-  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--color-text-light);
+}
+
+.qa-list {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
-.meta-item {
+.qa-card {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #999;
-}
-
-/* 问答列表 */
-.qa-list {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-.qa-item {
+  gap: 12px;
   padding: 16px;
+  background: var(--color-white);
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  transition: all 0.3s;
 }
 
-.qa-item:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
-  border-color: rgba(76, 175, 80, 0.1);
+.qa-card:hover {
+  border-color: var(--color-primary);
 }
 
-.qa-badge {
-  display: inline-block;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  margin-bottom: 10px;
+.qa-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--color-text-light);
+  background: var(--color-bg);
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.badge-answered {
-  background: #e8f5e9;
-  color: #4CAF50;
-}
-
-.badge-pending {
-  background: #fff3e0;
-  color: #FF9800;
-}
-
-.qa-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 8px;
+.qa-status.answered {
+  color: var(--color-primary);
+  background: rgba(45, 90, 61, 0.1);
 }
 
 .qa-content {
-  font-size: 12px;
-  color: #999;
-  margin-bottom: 12px;
+  flex: 1;
+}
+
+.qa-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 6px;
+}
+
+.qa-question {
+  font-size: 13px;
+  color: var(--color-text-light);
+  margin: 0 0 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1397,153 +1551,248 @@ onMounted(() => {
 
 .qa-meta {
   display: flex;
-  gap: 12px;
+  gap: 16px;
+  font-size: 12px;
 }
 
-.meta-tag {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: #999;
+.qa-expert {
+  color: var(--color-secondary);
 }
 
-/* 页脚 */
-.site-footer {
-  background: #1a1a1a;
-  color: rgba(255, 255, 255, 0.7);
-  margin-top: 60px;
+.qa-answers {
+  color: var(--color-text-light);
 }
 
-.footer-top {
-  max-width: 1400px;
+/* ===== CTA Section ===== */
+.cta-section {
+  padding: 80px 32px;
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.cta-inner {
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 48px 24px;
+  text-align: center;
+}
+
+.cta-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+
+.cta-subtitle {
+  font-size: 16px;
+  opacity: 0.9;
+  margin: 0 0 32px;
+}
+
+.cta-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.btn-cta {
+  padding: 14px 40px;
+  font-size: 16px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cta-primary {
+  color: var(--color-primary);
+  background: var(--color-white);
+  border: none;
+}
+
+.btn-cta-primary:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+}
+
+.btn-cta-secondary {
+  color: var(--color-white);
+  background: transparent;
+  border: 2px solid var(--color-white);
+}
+
+.btn-cta-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ===== Footer ===== */
+.home-footer {
+  padding: 48px 32px 24px;
+  background: var(--color-text);
+  color: var(--color-white);
+}
+
+.footer-inner {
+  max-width: 1280px;
+  margin: 0 auto;
   display: flex;
   justify-content: space-between;
+  margin-bottom: 32px;
 }
 
-.footer-brand {
-  flex: 1;
+.footer-section {
+  max-width: 300px;
 }
 
 .footer-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
   margin-bottom: 16px;
-  color: #fff;
-  font-size: 18px;
-  font-weight: 500;
 }
 
-.footer-slogan {
-  font-size: 14px;
-  color: #fff;
-  margin-bottom: 8px;
+.footer-logo .logo-icon {
+  font-size: 32px;
 }
 
 .footer-desc {
-  font-size: 13px;
-  opacity: 0.7;
+  font-size: 14px;
+  opacity: 0.8;
+  line-height: 1.6;
+  margin: 0;
 }
 
 .footer-links {
   display: flex;
-  gap: 60px;
+  gap: 64px;
 }
 
-.link-column h4 {
-  color: #fff;
-  margin-bottom: 16px;
+.footer-link-group h4 {
   font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 16px;
 }
 
-.link-column a {
+.footer-link-group a {
   display: block;
-  margin-bottom: 10px;
-  font-size: 13px;
-  color: inherit;
-  text-decoration: none;
-  opacity: 0.7;
-  transition: opacity 0.3s;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 12px;
+  transition: color 0.2s;
 }
 
-.link-column a:hover {
-  opacity: 1;
+.footer-link-group a:hover {
+  color: var(--color-white);
 }
 
 .footer-bottom {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-top: 24px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 20px;
   text-align: center;
-  font-size: 13px;
-  opacity: 0.6;
 }
 
-/* 响应式设计 */
-@media (max-width: 1200px) {
-  .product-grid {
-    grid-template-columns: repeat(3, 1fr);
+.footer-bottom p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 1024px) {
+  .products-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  .expert-grid {
-    grid-template-columns: repeat(4, 1fr);
+  .financing-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .experts-list {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-content {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .hero-visual {
+    display: none;
   }
 }
 
 @media (max-width: 768px) {
-  .nav-menu {
+  .header-inner {
+    padding: 0 20px;
+  }
+
+  .main-nav {
     display: none;
   }
 
-  .header-container {
-    padding: 0 16px;
+  .products-section,
+  .financing-section,
+  .experts-section,
+  .knowledge-section {
+    padding: 48px 20px;
   }
 
-  .main-wrapper {
-    padding: 16px;
+  .section-title {
+    font-size: 28px;
   }
 
-  .entry-container {
+  .hero-title {
+    font-size: 36px;
+  }
+
+  .products-grid {
     grid-template-columns: 1fr;
   }
 
-  .product-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .finance-grid {
+  .financing-grid {
     grid-template-columns: 1fr;
   }
 
-  .expert-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .knowledge-list,
-  .qa-list {
-    grid-template-columns: 1fr;
-  }
-
-  .footer-top {
+  .financing-cta {
     flex-direction: column;
-    gap: 32px;
+    gap: 20px;
+    text-align: center;
   }
 
-  .footer-links {
+  .cta-actions {
+    flex-direction: column;
+  }
+
+  .trust-bar {
     flex-wrap: wrap;
+    gap: 24px;
+  }
+
+  .trust-divider {
+    display: none;
+  }
+
+  .footer-inner {
+    flex-direction: column;
     gap: 32px;
   }
 }
 
-@media (max-width: 480px) {
-  .product-grid {
-    grid-template-columns: 1fr;
-  }
+/* Element Plus Dropdown Override */
+:deep(.el-dropdown-menu) {
+  font-family: var(--font-body);
+}
 
-  .expert-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+:deep(.el-dropdown-menu__item) {
+  font-size: 14px;
 }
 </style>
