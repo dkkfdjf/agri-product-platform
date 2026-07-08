@@ -20,7 +20,7 @@ CREATE TABLE `tb_user` (
   `phone` varchar(20) DEFAULT NULL COMMENT '手机号',
   `identity_num` varchar(20) DEFAULT NULL COMMENT '身份证号',
   `address` varchar(255) DEFAULT NULL COMMENT '地址',
-  `role` varchar(20) NOT NULL DEFAULT 'farmer' COMMENT '角色：farmer农户/expert专家/bank银行/admin管理员',
+  `role` varchar(20) NOT NULL DEFAULT 'farmer' COMMENT '角色：farmer农户/buyer买家/expert专家/bank银行/admin管理员',
   `avatar` varchar(255) DEFAULT NULL COMMENT '头像URL',
   `integral` int DEFAULT 500 COMMENT '积分',
   `credit` int DEFAULT 5 COMMENT '信誉分（1-5）',
