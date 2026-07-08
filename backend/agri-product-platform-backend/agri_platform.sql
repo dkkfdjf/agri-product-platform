@@ -337,5 +337,3 @@ INSERT INTO `tb_banner` (`title`, `pic_path`, `link_url`, `sort_order`, `status`
 ('专业农业咨询服务', '/images/banner3.jpg', '/expert', 3, 1);
 
 -- 完成
-SELECT '数据库创建完成！' AS message;
-SELECT COUNT(*) AS table_count FROM information_schema.tables WHERE table_schema = 'agri_platform';
