@@ -3,7 +3,7 @@
     <div class="login-box">
       <div class="login-header">
         <h1>农产品融销一体平台</h1>
-        <p> Agricultural Product Financing and Trading Platform</p>
+        <p>欢迎登录</p>
       </div>
 
       <el-form
@@ -15,7 +15,7 @@
         <el-form-item prop="username">
           <el-input
             v-model="loginForm.username"
-            placeholder="请输入账号"
+            placeholder="请输入用户名"
             prefix-icon="User"
             size="large"
           />
@@ -32,20 +32,6 @@
           />
         </el-form-item>
 
-        <el-form-item prop="role">
-          <el-select
-            v-model="loginForm.role"
-            placeholder="请选择角色"
-            size="large"
-            style="width: 100%"
-          >
-            <el-option label="农户" value="farmer" />
-            <el-option label="专家" value="expert" />
-            <el-option label="银行" value="bank" />
-            <el-option label="管理员" value="admin" />
-          </el-select>
-        </el-form-item>
-
         <el-form-item>
           <el-button
             type="primary"
@@ -58,9 +44,14 @@
           </el-button>
         </el-form-item>
 
+        <div class="login-footer">
+          <span>还没有账号？</span>
+          <el-link type="primary" @click="goToRegister">立即注册</el-link>
+        </div>
+
         <div class="login-tips">
-          <p>测试账号：角色代码（如：farmer、expert、bank、admin）</p>
-          <p>测试密码：123456</p>
+          <p>测试账号：admin / 密码：admin123</p>
+          <p>测试农户：farmer01 / 密码：123456</p>
         </div>
       </el-form>
     </div>
@@ -83,21 +74,17 @@ const loading = ref(false)
 // 表单数据
 const loginForm = reactive({
   username: '',
-  password: '',
-  role: ''
+  password: ''
 })
 
 // 表单验证规则
 const loginRules = {
   username: [
-    { required: true, message: '请输入账号', trigger: 'blur' }
+    { required: true, message: '请输入用户名', trigger: 'blur' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, message: '密码长度不能小于6位', trigger: 'blur' }
-  ],
-  role: [
-    { required: true, message: '请选择角色', trigger: 'change' }
   ]
 }
 
@@ -109,48 +96,19 @@ const handleLogin = async () => {
   loading.value = true
 
   try {
-    // 模拟登录API调用 - 等待后端接口完成后替换为真实API调用
-    // const res = await userApi.login(loginForm)
+    const result = await userStore.loginUser({
+      userName: loginForm.username,
+      password: loginForm.password
+    })
 
-    // 模拟登录验证
-    if (loginForm.password === '123456') {
-      // 模拟token和用户信息
-      const mockToken = 'mock-token-' + Date.now()
-      const mockUserInfo = {
-        userName: loginForm.username,
-        role: loginForm.role,
-        // 根据角色设置不同的用户信息
-        ...(loginForm.role === 'farmer' && {
-          farmName: '示例农场',
-          phone: '13800138000',
-          address: '示例地址'
-        }),
-        ...(loginForm.role === 'expert' && {
-          expertName: '示例专家',
-          specialty: '农业技术',
-          title: '高级农艺师'
-        }),
-        ...(loginForm.role === 'bank' && {
-          bankName: '示例银行',
-          branch: '农业贷款部'
-        }),
-        ...(loginForm.role === 'admin' && {
-          adminName: '系统管理员'
-        })
-      }
-
-      // 保存到store
-      userStore.setToken(mockToken)
-      userStore.setUserInfo(mockUserInfo)
-      userStore.setRole(loginForm.role)
-
+    if (result.success) {
       ElMessage.success('登录成功')
 
       // 跳转到对应角色的首页或重定向页面
-      const redirect = route.query.redirect || getDefaultRoute(loginForm.role)
+      const redirect = route.query.redirect || userStore.getDashboardPath()
       router.push(redirect)
     } else {
-      ElMessage.error('密码错误，请输入正确的密码')
+      ElMessage.error(result.message || '登录失败')
     }
   } catch (error) {
     ElMessage.error(error.message || '登录失败，请稍后重试')
@@ -159,15 +117,9 @@ const handleLogin = async () => {
   }
 }
 
-// 根据角色获取默认路由
-const getDefaultRoute = (role) => {
-  const routeMap = {
-    farmer: '/farmer/dashboard',
-    expert: '/expert/dashboard',
-    bank: '/bank/dashboard',
-    admin: '/admin/dashboard'
-  }
-  return routeMap[role] || '/'
+// 跳转注册
+const goToRegister = () => {
+  router.push('/register')
 }
 </script>
 
@@ -208,12 +160,23 @@ const getDefaultRoute = (role) => {
   margin-top: 20px;
 }
 
-.login-tips {
+.login-footer {
   text-align: center;
+  margin-top: 15px;
+  color: #666;
+  font-size: 14px;
+}
+
+.login-footer .el-link {
+  margin-left: 8px;
+}
+
+.login-tips {
   margin-top: 20px;
   padding: 15px;
   background: #f5f7fa;
   border-radius: 4px;
+  text-align: center;
 }
 
 .login-tips p {
