@@ -123,23 +123,23 @@ const validateConfirmPassword = (rule, value, callback) => {
 // 表单验证规则
 const rules = {
   userName: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度在3-20个字符', trigger: 'blur' }
+    { required: true, message: '请输入用户名', trigger: ['blur', 'change'] },
+    { min: 3, max: 20, message: '用户名长度在3-20个字符', trigger: ['blur', 'change'] }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+    { required: true, message: '请输入密码', trigger: ['blur', 'change'] },
+    { min: 6, message: '密码长度不能少于6位', trigger: ['blur', 'change'] }
   ],
   confirmPassword: [
-    { required: true, message: '请确认密码', trigger: 'blur' },
-    { validator: validateConfirmPassword, trigger: 'blur' }
+    { required: true, message: '请确认密码', trigger: ['blur', 'change'] },
+    { validator: validateConfirmPassword, trigger: ['blur', 'change'] }
   ],
   realName: [
-    { required: true, message: '请输入真实姓名', trigger: 'blur' }
+    { required: true, message: '请输入真实姓名', trigger: ['blur', 'change'] }
   ],
   phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+    { required: true, message: '请输入手机号', trigger: ['blur', 'change'] },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: ['blur', 'change'] }
   ],
   role: [
     { required: true, message: '请选择角色类型', trigger: 'change' }
@@ -149,9 +149,22 @@ const rules = {
 // 注册
 const handleRegister = async () => {
   try {
-    await registerFormRef.value.validate()
+    // 验证表单
+    const valid = await registerFormRef.value?.validate().catch(() => false)
+    if (!valid) {
+      ElMessage.warning('请填写完整且正确的注册信息')
+      return
+    }
 
     loading.value = true
+    console.log('提交注册数据:', {
+      userName: registerForm.userName,
+      password: registerForm.password,
+      realName: registerForm.realName,
+      phone: registerForm.phone,
+      role: registerForm.role
+    })
+
     const result = await userStore.registerUser({
       userName: registerForm.userName,
       password: registerForm.password,
@@ -160,6 +173,8 @@ const handleRegister = async () => {
       role: registerForm.role
     })
 
+    console.log('注册结果:', result)
+
     if (result.success) {
       ElMessage.success('注册成功，请登录')
       router.push('/login')
@@ -167,7 +182,8 @@ const handleRegister = async () => {
       ElMessage.error(result.message || '注册失败')
     }
   } catch (error) {
-    console.error('注册失败:', error)
+    console.error('注册异常:', error)
+    ElMessage.error(error.message || '注册失败，请稍后重试')
   } finally {
     loading.value = false
   }

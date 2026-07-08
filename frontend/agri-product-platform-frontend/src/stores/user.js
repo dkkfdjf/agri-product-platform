@@ -93,7 +93,7 @@ export const useUserStore = defineStore('user', () => {
   // 获取用户显示名称
   const displayName = () => {
     if (!userInfo.value) return ''
-    return userInfo.value.nickName || userInfo.value.realName || userInfo.value.userName
+    return userInfo.value.realName || userInfo.value.userName
   }
 
   // 获取用户头像

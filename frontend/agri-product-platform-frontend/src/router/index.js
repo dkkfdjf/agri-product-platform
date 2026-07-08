@@ -20,6 +20,10 @@ const routes = [
   },
   {
     path: '/',
+    redirect: '/login'
+  },
+  {
+    path: '/home',
     name: 'Home',
     component: () => import('@/views/Home.vue'),
     meta: { requiresAuth: false }
@@ -63,6 +67,43 @@ const routes = [
         path: 'profile',
         name: 'FarmerProfile',
         component: () => import('@/views/farmer/Profile.vue')
+      }
+    ]
+  },
+  // 买家路由
+  {
+    path: '/buyer',
+    component: () => import('@/layouts/BuyerLayout.vue'),
+    meta: { requiresAuth: true, roles: ['buyer'] },
+    children: [
+      {
+        path: '',
+        redirect: '/buyer/dashboard'
+      },
+      {
+        path: 'dashboard',
+        name: 'BuyerDashboard',
+        component: () => import('@/views/buyer/Dashboard.vue')
+      },
+      {
+        path: 'cart',
+        name: 'BuyerCart',
+        component: () => import('@/views/buyer/Cart.vue')
+      },
+      {
+        path: 'orders',
+        name: 'BuyerOrders',
+        component: () => import('@/views/buyer/Orders.vue')
+      },
+      {
+        path: 'expert',
+        name: 'BuyerExpert',
+        component: () => import('@/views/buyer/Expert.vue')
+      },
+      {
+        path: 'profile',
+        name: 'BuyerProfile',
+        component: () => import('@/views/buyer/Profile.vue')
       }
     ]
   },
