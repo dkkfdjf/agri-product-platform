@@ -54,6 +54,17 @@ public class UserController {
     @PostMapping("/login")
     public Result<Map<String, Object>> login(@RequestBody UserLoginRequest request) {
         try {
+            // 验证参数
+            if (request.getUserName() == null || request.getUserName().trim().isEmpty()) {
+                return Result.error("用户名不能为空");
+            }
+            if (request.getPassword() == null || request.getPassword().length() < 6) {
+                return Result.error("密码长度不能少于6位");
+            }
+            if (request.getRole() == null || request.getRole().trim().isEmpty()) {
+                return Result.error("请选择登录角色");
+            }
+
             Map<String, Object> result = userService.login(request);
             return Result.success("登录成功", result);
         } catch (Exception e) {
