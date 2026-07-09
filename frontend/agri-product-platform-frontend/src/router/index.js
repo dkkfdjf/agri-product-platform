@@ -237,6 +237,12 @@ const routes = [
     component: () => import('@/views/ExpertHelp.vue'),
     meta: { requiresAuth: false }
   },
+  {
+    path: '/knowledge',
+    name: 'KnowledgeList',
+    component: () => import('@/views/KnowledgeList.vue'),
+    meta: { requiresAuth: false }
+  },
   // 404页面
   {
     path: '/:pathMatch(.*)*',

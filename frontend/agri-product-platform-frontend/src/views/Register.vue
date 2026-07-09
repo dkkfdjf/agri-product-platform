@@ -9,6 +9,14 @@
             <circle cx="12" cy="3" r="1.5" fill="currentColor"/>
           </svg>
         </div>
+
+        <!-- 返回首页按钮 -->
+        <button class="back-home-btn" @click="goTo('/home')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 8H2M2 8l5-5M2 8l5 5"/>
+          </svg>
+          返回首页
+        </button>
         <h1 class="brand-title">加入农融汇</h1>
         <p class="brand-subtitle">开启您的农业数字化之旅</p>
 
@@ -150,6 +158,18 @@
                   <span class="role-desc">采购优质农产品</span>
                 </div>
               </el-option>
+              <el-option label="专家" value="expert">
+                <div class="role-option">
+                  <span class="role-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M22 10v6M2 10l2-4h16l2 4M12 2v3M12 10a3 3 0 100 6 3 3 0 000-6z"/>
+                      <path d="M12 16c-3 0-5 1.5-6 3v2h12v-2c-1-1.5-3-3-6-3z"/>
+                    </svg>
+                  </span>
+                  <span>专家</span>
+                  <span class="role-desc">发布知识，解答问题</span>
+                </div>
+              </el-option>
             </el-select>
           </el-form-item>
 
@@ -209,6 +229,11 @@ const registerForm = reactive({
   phone: '',
   role: ''
 })
+
+// 页面跳转
+const goTo = (path) => {
+  router.push(path)
+}
 
 const validateConfirmPassword = (rule, value, callback) => {
   if (value !== registerForm.password) {
@@ -338,6 +363,48 @@ const handleRegister = async () => {
   width: 64px;
   height: 64px;
   color: rgba(255, 255, 255, 0.9);
+  animation: subtleFloat 3s ease-in-out infinite;
+}
+
+@keyframes subtleFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* 返回首页按钮 - 精致幽灵按钮 */
+.back-home-btn {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+
+.back-home-btn:hover {
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.back-home-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .brand-title {
@@ -349,26 +416,26 @@ const handleRegister = async () => {
 }
 
 .brand-subtitle {
-  font-size: 18px;
+  font-size: 16px;
   opacity: 0.9;
-  margin: 0 0 48px;
+  margin: 0 0 32px;
 }
 
 /* 优势卡片 */
 .brand-benefits {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-bottom: 60px;
+  gap: 12px;
+  margin-bottom: 32px;
 }
 
 .benefit-card {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
   backdrop-filter: blur(10px);
   text-align: left;
 }
@@ -377,27 +444,27 @@ const handleRegister = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   color: var(--color-secondary);
   background: rgba(201, 166, 97, 0.2);
-  border-radius: 12px;
+  border-radius: 10px;
   flex-shrink: 0;
 }
 
 .benefit-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 .benefit-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  margin: 0 0 4px;
+  margin: 0 0 2px;
 }
 
 .benefit-desc {
-  font-size: 13px;
+  font-size: 12px;
   opacity: 0.8;
   margin: 0;
 }
@@ -414,7 +481,7 @@ const handleRegister = async () => {
 
 .form-card {
   width: 100%;
-  max-width: 460px;
+  max-width: 440px;
   padding: 40px;
   background: var(--color-white);
   border-radius: 24px;
@@ -509,16 +576,17 @@ const handleRegister = async () => {
 }
 
 .role-icon {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--color-primary);
 }
 
 .role-icon svg {
-  width: 100%;
-  height: 100%;
+  width: 20px;
+  height: 20px;
 }
 
 .role-desc {
@@ -576,7 +644,7 @@ const handleRegister = async () => {
 /* ===== 表单底部 ===== */
 .form-footer {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .footer-text {
@@ -599,9 +667,16 @@ const handleRegister = async () => {
 
 .form-terms {
   text-align: center;
-  padding: 16px;
+  padding: 8px 12px;
   background: var(--color-bg);
-  border-radius: 10px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.form-terms p {
+  font-size: 11px;
+  color: var(--color-text-light);
+  margin: 0;
 }
 
 .form-terms p {

@@ -3,24 +3,31 @@
     <!-- 品牌展示区 -->
     <div class="brand-section">
       <div class="brand-content">
-        <!-- 生长动画 - 签名元素 -->
-        <div class="growth-animation">
-          <svg viewBox="0 0 200 200" class="growth-svg">
-            <!-- 土壤层 -->
-            <ellipse class="soil" cx="100" cy="180" rx="60" ry="15" fill="rgba(201, 166, 97, 0.3)"/>
+        <!-- 返回首页按钮 - 精致的幽灵按钮 -->
+        <button class="back-home-btn" @click="goTo('/home')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 8H2M2 8l5-5M2 8l5 5"/>
+          </svg>
+          返回首页
+        </button>
 
-            <!-- 种子 -->
-            <ellipse class="seed" cx="100" cy="165" rx="8" ry="12" fill="rgba(201, 166, 97, 0.8)"/>
-
-            <!-- 茎 - 动态生长 -->
-            <path class="stem" d="M100 165 Q100 120 100 80" fill="none" stroke="rgba(45, 90, 61, 0.6)" stroke-width="3" stroke-linecap="round"/>
-
-            <!-- 叶子 - 依次出现 -->
-            <path class="leaf-left" d="M100 130 Q70 120 65 100" fill="none" stroke="rgba(74, 124, 89, 0.5)" stroke-width="2" stroke-linecap="round"/>
-            <path class="leaf-right" d="M100 110 Q130 100 135 80" fill="none" stroke="rgba(74, 124, 89, 0.5)" stroke-width="2" stroke-linecap="round"/>
-
-            <!-- 顶部叶子 -->
-            <path class="leaf-top" d="M100 80 Q85 60 90 45" fill="none" stroke="rgba(184, 92, 56, 0.4)" stroke-width="2" stroke-linecap="round"/>
+        <!-- 精简的品牌图标 -->
+        <div class="brand-logo">
+          <svg viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="1.5">
+            <!-- 主茎 -->
+            <path d="M40 12v40" stroke-linecap="round"/>
+            <!-- 根部 -->
+            <path d="M40 52l-6 6M40 52l6 6M40 48l-8 4M40 48l8 4" stroke-linecap="round" opacity="0.6"/>
+            <!-- 左侧叶片 -->
+            <path d="M40 20c-8 4-16 2-20-4" stroke-linecap="round"/>
+            <path d="M40 28c-10 4-18 0-22-8" stroke-linecap="round"/>
+            <path d="M40 36c-8 2-14 0-16-6" stroke-linecap="round"/>
+            <!-- 右侧叶片 -->
+            <path d="M40 20c8 4 16 2 20-4" stroke-linecap="round"/>
+            <path d="M40 28c10 4 18 0 22-8" stroke-linecap="round"/>
+            <path d="M40 36c8 2 14 0 16-6" stroke-linecap="round"/>
+            <!-- 顶端装饰 -->
+            <circle cx="40" cy="10" r="3" fill="currentColor" stroke="none"/>
           </svg>
         </div>
 
@@ -85,45 +92,89 @@
           <p class="form-subtitle">选择您的角色并登录</p>
         </div>
 
-        <!-- 角色选择 - Tab切换 -->
-        <div class="role-tabs">
-          <button
-            v-for="role in roles"
-            :key="role.value"
-            :class="['role-tab', { active: loginForm.role === role.value }]"
-            @click="selectRole(role.value)"
-          >
-            <span class="role-icon">
-              <svg v-if="role.value === 'farmer'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <circle cx="12" cy="8" r="3"/>
-                <path d="M8 21v-5a4 4 0 014-4M8 21h8M12 12v5M8 10l2-2M16 10l-2-2"/>
-              </svg>
-              <svg v-else-if="role.value === 'buyer'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <circle cx="9" cy="21" r="1"/>
-                <circle cx="20" cy="21" r="1"/>
-                <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>
-              </svg>
-              <svg v-else-if="role.value === 'expert'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M22 10v6M2 10l2-4h16l2 4M12 2v3M12 10a3 3 0 100 6 3 3 0 000-6z"/>
-                <path d="M12 16c-3 0-5 1.5-6 3v2h12v-2c-1-1.5-3-3-6-3z"/>
-              </svg>
-              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M3 21h18M5 21V7l8-4 8 4v14M8 21v-2a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                <path d="M10 9l4 4"/>
-                <circle cx="10" cy="9" r="2"/>
-                <path d="M14 13l4 4"/>
-              </svg>
-            </span>
-            <span class="role-name">{{ role.label }}</span>
-          </button>
-        </div>
-
+        <!-- 角色选择 - 下拉框 -->
         <el-form
           ref="loginFormRef"
           :model="loginForm"
           :rules="rules"
           class="login-form"
         >
+          <el-form-item prop="role">
+            <label class="form-label">登录角色</label>
+            <el-select
+              v-model="loginForm.role"
+              placeholder="请选择您的角色"
+              size="large"
+              class="form-input role-select"
+            >
+              <el-option label="农户" value="farmer">
+                <div class="role-option">
+                  <span class="role-option-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <circle cx="12" cy="8" r="3"/>
+                      <path d="M8 21v-5a4 4 0 014-4M8 21h8M12 12v5M8 10l2-2M16 10l-2-2"/>
+                    </svg>
+                  </span>
+                  <span class="role-option-text">农户</span>
+                  <span class="role-option-desc">销售农产品，申请融资</span>
+                </div>
+              </el-option>
+              <el-option label="买家" value="buyer">
+                <div class="role-option">
+                  <span class="role-option-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <circle cx="9" cy="21" r="1"/>
+                      <circle cx="20" cy="21" r="1"/>
+                      <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>
+                    </svg>
+                  </span>
+                  <span class="role-option-text">买家</span>
+                  <span class="role-option-desc">采购优质农产品</span>
+                </div>
+              </el-option>
+              <el-option label="专家" value="expert">
+                <div class="role-option">
+                  <span class="role-option-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M22 10v6M2 10l2-4h16l2 4M12 2v3M12 10a3 3 0 100 6 3 3 0 000-6z"/>
+                      <path d="M12 16c-3 0-5 1.5-6 3v2h12v-2c-1-1.5-3-3-6-3z"/>
+                    </svg>
+                  </span>
+                  <span class="role-option-text">专家</span>
+                  <span class="role-option-desc">发布知识，解答问题</span>
+                </div>
+              </el-option>
+              <el-option label="银行" value="bank">
+                <div class="role-option">
+                  <span class="role-option-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M3 21h18M5 21V7l8-4 8 4v14M8 21v-2a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                      <path d="M10 9l4 4"/>
+                      <circle cx="10" cy="9" r="2"/>
+                      <path d="M14 13l4 4"/>
+                    </svg>
+                  </span>
+                  <span class="role-option-text">银行</span>
+                  <span class="role-option-desc">审批融资，智能匹配</span>
+                </div>
+              </el-option>
+              <el-option label="管理员" value="admin">
+                <div class="role-option">
+                  <span class="role-option-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <circle cx="12" cy="12" r="3"/>
+                      <path d="M12 1v6m0 6v6"/>
+                      <path d="m5 12 6-6m0 12 6-6"/>
+                      <circle cx="12" cy="12" r="8"/>
+                    </svg>
+                  </span>
+                  <span class="role-option-text">管理员</span>
+                  <span class="role-option-desc">平台管理与维护</span>
+                </div>
+              </el-option>
+            </el-select>
+          </el-form-item>
+
           <el-form-item prop="userName">
             <label class="form-label">用户名</label>
             <el-input
@@ -254,6 +305,11 @@ const roles = [
     label: '银行',
     value: 'bank',
     icon: 'Office'
+  },
+  {
+    label: '管理员',
+    value: 'admin',
+    icon: 'Setting'
   }
 ]
 
@@ -281,6 +337,11 @@ const features = [
 
 const selectRole = (role) => {
   loginForm.role = role
+}
+
+// 页面跳转
+const goTo = (path) => {
+  router.push(path)
 }
 
 const rules = {
@@ -311,7 +372,16 @@ const handleLogin = async () => {
 
     if (result.success) {
       ElMessage.success('登录成功')
-      router.push('/')
+      // 使用服务器返回的角色跳转到对应的Dashboard
+      const actualRole = userStore.role
+      const roleMap = {
+        farmer: '/farmer/dashboard',
+        buyer: '/buyer/dashboard',
+        expert: '/expert/dashboard',
+        bank: '/bank/dashboard',
+        admin: '/admin/dashboard'
+      }
+      router.push(roleMap[actualRole] || '/home')
     } else {
       ElMessage.error(result.message || '登录失败')
     }
@@ -322,39 +392,9 @@ const handleLogin = async () => {
   }
 }
 
-// 初始化动画
+// 组件挂载完成
 onMounted(() => {
-  const style = document.createElement('style')
-  style.textContent = `
-    @keyframes seedToPlant {
-      0% {
-        stroke-dasharray: 100;
-        stroke-dashoffset: 100;
-        opacity: 0;
-      }
-      20% {
-        opacity: 1;
-      }
-      100% {
-        stroke-dasharray: 100;
-        stroke-dashoffset: 0;
-        opacity: 1;
-      }
-    }
-
-    .stem { animation: seedToPlant 1.5s ease-out forwards; }
-    .leaf-left { animation: seedToPlant 1s ease-out 0.5s forwards; opacity: 0; }
-    .leaf-right { animation: seedToPlant 1s ease-out 0.8s forwards; opacity: 0; }
-    .leaf-top { animation: seedToPlant 0.8s ease-out 1.1s forwards; opacity: 0; }
-
-    @keyframes seedPulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.1); }
-    }
-
-    .seed { animation: seedPulse 2s ease-in-out infinite; }
-  `
-  document.head.appendChild(style)
+  // 可以在这里添加其他初始化逻辑
 })
 </script>
 
@@ -411,16 +451,59 @@ onMounted(() => {
   max-width: 480px;
 }
 
-/* 生长动画 - 签名元素 */
-.growth-animation {
+/* 品牌图标 - 简洁的麦穗 */
+.brand-logo {
   display: flex;
   justify-content: center;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
 }
 
-.growth-svg {
-  width: 160px;
-  height: 160px;
+.brand-logo svg {
+  width: 48px;
+  height: 48px;
+  color: rgba(255, 255, 255, 0.85);
+  animation: subtleFloat 3s ease-in-out infinite;
+}
+
+@keyframes subtleFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* 返回首页按钮 - 精致幽灵按钮 */
+.back-home-btn {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+
+.back-home-btn:hover {
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.back-home-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .brand-title {
@@ -563,61 +646,57 @@ onMounted(() => {
   margin: 0;
 }
 
-/* 角色选择Tab */
-.role-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 28px;
-  padding: 6px;
-  background: var(--color-bg);
-  border-radius: 12px;
-}
-
-.role-tab {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 14px 12px;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
+/* 角色选择下拉框 */
+.role-select :deep(.el-select__wrapper) {
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1.5px solid var(--color-border);
+  box-shadow: none;
   transition: all 0.2s;
 }
 
-.role-tab:hover {
-  background: rgba(45, 90, 61, 0.08);
+.role-select :deep(.el-select__wrapper:hover) {
+  border-color: var(--color-primary-light);
 }
 
-.role-tab.active {
-  background: var(--color-white);
-  box-shadow: 0 2px 8px rgba(31, 41, 35, 0.1);
+.role-select :deep(.el-select__wrapper.is-focus) {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(45, 90, 61, 0.1);
 }
 
-.role-icon {
-  width: 28px;
-  height: 28px;
+/* 角色选项样式 */
+.role-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.role-option-icon {
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--color-primary);
 }
 
-.role-icon svg {
+.role-option-icon svg {
   width: 20px;
   height: 20px;
 }
 
-.role-name {
-  font-size: 13px;
+.role-option-text {
+  font-size: 15px;
   font-weight: 500;
   color: var(--color-text);
 }
 
-.role-tab.active .role-name {
-  color: var(--color-primary);
-  font-weight: 600;
+.role-option-desc {
+  font-size: 12px;
+  color: var(--color-text-light);
+  margin-left: auto;
 }
 
 /* ===== 表单样式 ===== */
@@ -817,27 +896,9 @@ onMounted(() => {
     font-size: 26px;
   }
 
-  .role-tabs {
-    gap: 4px;
-    padding: 4px;
-  }
-
-  .role-tab {
-    padding: 10px 8px;
-  }
-
-  .role-icon {
-    width: 24px;
-    height: 24px;
-  }
-
-  .role-icon svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  .role-name {
-    font-size: 11px;
+  .back-home-btn {
+    padding: 8px 14px;
+    font-size: 12px;
   }
 
   .platform-assurance {
@@ -846,6 +907,14 @@ onMounted(() => {
 
   .assurance-item {
     flex: 1 1 30%;
+  }
+
+  .role-option-text {
+    font-size: 14px;
+  }
+
+  .role-option-desc {
+    display: none;
   }
 }
 </style>

@@ -326,7 +326,7 @@
         </div>
 
         <div class="section-more">
-          <button class="btn-link" @click="goTo('/expert-help')">
+          <button class="btn-link" @click="goTo('/knowledge')">
             浏览更多知识
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 8h10M10 5l3 3-3 3"/>
@@ -661,10 +661,22 @@ const handleExpertClick = (expert) => {
 }
 
 const viewArticle = (article) => {
+  if (!userStore.isLoggedIn()) {
+    ElMessage.info('请先登录')
+    router.push('/login')
+    return
+  }
+  // TODO: 跳转到文章详情页
   ElMessage.info('查看文章：' + article.title)
 }
 
 const viewQA = (qa) => {
+  if (!userStore.isLoggedIn()) {
+    ElMessage.info('请先登录')
+    router.push('/login')
+    return
+  }
+  // TODO: 跳转到问答详情页
   ElMessage.info('查看问答：' + qa.title)
 }
 
