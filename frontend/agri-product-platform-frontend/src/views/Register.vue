@@ -1,90 +1,190 @@
 <template>
-  <div class="register-container">
-    <div class="register-box">
-      <div class="register-header">
-        <h1>农产品融销一体平台</h1>
-        <p>创建新账号</p>
-      </div>
-
-      <el-form :model="registerForm" :rules="rules" ref="registerFormRef">
-        <el-form-item prop="userName">
-          <el-input
-            v-model="registerForm.userName"
-            placeholder="请输入用户名"
-            prefix-icon="User"
-            size="large"
-          />
-        </el-form-item>
-
-        <el-form-item prop="password">
-          <el-input
-            v-model="registerForm.password"
-            type="password"
-            placeholder="请输入密码（至少6位）"
-            prefix-icon="Lock"
-            size="large"
-            show-password
-          />
-        </el-form-item>
-
-        <el-form-item prop="confirmPassword">
-          <el-input
-            v-model="registerForm.confirmPassword"
-            type="password"
-            placeholder="请确认密码"
-            prefix-icon="Lock"
-            size="large"
-            show-password
-          />
-        </el-form-item>
-
-        <el-form-item prop="realName">
-          <el-input
-            v-model="registerForm.realName"
-            placeholder="请输入真实姓名"
-            prefix-icon="UserFilled"
-            size="large"
-          />
-        </el-form-item>
-
-        <el-form-item prop="phone">
-          <el-input
-            v-model="registerForm.phone"
-            placeholder="请输入手机号"
-            prefix-icon="Phone"
-            size="large"
-          />
-        </el-form-item>
-
-        <el-form-item prop="role">
-          <el-select
-            v-model="registerForm.role"
-            placeholder="请选择角色类型"
-            size="large"
-            style="width: 100%"
-          >
-            <el-option label="农户" value="farmer" />
-            <el-option label="买家" value="buyer" />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item>
-          <el-button
-            type="primary"
-            size="large"
-            style="width: 100%"
-            :loading="loading"
-            @click="handleRegister"
-          >
-            注册
-          </el-button>
-        </el-form-item>
-
-        <div class="register-footer">
-          <span>已有账号？</span>
-          <el-link type="primary" @click="goToLogin">立即登录</el-link>
+  <div class="register-page">
+    <!-- 品牌展示区 -->
+    <div class="brand-section">
+      <div class="brand-content">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 2L12 12M12 12L8 8M12 12L16 8M12 12L12 22M12 22L8 18M12 22L16 18" />
+            <circle cx="12" cy="3" r="1.5" fill="currentColor"/>
+          </svg>
         </div>
-      </el-form>
+        <h1 class="brand-title">加入农融汇</h1>
+        <p class="brand-subtitle">开启您的农业数字化之旅</p>
+
+        <div class="brand-benefits">
+          <div class="benefit-card">
+            <div class="benefit-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+              </svg>
+            </div>
+            <h3 class="benefit-title">便捷融资</h3>
+            <p class="benefit-desc">快速审批，灵活还款</p>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="8" r="4"/>
+                <path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/>
+              </svg>
+            </div>
+            <h3 class="benefit-title">专家指导</h3>
+            <p class="benefit-desc">专业农业技术支持</p>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M20 9v11a2 2 0 01-2 2H6a2 2 0 01-2-2V9"/>
+                <path d="M9 22V12h6v10M2 10.6L12 2l10 8.6"/>
+              </svg>
+            </div>
+            <h3 class="benefit-title">直达市场</h3>
+            <p class="benefit-desc">农户与买家直接对接</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 注册表单区 -->
+    <div class="form-section">
+      <div class="form-card">
+        <div class="form-header">
+          <h2 class="form-title">创建账号</h2>
+          <p class="form-subtitle">填写信息，开始您的农业之旅</p>
+        </div>
+
+        <el-form
+          ref="registerFormRef"
+          :model="registerForm"
+          :rules="rules"
+          class="register-form"
+        >
+          <el-form-item prop="userName">
+            <label class="form-label">用户名</label>
+            <el-input
+              v-model="registerForm.userName"
+              placeholder="请输入用户名"
+              size="large"
+              class="form-input"
+            />
+          </el-form-item>
+
+          <el-form-item prop="password">
+            <label class="form-label">密码</label>
+            <el-input
+              v-model="registerForm.password"
+              type="password"
+              placeholder="请输入密码（至少6位）"
+              size="large"
+              show-password
+              class="form-input"
+            />
+          </el-form-item>
+
+          <el-form-item prop="confirmPassword">
+            <label class="form-label">确认密码</label>
+            <el-input
+              v-model="registerForm.confirmPassword"
+              type="password"
+              placeholder="请再次输入密码"
+              size="large"
+              show-password
+              class="form-input"
+            />
+          </el-form-item>
+
+          <el-form-item prop="realName">
+            <label class="form-label">真实姓名</label>
+            <el-input
+              v-model="registerForm.realName"
+              placeholder="请输入真实姓名"
+              size="large"
+              class="form-input"
+            />
+          </el-form-item>
+
+          <el-form-item prop="phone">
+            <label class="form-label">手机号码</label>
+            <el-input
+              v-model="registerForm.phone"
+              placeholder="请输入手机号码"
+              size="large"
+              class="form-input"
+            />
+          </el-form-item>
+
+          <el-form-item prop="role">
+            <label class="form-label">角色类型</label>
+            <el-select
+              v-model="registerForm.role"
+              placeholder="请选择您的角色"
+              size="large"
+              class="form-input"
+            >
+              <el-option label="农户" value="farmer">
+                <div class="role-option">
+                  <span class="role-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <circle cx="12" cy="8" r="3"/>
+                      <path d="M8 21v-5a4 4 0 014-4M8 21h8M12 12v5M8 10l2-2M16 10l-2-2"/>
+                    </svg>
+                  </span>
+                  <span>农户</span>
+                  <span class="role-desc">销售农产品，申请融资</span>
+                </div>
+              </el-option>
+              <el-option label="买家" value="buyer">
+                <div class="role-option">
+                  <span class="role-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <circle cx="9" cy="21" r="1"/>
+                      <circle cx="20" cy="21" r="1"/>
+                      <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>
+                    </svg>
+                  </span>
+                  <span>买家</span>
+                  <span class="role-desc">采购优质农产品</span>
+                </div>
+              </el-option>
+            </el-select>
+          </el-form-item>
+
+          <el-form-item>
+            <button
+              type="button"
+              class="btn-submit"
+              :disabled="loading"
+              @click="handleRegister"
+            >
+              <span v-if="!loading">创建账号</span>
+              <span v-else class="loading-text">
+                <svg class="loading-icon" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.3"/>
+                  <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+                注册中...
+              </span>
+            </button>
+          </el-form-item>
+        </el-form>
+
+        <div class="form-footer">
+          <span class="footer-text">已有账号？</span>
+          <router-link to="/login" class="footer-link">立即登录</router-link>
+        </div>
+
+        <div class="form-terms">
+          <p>注册即表示您同意我们的
+            <a href="#" class="terms-link">服务条款</a>
+            和
+            <a href="#" class="terms-link">隐私政策</a>
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -101,7 +201,6 @@ const userStore = useUserStore()
 const registerFormRef = ref(null)
 const loading = ref(false)
 
-// 注册表单
 const registerForm = reactive({
   userName: '',
   password: '',
@@ -111,7 +210,6 @@ const registerForm = reactive({
   role: ''
 })
 
-// 自定义验证：确认密码
 const validateConfirmPassword = (rule, value, callback) => {
   if (value !== registerForm.password) {
     callback(new Error('两次输入的密码不一致'))
@@ -120,7 +218,6 @@ const validateConfirmPassword = (rule, value, callback) => {
   }
 }
 
-// 表单验证规则
 const rules = {
   userName: [
     { required: true, message: '请输入用户名', trigger: ['blur', 'change'] },
@@ -146,25 +243,16 @@ const rules = {
   ]
 }
 
-// 注册
 const handleRegister = async () => {
+  const valid = await registerFormRef.value?.validate().catch(() => false)
+  if (!valid) {
+    ElMessage.warning('请填写完整且正确的注册信息')
+    return
+  }
+
+  loading.value = true
+
   try {
-    // 验证表单
-    const valid = await registerFormRef.value?.validate().catch(() => false)
-    if (!valid) {
-      ElMessage.warning('请填写完整且正确的注册信息')
-      return
-    }
-
-    loading.value = true
-    console.log('提交注册数据:', {
-      userName: registerForm.userName,
-      password: registerForm.password,
-      realName: registerForm.realName,
-      phone: registerForm.phone,
-      role: registerForm.role
-    })
-
     const result = await userStore.registerUser({
       userName: registerForm.userName,
       password: registerForm.password,
@@ -173,8 +261,6 @@ const handleRegister = async () => {
       role: registerForm.role
     })
 
-    console.log('注册结果:', result)
-
     if (result.success) {
       ElMessage.success('注册成功，请登录')
       router.push('/login')
@@ -182,62 +268,383 @@ const handleRegister = async () => {
       ElMessage.error(result.message || '注册失败')
     }
   } catch (error) {
-    console.error('注册异常:', error)
     ElMessage.error(error.message || '注册失败，请稍后重试')
   } finally {
     loading.value = false
   }
 }
-
-// 跳转登录
-const goToLogin = () => {
-  router.push('/login')
-}
 </script>
 
 <style scoped>
-.register-container {
+/* ===== 全局变量 ===== */
+.register-page {
+  --color-primary: #2D5A3D;
+  --color-primary-light: #4A7C59;
+  --color-primary-dark: #1F4229;
+  --color-secondary: #C9A661;
+  --color-accent: #B85C38;
+  --color-bg: #F7F5F0;
+  --color-text: #1F2923;
+  --color-text-light: #6B7280;
+  --color-border: #E5E0D8;
+  --color-white: #FFFFFF;
+  --font-display: 'Noto Serif SC', serif;
+  --font-body: 'Noto Sans SC', sans-serif;
+}
+
+/* ===== 页面布局 ===== */
+.register-page {
+  display: flex;
   min-height: 100vh;
-  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  background: var(--color-bg);
+}
+
+/* ===== 品牌区域 ===== */
+.brand-section {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 48px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  position: relative;
+  overflow: hidden;
 }
 
-.register-box {
-  background: white;
-  border-radius: 12px;
-  padding: 40px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+.brand-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 30% 20%, rgba(201, 166, 97, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
 }
 
-.register-header {
+.brand-content {
+  position: relative;
   text-align: center;
-  margin-bottom: 30px;
+  color: var(--color-white);
+  z-index: 1;
+  max-width: 480px;
 }
 
-.register-header h1 {
-  font-size: 24px;
-  color: #333;
+.brand-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.brand-logo svg {
+  width: 64px;
+  height: 64px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.brand-title {
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 700;
+  margin: 0 0 16px;
+  letter-spacing: 0.02em;
+}
+
+.brand-subtitle {
+  font-size: 18px;
+  opacity: 0.9;
+  margin: 0 0 48px;
+}
+
+/* 优势卡片 */
+.brand-benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 60px;
+}
+
+.benefit-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  text-align: left;
+}
+
+.benefit-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  color: var(--color-secondary);
+  background: rgba(201, 166, 97, 0.2);
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.benefit-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.benefit-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.benefit-desc {
+  font-size: 13px;
+  opacity: 0.8;
+  margin: 0;
+}
+
+/* ===== 表单区域 ===== */
+.form-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  background: var(--color-bg);
+  overflow-y: auto;
+}
+
+.form-card {
+  width: 100%;
+  max-width: 460px;
+  padding: 40px;
+  background: var(--color-white);
+  border-radius: 24px;
+  box-shadow: 0 4px 24px rgba(31, 41, 35, 0.08);
+}
+
+.form-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.form-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 12px;
+}
+
+.form-subtitle {
+  font-size: 15px;
+  color: var(--color-text-light);
+  margin: 0;
+}
+
+/* ===== 表单样式 ===== */
+.register-form {
+  margin-bottom: 24px;
+}
+
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
   margin-bottom: 8px;
 }
 
-.register-header p {
-  color: #999;
-  font-size: 14px;
+:deep(.form-input .el-input__wrapper) {
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1.5px solid var(--color-border);
+  box-shadow: none;
+  transition: all 0.2s;
 }
 
-.register-footer {
+:deep(.form-input .el-input__wrapper:hover) {
+  border-color: var(--color-primary-light);
+}
+
+:deep(.form-input .el-input__wrapper.is-focus) {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(45, 90, 61, 0.1);
+}
+
+:deep(.form-input .el-input__inner) {
+  font-size: 15px;
+  color: var(--color-text);
+}
+
+:deep(.el-select .el-select__wrapper) {
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1.5px solid var(--color-border);
+  box-shadow: none;
+}
+
+:deep(.el-select .el-select__wrapper:hover) {
+  border-color: var(--color-primary-light);
+}
+
+:deep(.el-select .el-select__wrapper.is-focus) {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(45, 90, 61, 0.1);
+}
+
+:deep(.el-form-item) {
+  margin-bottom: 20px;
+}
+
+:deep(.el-form-item__error) {
+  font-size: 13px;
+  color: var(--color-accent);
+}
+
+/* 角色选项样式 */
+.role-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.role-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.role-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.role-desc {
+  font-size: 12px;
+  color: var(--color-text-light);
+  margin-left: auto;
+}
+
+/* 提交按钮 */
+.btn-submit {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-white);
+  background: var(--color-primary);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 8px;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 90, 61, 0.3);
+}
+
+.btn-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.loading-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loading-icon {
+  width: 18px;
+  height: 18px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== 表单底部 ===== */
+.form-footer {
   text-align: center;
-  margin-top: 20px;
-  color: #666;
-  font-size: 14px;
+  margin-bottom: 20px;
 }
 
-.register-footer .el-link {
+.footer-text {
+  font-size: 14px;
+  color: var(--color-text-light);
+}
+
+.footer-link {
   margin-left: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-link:hover {
+  color: var(--color-primary-dark);
+}
+
+.form-terms {
+  text-align: center;
+  padding: 16px;
+  background: var(--color-bg);
+  border-radius: 10px;
+}
+
+.form-terms p {
+  font-size: 12px;
+  color: var(--color-text-light);
+  margin: 0;
+}
+
+.terms-link {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.terms-link:hover {
+  text-decoration: underline;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 1024px) {
+  .brand-section {
+    display: none;
+  }
+
+  .form-section {
+    padding: 24px;
+  }
+
+  .form-card {
+    padding: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .form-card {
+    padding: 20px;
+  }
+
+  .form-title {
+    font-size: 26px;
+  }
+
+  .brand-title {
+    font-size: 36px;
+  }
 }
 </style>

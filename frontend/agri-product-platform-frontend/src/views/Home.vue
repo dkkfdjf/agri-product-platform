@@ -77,15 +77,34 @@
         </div>
         <div class="hero-visual">
           <div class="visual-card visual-card-1">
-            <div class="card-icon">🌾</div>
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 2L12 12M12 12L8 8M12 12L16 8M12 12L12 22M12 22L8 18M12 22L16 18" />
+                <circle cx="12" cy="3" r="1.5" fill="currentColor"/>
+                <ellipse cx="12" cy="18" rx="3" ry="5" fill="currentColor" opacity="0.3"/>
+              </svg>
+            </div>
             <div class="card-label">农产品交易</div>
           </div>
           <div class="visual-card visual-card-2">
-            <div class="card-icon">💰</div>
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+                <circle cx="12" cy="12" r="2" fill="currentColor"/>
+                <path d="M8 8l2-2M8 16l2 2M16 8l-2-2M16 16l-2 2" stroke-width="1"/>
+              </svg>
+            </div>
             <div class="card-label">融资服务</div>
           </div>
           <div class="visual-card visual-card-3">
-            <div class="card-icon">👨‍🌾</div>
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="8" r="3"/>
+                <path d="M12 11v4M12 15l-3 3M12 15l3 3"/>
+                <path d="M8 21h8a2 2 0 002-2v-5a2 2 0 00-2-2H8a2 2 0 00-2 2v5a2 2 0 002 2z"/>
+                <path d="M9 6l1.5-1.5M15 6l-1.5-1.5" stroke-width="1"/>
+              </svg>
+            </div>
             <div class="card-label">专家咨询</div>
           </div>
         </div>
@@ -340,7 +359,15 @@
       <div class="footer-inner">
         <div class="footer-section">
           <div class="footer-logo">
-            <span class="logo-icon">🌱</span>
+            <span class="logo-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 2v10M12 12c0 4 2 6 4 8M12 12c0 4-2 6-4 8"/>
+                <path d="M12 2a3 3 0 013 3c0 1.5-1 2.5-3 3s-3 1.5-3 3a3 3 0 013 3z" fill="currentColor" opacity="0.2"/>
+                <path d="M16 8a2 2 0 01-2 2h-4a2 2 0 01-2-2"/>
+                <path d="M12 12v5M10 17h4"/>
+                <path d="M8 4s2 1 4 1 4-1 4-1"/>
+              </svg>
+            </span>
             <span>农融汇</span>
           </div>
           <p class="footer-desc">连接农户与市场，助力农业发展</p>
@@ -952,7 +979,19 @@ onMounted(() => {
 }
 
 .card-icon {
-  font-size: 48px;
+  width: 64px;
+  height: 64px;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(45, 90, 61, 0.1);
+  border-radius: 16px;
+}
+
+.card-icon svg {
+  width: 36px;
+  height: 36px;
 }
 
 .card-label {
@@ -1655,7 +1694,17 @@ onMounted(() => {
 }
 
 .footer-logo .logo-icon {
-  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  color: var(--color-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer-logo .logo-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .footer-desc {
