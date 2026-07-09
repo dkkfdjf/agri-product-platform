@@ -64,8 +64,8 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">2,845</div>
-          <div class="stat-label">获得点赞</div>
+          <div class="stat-value">98%</div>
+          <div class="stat-label">用户满意度</div>
         </div>
       </div>
     </div>
@@ -162,7 +162,7 @@
             <div class="knowledge-title">{{ knowledge.title }}</div>
             <div class="knowledge-meta">
               <span class="knowledge-views">{{ knowledge.views }} 阅读</span>
-              <span class="knowledge-likes">{{ knowledge.likes }} 点赞</span>
+              <span class="knowledge-comments">{{ knowledge.comments }} 评论</span>
               <span class="knowledge-time">{{ knowledge.time }}</span>
             </div>
           </div>
@@ -212,21 +212,21 @@ const recentKnowledge = ref([
     id: 1,
     title: '夏季水稻病虫害综合防治技术指南',
     views: 1234,
-    likes: 156,
+    comments: 45,
     time: '3天前'
   },
   {
     id: 2,
     title: '大棚蔬菜种植管理要点详解',
     views: 856,
-    likes: 98,
+    comments: 32,
     time: '1周前'
   },
   {
     id: 3,
     title: '有机农业种植技术与实践',
     views: 2345,
-    likes: 234,
+    comments: 78,
     time: '2周前'
   }
 ])

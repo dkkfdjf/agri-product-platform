@@ -72,9 +72,9 @@
       <div class="card-header">
         <h3 class="card-title">平台数据趋势</h3>
         <div class="time-filter">
-          <el-button size="small">日</el-button>
-          <el-button size="small" type="primary">周</el-button>
-          <el-button size="small">月</el-button>
+          <el-button size="small" @click="handleTimeFilter('day')">日</el-button>
+          <el-button size="small" type="primary" @click="handleTimeFilter('week')">周</el-button>
+          <el-button size="small" @click="handleTimeFilter('month')">月</el-button>
         </div>
       </div>
       <div class="chart-placeholder">
@@ -109,7 +109,7 @@
               <div class="pending-title">3条商品审核待处理</div>
               <div class="pending-time">紧急</div>
             </div>
-            <el-button type="primary" size="small">处理</el-button>
+            <el-button type="primary" size="small" @click="handlePendingAction('product')">处理</el-button>
           </div>
           <div class="pending-item warning">
             <div class="pending-icon">
@@ -122,7 +122,7 @@
               <div class="pending-title">5个用户投诉待回复</div>
               <div class="pending-time">今天</div>
             </div>
-            <el-button type="primary" size="small">查看</el-button>
+            <el-button type="primary" size="small" @click="handlePendingAction('complaint')">查看</el-button>
           </div>
           <div class="pending-item">
             <div class="pending-icon">
@@ -136,7 +136,7 @@
               <div class="pending-title">4个专家申请待审核</div>
               <div class="pending-time">本周</div>
             </div>
-            <el-button type="primary" size="small">审核</el-button>
+            <el-button type="primary" size="small" @click="handlePendingAction('expert')">审核</el-button>
           </div>
         </div>
       </div>
@@ -220,8 +220,11 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
 
+const router = useRouter()
 const userStore = useUserStore()
 
 const greeting = computed(() => {
@@ -230,6 +233,27 @@ const greeting = computed(() => {
   if (hour < 18) return '下午好'
   return '晚上好'
 })
+
+// 处理时间筛选
+const handleTimeFilter = (type) => {
+  ElMessage.info('切换到' + (type === 'day' ? '日' : type === 'week' ? '周' : '月') + '视图')
+  // TODO: 根据时间类型加载对应的数据
+}
+
+// 处理待处理事项
+const handlePendingAction = (type) => {
+  switch (type) {
+    case 'product':
+      router.push('/admin/products')
+      break
+    case 'complaint':
+      ElMessage.info('跳转到投诉管理页面')
+      break
+    case 'expert':
+      router.push('/admin/experts')
+      break
+  }
+}
 
 const recentActivities = ref([
   { id: 1, user: '张农场', action: '发布了新商品', target: '有机大米 50kg', time: '5分钟前' },

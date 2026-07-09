@@ -19,28 +19,40 @@
 
     <div class="header-center">
       <nav class="header-nav">
-        <router-link to="/market" class="nav-item">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="9" cy="21" r="1"/>
-            <circle cx="20" cy="21" r="1"/>
-            <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>
-          </svg>
-          <span>农产品交易</span>
-        </router-link>
-        <router-link to="/finance-products" class="nav-item">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
-            <circle cx="12" cy="12" r="2" fill="currentColor"/>
-          </svg>
-          <span>融资服务</span>
-        </router-link>
-        <router-link to="/expert-help" class="nav-item">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="12" cy="8" r="3"/>
-            <path d="M8 21v-5a4 4 0 014-4M8 21h8M12 12v5M8 10l2-2M16 10l-2-2"/>
-          </svg>
-          <span>专家助力</span>
-        </router-link>
+        <template v-if="!userStore.isLoggedIn()">
+          <router-link to="/market" class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="9" cy="21" r="1"/>
+              <circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>
+            </svg>
+            <span>农产品交易</span>
+          </router-link>
+          <router-link to="/finance-products" class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+              <circle cx="12" cy="12" r="2" fill="currentColor"/>
+            </svg>
+            <span>融资服务</span>
+          </router-link>
+          <router-link to="/expert-help" class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="8" r="3"/>
+              <path d="M8 21v-5a4 4 0 014-4M8 21h8M12 12v5M8 10l2-2M16 10l-2-2"/>
+            </svg>
+            <span>专家助力</span>
+          </router-link>
+        </template>
+        <template v-else>
+          <router-link to="/market" class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="9" cy="21" r="1"/>
+              <circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>
+            </svg>
+            <span>市场</span>
+          </router-link>
+        </template>
       </nav>
     </div>
 

@@ -23,11 +23,11 @@
               <div class="expert-specialty">{{ expert.specialty }}</div>
               <div class="expert-stats">
                 <span class="stat-item">{{ expert.answersCount }} 回答</span>
-                <span class="stat-item">{{ expert.likesCount }} 点赞</span>
+                <span class="stat-item">满意度 {{ expert.satisfactionRate }}%</span>
               </div>
             </div>
             <div class="expert-actions">
-              <el-button type="primary" size="small">提问</el-button>
+              <el-button type="primary" size="small" @click="handleAskExpert(expert)">提问</el-button>
             </div>
           </div>
         </div>
@@ -77,6 +77,23 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
+
+const router = useRouter()
+const userStore = useUserStore()
+
+// 处理向专家提问
+const handleAskExpert = (expert) => {
+  if (!userStore.isLoggedIn()) {
+    ElMessage.info('请先登录后向专家提问')
+    router.push('/login')
+    return
+  }
+  // TODO: 跳转到提问页面或打开提问对话框
+  ElMessage.info('向专家提问：' + expert.name)
+}
 
 const experts = ref([
   {
@@ -85,7 +102,7 @@ const experts = ref([
     title: '高级农艺师',
     specialty: '水稻种植、病虫害防治',
     answersCount: 156,
-    likesCount: 234
+    satisfactionRate: 98
   },
   {
     id: 2,
@@ -93,7 +110,7 @@ const experts = ref([
     title: '农业技术推广专家',
     specialty: '设施农业、大棚技术',
     answersCount: 89,
-    likesCount: 156
+    satisfactionRate: 95
   },
   {
     id: 3,
@@ -101,7 +118,7 @@ const experts = ref([
     title: '土壤肥料专家',
     specialty: '土壤改良、科学施肥',
     answersCount: 67,
-    likesCount: 98
+    satisfactionRate: 96
   }
 ])
 

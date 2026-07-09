@@ -26,7 +26,7 @@
 
     <!-- 商品网格 -->
     <div class="products-grid">
-      <div v-for="product in products" :key="product.id" class="product-card">
+      <div v-for="product in products" :key="product.id" class="product-card" @click="handleProductClick(product)">
         <div class="product-image">
           <div class="image-placeholder">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -52,9 +52,26 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
+
+const router = useRouter()
+const userStore = useUserStore()
 
 const filterType = ref('all')
 const searchKeyword = ref('')
+
+// 处理产品点击
+const handleProductClick = (product) => {
+  if (!userStore.isLoggedIn()) {
+    ElMessage.info('请先登录后查看产品详情')
+    router.push('/login')
+    return
+  }
+  // TODO: 跳转到产品详情页
+  ElMessage.info('查看产品详情：' + product.name)
+}
 
 const products = ref([
   { id: 1, name: '有机东北大米', origin: '黑龙江·五常', price: '8.50', unit: 'kg', seller: '张农场', type: 'supply' },

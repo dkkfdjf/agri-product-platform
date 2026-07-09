@@ -41,7 +41,7 @@
           </div>
         </div>
         <div class="product-actions">
-          <el-button type="primary" size="large" block>立即申请</el-button>
+          <el-button type="primary" size="large" block @click="handleApply(product)">立即申请</el-button>
         </div>
       </div>
     </div>
@@ -50,6 +50,27 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
+
+const router = useRouter()
+const userStore = useUserStore()
+
+// 处理融资申请
+const handleApply = (product) => {
+  if (!userStore.isLoggedIn()) {
+    ElMessage.info('请先登录后申请融资')
+    router.push('/login')
+    return
+  }
+  if (userStore.role !== 'farmer') {
+    ElMessage.warning('融资服务仅对农户开放')
+    return
+  }
+  // TODO: 跳转到融资申请页面
+  ElMessage.info('申请产品：' + product.name)
+}
 
 const products = ref([
   {
