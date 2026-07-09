@@ -4,8 +4,13 @@
     <el-header class="header">
       <div class="header-content">
         <div class="logo" @click="goTo('/')">
-          <el-icon :size="28" color="#fff"><Grid /></el-icon>
-          <span>农产品融销平台</span>
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 2L12 12M12 12L8 8M12 12L16 8M12 12L12 22M12 22L8 18M12 22L16 18" />
+              <circle cx="12" cy="3" r="1.5" fill="currentColor"/>
+            </svg>
+          </div>
+          <span>农融汇</span>
         </div>
         <el-menu
           :default-active="activeMenu"
@@ -49,7 +54,10 @@
 
     <!-- 主内容 -->
     <el-main class="main">
-      <h2 class="page-title">专家助力</h2>
+      <div class="page-header">
+        <h2 class="page-title">专家助力</h2>
+        <p class="page-subtitle">农业专家在线答疑，为您提供专业的技术指导</p>
+      </div>
 
       <el-tabs v-model="activeTab">
         <!-- 知识 -->
@@ -381,35 +389,67 @@ onMounted(() => {
 
 <style scoped>
 .expert-help-page {
+  --color-primary: #2D5A3D;
+  --color-primary-light: #4A7C59;
+  --color-primary-dark: #1F4229;
+  --color-secondary: #C9A661;
+  --color-accent: #B85C38;
+  --color-bg: #F7F5F0;
+  --color-text: #1F2923;
+  --color-text-light: #6B7280;
+  --color-border: #E5E0D8;
+  --color-white: #FFFFFF;
+  --font-display: 'Noto Serif SC', serif;
+  --font-body: 'Noto Sans SC', sans-serif;
+
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: var(--color-bg);
 }
 
 .header {
-  background-color: #4CAF50;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   padding: 0;
-  height: 60px;
+  height: 72px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
 .header-content {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
   height: 100%;
   display: flex;
   align-items: center;
-  padding: 0 20px;
-  gap: 40px;
+  padding: 0 32px;
+  gap: 48px;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: #fff;
-  font-size: 18px;
-  font-weight: bold;
+  gap: 12px;
+  color: var(--color-white);
+  font-size: 20px;
+  font-weight: 600;
+  font-family: var(--font-display);
   cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.logo:hover {
+  opacity: 0.9;
+}
+
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  color: var(--color-secondary);
+}
+
+.logo-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .nav-menu {
@@ -418,16 +458,18 @@ onMounted(() => {
   background: transparent;
 }
 
-.nav-menu .el-menu-item {
+.nav-menu :deep(.el-menu-item) {
   color: rgba(255, 255, 255, 0.8);
   border-bottom: 2px solid transparent;
+  font-size: 15px;
+  font-weight: 500;
 }
 
-.nav-menu .el-menu-item:hover,
-.nav-menu .el-menu-item.is-active {
-  color: #fff;
+.nav-menu :deep(.el-menu-item:hover),
+.nav-menu :deep(.el-menu-item.is-active) {
+  color: var(--color-white);
   background: transparent;
-  border-bottom-color: #fff;
+  border-bottom-color: var(--color-white);
 }
 
 .header-actions {
@@ -438,119 +480,287 @@ onMounted(() => {
 .user-name {
   display: flex;
   align-items: center;
-  gap: 5px;
-  color: #fff;
+  gap: 8px;
+  padding: 8px 16px;
+  color: var(--color-white);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.user-name:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .main {
   flex: 1;
-  padding: 20px;
-  max-width: 1200px;
+  padding: 48px 32px;
+  max-width: 1280px;
   margin: 0 auto;
   width: 100%;
 }
 
-.page-title {
-  margin-bottom: 30px;
-  color: #333;
+.page-header {
   text-align: center;
+  margin-bottom: 48px;
 }
 
+.page-title {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 12px;
+}
+
+.page-subtitle {
+  font-size: 16px;
+  color: var(--color-text-light);
+  margin: 0;
+}
+
+/* Tabs */
+:deep(.el-tabs) {
+  background: transparent;
+}
+
+:deep(.el-tabs__header) {
+  margin: 0 0 32px;
+  border-bottom: 2px solid var(--color-border);
+}
+
+:deep(.el-tabs__nav-wrap::after) {
+  display: none;
+}
+
+:deep(.el-tabs__item) {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-text-light);
+  padding: 0 24px;
+  height: 48px;
+  line-height: 48px;
+}
+
+:deep(.el-tabs__item:hover) {
+  color: var(--color-primary);
+}
+
+:deep(.el-tabs__item.is-active) {
+  color: var(--color-primary);
+}
+
+:deep(.el-tabs__active-bar) {
+  height: 3px;
+  background: var(--color-primary);
+}
+
+/* Knowledge Cards */
 .knowledge-card {
   margin-bottom: 20px;
   cursor: pointer;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  transition: all 0.3s;
+}
+
+.knowledge-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(45, 90, 61, 0.12);
+  border-color: var(--color-primary-light);
+}
+
+.knowledge-card :deep(.el-card__body) {
+  padding: 24px;
 }
 
 .knowledge-card .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.knowledge-card .views {
+  font-size: 13px;
+  color: var(--color-text-light);
 }
 
 .knowledge-card h3 {
-  margin: 10px 0;
-  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 12px;
 }
 
 .knowledge-card .summary {
-  color: #666;
-  margin-bottom: 15px;
+  font-size: 14px;
+  color: var(--color-text-light);
+  line-height: 1.6;
+  margin-bottom: 16px;
   min-height: 40px;
 }
 
 .knowledge-card .card-footer {
   display: flex;
   justify-content: space-between;
-  color: #999;
-  font-size: 12px;
+  color: var(--color-text-light);
+  font-size: 13px;
 }
 
+/* Expert Cards */
 .expert-card {
   margin-bottom: 20px;
   text-align: center;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  transition: all 0.3s;
+}
+
+.expert-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(45, 90, 61, 0.12);
+  border-color: var(--color-secondary);
+}
+
+.expert-card :deep(.el-card__body) {
+  padding: 28px 20px;
 }
 
 .expert-card h3 {
-  margin: 15px 0 5px 0;
-  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 16px 0 8px;
 }
 
 .expert-card .title {
-  margin: 0 0 5px 0;
-  color: #4CAF50;
+  margin: 0 0 8px;
+  color: var(--color-secondary);
   font-size: 14px;
+  font-weight: 500;
 }
 
 .expert-card .specialty {
-  margin: 0 0 15px 0;
-  color: #999;
-  font-size: 12px;
+  margin: 0 0 20px;
+  color: var(--color-text-light);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
+.expert-card :deep(.el-button) {
+  border-radius: 8px;
+}
+
+/* Table Styling */
+:deep(.el-table) {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+:deep(.el-table th) {
+  background: var(--color-bg);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+:deep(.el-table tr:hover > td) {
+  background: rgba(45, 90, 61, 0.05);
+}
+
+/* Dialog Styling */
+:deep(.el-dialog) {
+  border-radius: 16px;
+}
+
+:deep(.el-dialog__header) {
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+:deep(.el-dialog__title) {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+:deep(.el-dialog__body) {
+  padding: 24px;
+}
+
+/* Knowledge Detail */
 .knowledge-detail h2 {
-  margin-bottom: 15px;
-  color: #333;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 16px;
 }
 
 .knowledge-detail .meta {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   display: flex;
-  gap: 15px;
-  color: #999;
+  flex-wrap: wrap;
+  gap: 16px;
+  color: var(--color-text-light);
   font-size: 14px;
 }
 
 .knowledge-detail .content {
   line-height: 1.8;
-  color: #666;
+  color: var(--color-text);
   white-space: pre-wrap;
+  font-size: 15px;
 }
 
+/* Question Detail */
 .question-detail h3 {
-  margin-bottom: 15px;
-  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 16px;
 }
 
 .question-content {
-  padding: 15px;
-  background: #f5f7fa;
-  border-radius: 4px;
+  padding: 20px;
+  background: var(--color-bg);
+  border-radius: 8px;
 }
 
 .question-content p {
-  margin-bottom: 15px;
+  margin-bottom: 16px;
+  line-height: 1.6;
 }
 
 .question-content .answer {
-  color: #4CAF50;
-  padding-top: 15px;
-  border-top: 1px dashed #ddd;
+  color: var(--color-primary);
+  padding-top: 16px;
+  border-top: 1px dashed var(--color-border);
 }
 
 .question-content .no-answer {
-  color: #999;
+  color: var(--color-text-light);
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .header-content {
+    padding: 0 20px;
+    gap: 24px;
+  }
+
+  .nav-menu {
+    display: none;
+  }
+
+  .main {
+    padding: 32px 20px;
+  }
+
+  .page-title {
+    font-size: 28px;
+  }
 }
 
 :deep(.el-menu--horizontal) {
