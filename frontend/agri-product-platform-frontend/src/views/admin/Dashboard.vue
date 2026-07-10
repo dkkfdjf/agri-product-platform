@@ -17,7 +17,7 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">10,245</div>
+          <div class="stat-value">{{ formatNumber(stats.userCount) }}</div>
           <div class="stat-label">注册用户</div>
           <div class="stat-trend positive">
             <el-icon><Top /></el-icon>
@@ -35,7 +35,7 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">5,678</div>
+          <div class="stat-value">{{ formatNumber(stats.productCount) }}</div>
           <div class="stat-label">在售商品</div>
         </div>
       </div>
@@ -48,8 +48,8 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">¥ 12.8M</div>
-          <div class="stat-label">融资总额</div>
+          <div class="stat-value">{{ formatNumber(stats.financeCount) }}</div>
+          <div class="stat-label">融资申请</div>
         </div>
       </div>
 
@@ -61,7 +61,7 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">528</div>
+          <div class="stat-value">{{ formatNumber(stats.expertCount) }}</div>
           <div class="stat-label">认证专家</div>
         </div>
       </div>
@@ -95,7 +95,7 @@
       <div class="content-card">
         <div class="card-header">
           <h3 class="card-title">待处理事项</h3>
-          <span class="badge-count">12</span>
+          <span class="badge-count">{{ stats.pendingCount || 12 }}</span>
         </div>
         <div class="pending-list">
           <div class="pending-item urgent">
@@ -219,19 +219,81 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { getAdminStats } from '@/api/admin'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+const loading = ref(false)
+const stats = ref({
+  userCount: 0,
+  productCount: 0,
+  financeCount: 0,
+  expertCount: 0,
+  knowledgeCount: 0,
+  questionCount: 0,
+  reserveCount: 0,
+  pendingCount: 0
+})
 
 const greeting = computed(() => {
   const hour = new Date().getHours()
   if (hour < 12) return '早上好'
   if (hour < 18) return '下午好'
   return '晚上好'
+})
+
+// 格式化数字
+const formatNumber = (num) => {
+  if (num === undefined || num === null) return '0'
+  return num.toLocaleString()
+}
+
+// 格式化时间
+const formatTime = (timestamp) => {
+  if (!timestamp) return ''
+  const now = Date.now()
+  const diff = now - timestamp
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes}分钟前`
+  if (hours < 24) return `${hours}小时前`
+  if (days < 7) return `${days}天前`
+
+  return new Date(timestamp).toLocaleDateString('zh-CN')
+}
+
+// 获取统计数据
+const fetchStats = async () => {
+  try {
+    loading.value = true
+    const response = await getAdminStats()
+    if (response.code === 200 && response.data) {
+      stats.value = {
+        ...stats.value,
+        ...response.data,
+        // 设置一些默认值，因为后端可能不返回所有字段
+        userCount: response.data.userCount || 0,
+        expertCount: response.data.expertCount || 0
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch stats:', error)
+    ElMessage.error('获取统计数据失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchStats()
 })
 
 // 处理时间筛选

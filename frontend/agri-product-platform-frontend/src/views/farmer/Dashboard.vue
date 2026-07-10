@@ -7,7 +7,7 @@
     </div>
 
     <!-- 核心指标卡片 -->
-    <div class="stats-grid">
+    <div class="stats-grid" v-loading="loading">
       <div class="stat-card primary">
         <div class="stat-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -16,11 +16,11 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">¥ 128,500</div>
+          <div class="stat-value">¥ {{ stats.monthlySales.toLocaleString() }}</div>
           <div class="stat-label">本月销售额</div>
           <div class="stat-trend positive">
             <el-icon><Top /></el-icon>
-            <span>12.5%</span>
+            <span>实时更新</span>
           </div>
         </div>
       </div>
@@ -34,11 +34,11 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">156</div>
+          <div class="stat-value">{{ stats.productCount }}</div>
           <div class="stat-label">在售商品</div>
           <div class="stat-trend positive">
             <el-icon><Top /></el-icon>
-            <span>8 新品</span>
+            <span>持续更新</span>
           </div>
         </div>
       </div>
@@ -51,7 +51,7 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">42</div>
+          <div class="stat-value">{{ stats.pendingOrders }}</div>
           <div class="stat-label">待处理订单</div>
           <div class="stat-action">
             <router-link to="/farmer/orders">查看订单</router-link>
@@ -67,7 +67,7 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">3</div>
+          <div class="stat-value">{{ stats.financeCount }}</div>
           <div class="stat-label">融资进度</div>
           <div class="stat-action">
             <router-link to="/farmer/finance">查看详情</router-link>
@@ -179,8 +179,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
+import { Top } from '@element-plus/icons-vue'
+import { getProducts } from '@/api/product'
+import { getOrders } from '@/api/order'
+import { getMyFinanceApplications } from '@/api/finance'
 
 const userStore = useUserStore()
 
@@ -191,12 +196,85 @@ const greeting = computed(() => {
   return '晚上好'
 })
 
-const recentOrders = ref([
-  { id: 'ORD20240709001', product: '有机大米 50kg', time: '10分钟前', status: '待发货', statusClass: 'pending' },
-  { id: 'ORD20240709002', product: '新鲜苹果 100kg', time: '1小时前', status: '待付款', statusClass: 'warning' },
-  { id: 'ORD20240708015', product: '土鸡蛋 30斤', time: '3小时前', status: '已完成', statusClass: 'success' },
-  { id: 'ORD20240708008', product: '新鲜蔬菜 200kg', time: '昨天', status: '已完成', statusClass: 'success' }
-])
+// 统计数据
+const stats = ref({
+  monthlySales: 0,
+  productCount: 0,
+  pendingOrders: 0,
+  financeCount: 0
+})
+
+// 最近订单
+const recentOrders = ref([])
+const loading = ref(false)
+
+// 加载Dashboard数据
+const loadDashboardData = async () => {
+  loading.value = true
+  try {
+    // 获取商品数量
+    const productRes = await getProducts({ page: 1, pageSize: 1 })
+    if (productRes.code === 200) {
+      stats.value.productCount = productRes.data.total || 0
+    }
+
+    // 获取订单列表和统计
+    const orderRes = await getOrders({ page: 1, pageSize: 10 })
+    if (orderRes.code === 200) {
+      const orders = orderRes.data.records || []
+      stats.value.pendingOrders = orders.filter(o => o.status === '待发货' || o.status === '待付款').length
+
+      // 格式化最近订单数据
+      recentOrders.value = orders.slice(0, 5).map(order => ({
+        id: order.orderId || order.id,
+        product: order.productName || order.items?.[0]?.productName || '未知商品',
+        time: formatTime(order.createTime),
+        status: order.statusText || order.status,
+        statusClass: getStatusClass(order.status)
+      }))
+    }
+
+    // 获取融资申请数量
+    const financeRes = await getMyFinanceApplications({ page: 1, pageSize: 1 })
+    if (financeRes.code === 200) {
+      stats.value.financeCount = financeRes.data.total || 0
+    }
+  } catch (error) {
+    console.error('加载Dashboard数据失败:', error)
+    ElMessage.error('加载数据失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 格式化时间
+const formatTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  const now = new Date()
+  const diff = now - date
+
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
+  return date.toLocaleDateString()
+}
+
+// 获取状态样式类
+const getStatusClass = (status) => {
+  const statusMap = {
+    '待发货': 'pending',
+    '待付款': 'warning',
+    '已完成': 'success',
+    '已取消': 'info'
+  }
+  return statusMap[status] || 'info'
+}
+
+onMounted(() => {
+  loadDashboardData()
+})
 </script>
 
 <style scoped>

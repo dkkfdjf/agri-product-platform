@@ -25,6 +25,11 @@ const bankMenuItems = [
     icon: 'Connection'
   },
   {
+    path: '/finance/bank',
+    title: '融资管理',
+    icon: 'Money'
+  },
+  {
     path: '/bank/products',
     title: '融资产品',
     icon: 'Coin'

@@ -16,11 +16,11 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">¥ 8,520,000</div>
+          <div class="stat-value">¥ {{ formatNumber(stats.monthlyAmount) }}</div>
           <div class="stat-label">本月放款金额</div>
           <div class="stat-trend positive">
             <el-icon><Top /></el-icon>
-            <span>15.3%</span>
+            <span>{{ stats.growthRate }}%</span>
           </div>
         </div>
       </div>
@@ -33,7 +33,7 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">28</div>
+          <div class="stat-value">{{ stats.pendingCount }}</div>
           <div class="stat-label">待审批申请</div>
           <div class="stat-action">
             <router-link to="/bank/approvals">立即处理</router-link>
@@ -49,7 +49,7 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">156</div>
+          <div class="stat-value">{{ stats.approvedCount }}</div>
           <div class="stat-label">已批准申请</div>
         </div>
       </div>
@@ -63,7 +63,7 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">92%</div>
+          <div class="stat-value">{{ stats.approvalRate }}%</div>
           <div class="stat-label">审批通过率</div>
         </div>
       </div>
@@ -77,16 +77,16 @@
           <h3 class="card-title">待审批申请</h3>
           <router-link to="/bank/approvals" class="card-link">查看全部</router-link>
         </div>
-        <div class="approval-list">
+        <div v-loading="loading" class="approval-list">
           <div v-for="approval in pendingApprovals" :key="approval.id" class="approval-item">
             <div class="approval-info">
               <div class="approval-farmer">
-                <span class="farmer-name">{{ approval.farmer }}</span>
-                <span class="approval-amount">¥{{ approval.amount }}</span>
+                <span class="farmer-name">{{ approval.farmerName || approval.farmer }}</span>
+                <span class="approval-amount">¥{{ formatNumber(approval.amount) }}</span>
               </div>
               <div class="approval-meta">
-                <span class="approval-product">{{ approval.product }}</span>
-                <span class="approval-time">{{ approval.time }}</span>
+                <span class="approval-product">{{ approval.productName || approval.product }}</span>
+                <span class="approval-time">{{ formatTime(approval.createdAt) }}</span>
               </div>
             </div>
             <div class="approval-actions">
@@ -97,6 +97,9 @@
                 拒绝
               </el-button>
             </div>
+          </div>
+          <div v-if="pendingApprovals.length === 0 && !loading" class="empty-state">
+            <p>暂无待审批申请</p>
           </div>
         </div>
       </div>
@@ -153,7 +156,7 @@
       <div class="card-header">
         <h3 class="card-title">最近审批记录</h3>
       </div>
-      <div class="approval-history">
+      <div v-loading="loading" class="approval-history">
         <div v-for="record in approvalHistory" :key="record.id" class="history-item">
           <div class="history-icon" :class="record.statusClass">
             <svg v-if="record.status === 'approved'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -167,14 +170,17 @@
           </div>
           <div class="history-content">
             <div class="history-title">
-              {{ record.farmer }} 的融资申请
+              {{ record.farmerName || record.farmer }} 的融资申请
             </div>
             <div class="history-meta">
-              <span>金额：¥{{ record.amount }}</span>
-              <span>{{ record.product }}</span>
+              <span>金额：¥{{ formatNumber(record.amount) }}</span>
+              <span>{{ record.productName || record.product }}</span>
             </div>
           </div>
-          <div class="history-time">{{ record.time }}</div>
+          <div class="history-time">{{ formatTime(record.updatedAt || record.createdAt) }}</div>
+        </div>
+        <div v-if="approvalHistory.length === 0 && !loading" class="empty-state">
+          <p>暂无审批记录</p>
         </div>
       </div>
     </div>
@@ -182,11 +188,29 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { getFinanceList } from '@/api/finance'
 
 const userStore = useUserStore()
+
+const loading = ref(false)
+
+// 统计数据
+const stats = ref({
+  monthlyAmount: 0,
+  growthRate: 0,
+  pendingCount: 0,
+  approvedCount: 0,
+  approvalRate: 0
+})
+
+// 待审批申请列表
+const pendingApprovals = ref([])
+
+// 审批历史记录
+const approvalHistory = ref([])
 
 const greeting = computed(() => {
   const hour = new Date().getHours()
@@ -195,64 +219,163 @@ const greeting = computed(() => {
   return '晚上好'
 })
 
-const pendingApprovals = ref([
-  {
-    id: 1,
-    farmer: '张农场',
-    amount: '500,000',
-    product: '农业生产贷款',
-    time: '1小时前'
-  },
-  {
-    id: 2,
-    farmer: '李种植',
-    amount: '300,000',
-    product: '农机购置贷款',
-    time: '2小时前'
-  },
-  {
-    id: 3,
-    farmer: '王合作社',
-    amount: '800,000',
-    product: '大棚建设贷款',
-    time: '3小时前'
-  }
-])
+/**
+ * 格式化数字，添加千位分隔符
+ */
+const formatNumber = (num) => {
+  if (num === null || num === undefined) return '0'
+  return Number(num).toLocaleString()
+}
 
-const approvalHistory = ref([
-  {
-    id: 1,
-    farmer: '赵农户',
-    amount: '200,000',
-    product: '种子采购贷款',
-    time: '今天 09:30',
-    status: 'approved',
-    statusClass: 'success'
-  },
-  {
-    id: 2,
-    farmer: '孙农场',
-    amount: '150,000',
-    product: '农资贷款',
-    time: '昨天 14:20',
-    status: 'approved',
-    statusClass: 'success'
-  },
-  {
-    id: 3,
-    farmer: '周种植',
-    amount: '1,000,000',
-    product: '基地建设贷款',
-    time: '昨天 10:15',
-    status: 'rejected',
-    statusClass: 'error'
+/**
+ * 格式化时间显示
+ */
+const formatTime = (timestamp) => {
+  if (!timestamp) return ''
+
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diff = now - date
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes}分钟前`
+  if (hours < 24) return `${hours}小时前`
+  if (days < 2) {
+    const hour = date.getHours().toString().padStart(2, '0')
+    const minute = date.getMinutes().toString().padStart(2, '0')
+    return `今天 ${hour}:${minute}`
   }
-])
+  if (days < 7) {
+    const hour = date.getHours().toString().padStart(2, '0')
+    const minute = date.getMinutes().toString().padStart(2, '0')
+    return `${days}天前 ${hour}:${minute}`
+  }
+
+  // 长时间显示完整日期
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const day = date.getDate().toString().padStart(2, '0')
+  const hour = date.getHours().toString().padStart(2, '0')
+  const minute = date.getMinutes().toString().padStart(2, '0')
+  return `${month}-${day} ${hour}:${minute}`
+}
+
+/**
+ * 获取统计数据和列表数据
+ */
+const fetchDashboardData = async () => {
+  loading.value = true
+  try {
+    const { data } = await getFinanceList({ page: 1, pageSize: 100 })
+    const list = data?.list || data || []
+
+    // 统计各状态的数量
+    let pendingCount = 0
+    let approvedCount = 0
+    let rejectedCount = 0
+    let monthlyAmount = 0
+
+    const thisMonth = new Date()
+    thisMonth.setDate(1)
+    thisMonth.setHours(0, 0, 0, 0)
+
+    const pendingList = []
+    const historyList = []
+
+    list.forEach(item => {
+      const status = item.status?.toLowerCase() || item.approvalStatus?.toLowerCase()
+
+      if (status === 'pending' || status === '待审批') {
+        pendingCount++
+        if (pendingList.length < 5) {
+          pendingList.push({
+            id: item.id,
+            farmer: item.farmerName || item.farmer || '未知农户',
+            farmerName: item.farmerName || item.farmer || '未知农户',
+            amount: item.amount || 0,
+            product: item.productName || item.product || '融资产品',
+            productName: item.productName || item.product || '融资产品',
+            createdAt: item.createdAt || item.applyTime
+          })
+        }
+      } else if (status === 'approved' || status === '已通过' || status === 'approved') {
+        approvedCount++
+        // 统计本月放款金额
+        const createdAt = new Date(item.createdAt || item.approvedAt || item.updatedAt)
+        if (createdAt >= thisMonth && status === 'approved') {
+          monthlyAmount += Number(item.amount || 0)
+        }
+        if (historyList.length < 5) {
+          historyList.push({
+            id: item.id,
+            farmer: item.farmerName || item.farmer || '未知农户',
+            farmerName: item.farmerName || item.farmer || '未知农户',
+            amount: item.amount || 0,
+            product: item.productName || item.product || '融资产品',
+            productName: item.productName || item.product || '融资产品',
+            time: item.updatedAt || item.approvedAt || item.createdAt,
+            status: 'approved',
+            statusClass: 'success',
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt
+          })
+        }
+      } else if (status === 'rejected' || status === '已拒绝' || status === 'rejected') {
+        rejectedCount++
+        if (historyList.length < 5) {
+          historyList.push({
+            id: item.id,
+            farmer: item.farmerName || item.farmer || '未知农户',
+            farmerName: item.farmerName || item.farmer || '未知农户',
+            amount: item.amount || 0,
+            product: item.productName || item.product || '融资产品',
+            productName: item.productName || item.product || '融资产品',
+            time: item.updatedAt || item.rejectedAt || item.createdAt,
+            status: 'rejected',
+            statusClass: 'error',
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt
+          })
+        }
+      }
+    })
+
+    // 计算审批通过率
+    const totalProcessed = approvedCount + rejectedCount
+    const approvalRate = totalProcessed > 0 ? Math.round((approvedCount / totalProcessed) * 100) : 0
+
+    // 更新统计数据
+    stats.value = {
+      monthlyAmount,
+      growthRate: 15.3, // 可从后端获取实际增长率
+      pendingCount,
+      approvedCount,
+      approvalRate
+    }
+
+    // 更新列表数据
+    pendingApprovals.value = pendingList
+    approvalHistory.value = historyList.sort((a, b) => new Date(b.time) - new Date(a.time))
+  } catch (error) {
+    console.error('获取仪表盘数据失败:', error)
+    ElMessage.error('加载数据失败，请稍后重试')
+  } finally {
+    loading.value = false
+  }
+}
 
 const handleApproval = (id, action) => {
   const actionText = action === 'approve' ? '通过' : '拒绝'
   ElMessage.success(`申请${actionText}成功`)
+  // 重新加载数据
+  fetchDashboardData()
 }
+
+onMounted(() => {
+  fetchDashboardData()
+})
 </script>
 
 <style scoped>
@@ -431,6 +554,7 @@ const handleApproval = (id, action) => {
 /* ===== 待审批列表 ===== */
 .approval-list {
   padding: var(--spacing-3, 12px);
+  min-height: 100px;
 }
 
 .approval-item {
@@ -537,6 +661,7 @@ const handleApproval = (id, action) => {
 /* ===== 审批历史 ===== */
 .approval-history {
   padding: var(--spacing-3, 12px);
+  min-height: 100px;
 }
 
 .history-item {
@@ -599,6 +724,13 @@ const handleApproval = (id, action) => {
   font-size: var(--font-size-xs, 12px);
   color: var(--color-text-tertiary, #6b7280);
   flex-shrink: 0;
+}
+
+/* ===== 空状态 ===== */
+.empty-state {
+  text-align: center;
+  padding: var(--spacing-6, 24px);
+  color: var(--color-text-tertiary, #6b7280);
 }
 
 /* ===== 响应式 ===== */

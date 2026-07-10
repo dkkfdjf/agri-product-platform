@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <rect width="400" height="400" fill="#E8F5E9"/>
+  <circle cx="180" cy="180" r="50" fill="#4CAF50"/>
+  <circle cx="230" cy="200" r="40" fill="#8BC34A"/>
+  <circle cx="200" cy="230" r="45" fill="#CDDC39"/>
+  <text x="200" y="320" font-family="Arial, sans-serif" font-size="24" fill="#2E7D32" text-anchor="middle">新鲜蔬菜</text>
+</svg>

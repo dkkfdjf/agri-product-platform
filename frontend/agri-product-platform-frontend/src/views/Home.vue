@@ -49,8 +49,17 @@
       </div>
     </header>
 
-    <!-- Hero Section -->
-    <section class="hero-section">
+    <!-- Banner Carousel -->
+    <section v-if="banners.length > 0" class="banner-section">
+      <el-carousel height="400px" :interval="5000" arrow="hover">
+        <el-carousel-item v-for="banner in banners" :key="banner.bannerId">
+          <img :src="banner.picPath" class="banner-image" :alt="banner.title || 'Banner'" />
+        </el-carousel-item>
+      </el-carousel>
+    </section>
+
+    <!-- Hero Section (shown when no banners) -->
+    <section v-else class="hero-section">
       <div class="hero-bg">
         <div class="hero-pattern"></div>
       </div>
@@ -399,6 +408,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { getBanners } from '@/api/banner'
+import { getProducts } from '@/api/product'
+import { getFinanceProducts } from '@/api/finance'
+import { getKnowledgeList } from '@/api/knowledge'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -463,7 +476,14 @@ const scrollToSection = (id) => {
   }
 }
 
-// 模拟数据 - 精选产品
+// 轮播图数据
+const banners = ref([
+  { bannerId: 1, picPath: '/images/banner1.jpg', title: '优质农产品' },
+  { bannerId: 2, picPath: '/images/banner2.jpg', title: '融资服务' },
+  { bannerId: 3, picPath: '/images/banner3.jpg', title: '专家助力' }
+])
+
+// 模拟数据 - 精选产品 (fallback data if API fails)
 const featuredProducts = ref([
   {
     id: 1,
@@ -680,9 +700,46 @@ const viewQA = (qa) => {
   ElMessage.info('查看问答：' + qa.title)
 }
 
+// Load data from API
+const loadHomeData = async () => {
+  try {
+    // Load banners
+    const bannerRes = await getBanners()
+    if (bannerRes.code === 200 && bannerRes.data && bannerRes.data.length > 0) {
+      banners.value = bannerRes.data
+    } else {
+      // Fallback to default banners if API returns no data
+      banners.value = [
+        { bannerId: 1, picPath: '/images/banner1.jpg', title: '优质农产品' },
+        { bannerId: 2, picPath: '/images/banner2.jpg', title: '融资服务' },
+        { bannerId: 3, picPath: '/images/banner3.jpg', title: '专家助力' }
+      ]
+    }
+
+    // Load products (8 items as per brief)
+    const productRes = await getProducts({ page: 1, pageSize: 8 })
+    if (productRes.code === 200 && productRes.data) {
+      featuredProducts.value = productRes.data.records || productRes.data || []
+    }
+
+    // Load finance products (6 items as per brief)
+    const financeRes = await getFinanceProducts({ page: 1, pageSize: 6 })
+    if (financeRes.code === 200 && financeRes.data) {
+      financingItems.value = financeRes.data.records || financeRes.data || []
+    }
+
+    // Load knowledge articles (5 items as per brief)
+    const knowledgeRes = await getKnowledgeList({ page: 1, pageSize: 5 })
+    if (knowledgeRes.code === 200 && knowledgeRes.data) {
+      knowledgeArticles.value = knowledgeRes.data.records || knowledgeRes.data || []
+    }
+  } catch (error) {
+    console.error('加载首页数据失败:', error)
+  }
+}
+
 onMounted(() => {
-  // TODO: 从后端API加载数据
-  // loadHomeData()
+  loadHomeData()
 })
 </script>
 
@@ -700,6 +757,18 @@ onMounted(() => {
   --color-white: #FFFFFF;
   --font-display: 'Noto Serif SC', serif;
   --font-body: 'Noto Sans SC', sans-serif;
+}
+
+/* ===== Banner Section ===== */
+.banner-section {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.banner-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* ===== Header ===== */
