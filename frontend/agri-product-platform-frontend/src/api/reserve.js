@@ -28,6 +28,14 @@ export function getMyReserves(params) {
 }
 
 /**
+ * 获取我的预约列表（别名，保持兼容性）
+ * @param {Object} params - 查询参数 { page, pageSize, status }
+ */
+export function getMyReserveList(params) {
+  return getMyReserves(params)
+}
+
+/**
  * 取消预约
  * @param {String|Number} reserveId - 预约ID
  */

@@ -94,7 +94,7 @@
                     </div>
                     <div
                       class="status-badge"
-                      :class="`status-${reserve.status}`"
+                      :class="reserve.status === 1 ? 'status-completed' : (reserve.status === 2 ? 'status-rejected' : 'status-pending')"
                     >
                       {{ getReserveStatusText(reserve.status) }}
                     </div>
@@ -102,33 +102,33 @@
                   <div class="reserve-info">
                     <div class="info-item">
                       <el-icon><Calendar /></el-icon>
-                      预约时间：{{ formatDateTime(reserve.reserveTime) }}
+                      作物：{{ reserve.plantName }}
                     </div>
-                    <div class="info-item" v-if="reserve.description">
+                    <div class="info-item">
                       <el-icon><Document /></el-icon>
-                      咨询内容：{{ reserve.description }}
+                      面积：{{ reserve.area }}
                     </div>
-                    <div class="info-item" v-if="reserve.status === 'confirmed' && reserve.meetingLink">
-                      <el-icon><VideoCamera /></el-icon>
-                      会议链接：<a :href="reserve.meetingLink" target="_blank">点击进入</a>
+                    <div class="info-item">
+                      <el-icon><Location /></el-icon>
+                      地址：{{ reserve.address }}
+                    </div>
+                    <div class="info-item" v-if="reserve.message">
+                      <el-icon><ChatDotRound /></el-icon>
+                      留言：{{ reserve.message }}
+                    </div>
+                    <div class="info-item" v-if="reserve.answer && reserve.status === 1">
+                      <el-icon><Select /></el-icon>
+                      专家回复：{{ reserve.answer }}
                     </div>
                   </div>
                   <div class="reserve-actions">
                     <el-button
-                      v-if="reserve.status === 'pending'"
+                      v-if="reserve.status === 0"
                       type="danger"
                       size="small"
                       @click="handleCancelReserve(reserve)"
                     >
                       取消预约
-                    </el-button>
-                    <el-button
-                      v-if="reserve.status === 'confirmed' && reserve.meetingLink"
-                      type="primary"
-                      size="small"
-                      @click="handleEnterMeeting(reserve)"
-                    >
-                      进入会议
                     </el-button>
                   </div>
                 </div>
@@ -161,25 +161,63 @@
         <el-form-item label="专家姓名">
           <el-input v-model="selectedExpert.realName" disabled />
         </el-form-item>
-        <el-form-item label="预约时间" prop="reserveTime">
-          <el-date-picker
-            v-model="reserveForm.reserveTime"
-            type="datetime"
-            placeholder="选择预约时间"
-            :disabled-date="disabledDate"
-            :disabled-hours="disabledHours"
-            :disabled-minutes="disabledMinutes"
-            format="YYYY-MM-DD HH:mm"
-            value-format="YYYY-MM-DD HH:mm:ss"
+        <el-form-item label="农作物" prop="plantName">
+          <el-input
+            v-model="reserveForm.plantName"
+            placeholder="请输入农作物名称"
           />
         </el-form-item>
-        <el-form-item label="咨询内容" prop="description">
+        <el-form-item label="种植面积" prop="area">
           <el-input
-            v-model="reserveForm.description"
+            v-model="reserveForm.area"
+            placeholder="请输入种植面积"
+          >
+            <template #suffix>亩</template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="地址" prop="address">
+          <el-input
+            v-model="reserveForm.address"
+            placeholder="请输入详细地址"
+          />
+        </el-form-item>
+        <el-form-item label="电话" prop="phone">
+          <el-input
+            v-model="reserveForm.phone"
+            placeholder="请输入联系电话"
+          />
+        </el-form-item>
+        <el-form-item label="土壤条件" prop="soilCondition">
+          <el-input
+            v-model="reserveForm.soilCondition"
             type="textarea"
-            :rows="4"
-            placeholder="请简要描述您想咨询的问题"
-            maxlength="500"
+            :rows="2"
+            placeholder="请描述土壤条件（如：沙壤土、肥沃等）"
+          />
+        </el-form-item>
+        <el-form-item label="作物条件" prop="plantCondition">
+          <el-input
+            v-model="reserveForm.plantCondition"
+            type="textarea"
+            :rows="2"
+            placeholder="请描述作物条件（如：生长阶段、长势等）"
+          />
+        </el-form-item>
+        <el-form-item label="作物详情" prop="plantDetail">
+          <el-input
+            v-model="reserveForm.plantDetail"
+            type="textarea"
+            :rows="3"
+            placeholder="请详细描述作物情况"
+          />
+        </el-form-item>
+        <el-form-item label="留言" prop="message">
+          <el-input
+            v-model="reserveForm.message"
+            type="textarea"
+            :rows="2"
+            placeholder="其他留言信息（可选）"
+            maxlength="64"
             show-word-limit
           />
         </el-form-item>
@@ -203,8 +241,8 @@ import {
   ChatDotRound,
   Star,
   Calendar,
-  Document,
-  VideoCamera
+  Location,
+  Select
 } from '@element-plus/icons-vue'
 import { getExpertList } from '@/api/expert'
 import { makeReservation, getMyReserves, cancelReserve } from '@/api/reserve'
@@ -225,18 +263,40 @@ const selectedExpert = ref({})
 const reserveFormRef = ref(null)
 
 const reserveForm = reactive({
-  expertId: '',
-  reserveTime: '',
-  description: ''
+  expertName: '',
+  plantName: '',
+  area: '',
+  address: '',
+  phone: '',
+  soilCondition: '',
+  plantCondition: '',
+  plantDetail: '',
+  message: ''
 })
 
 const reserveFormRules = {
-  reserveTime: [
-    { required: true, message: '请选择预约时间', trigger: 'change' }
+  plantName: [
+    { required: true, message: '请输入农作物名称', trigger: 'blur' }
   ],
-  description: [
-    { required: true, message: '请输入咨询内容', trigger: 'blur' },
-    { min: 10, max: 500, message: '咨询内容长度应在10-500个字符之间', trigger: 'blur' }
+  area: [
+    { required: true, message: '请输入种植面积', trigger: 'blur' }
+  ],
+  address: [
+    { required: true, message: '请输入详细地址', trigger: 'blur' }
+  ],
+  phone: [
+    { required: true, message: '请输入联系电话', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+  ],
+  soilCondition: [
+    { required: true, message: '请描述土壤条件', trigger: 'blur' }
+  ],
+  plantCondition: [
+    { required: true, message: '请描述作物条件', trigger: 'blur' }
+  ],
+  plantDetail: [
+    { required: true, message: '请详细描述作物情况', trigger: 'blur' },
+    { min: 10, message: '作物详情至少10个字符', trigger: 'blur' }
   ]
 }
 
@@ -259,14 +319,12 @@ const filteredExperts = computed(() => {
   return experts.value.filter(expert => expert.specialty === selectedCategory.value)
 })
 
-// 获取预约状态文本
+// 获取预约状态文本 - 使用整数状态码与后端保持一致
 const getReserveStatusText = (status) => {
   const map = {
-    pending: '待确认',
-    confirmed: '已确认',
-    rejected: '已拒绝',
-    completed: '已完成',
-    cancelled: '已取消'
+    0: '待处理',
+    1: '已完成',
+    2: '已拒绝'
   }
   return map[status] || '未知'
 }
@@ -314,9 +372,15 @@ const handleReserve = (expert) => {
   }
 
   selectedExpert.value = expert
-  reserveForm.expertId = expert.expertId
-  reserveForm.reserveTime = ''
-  reserveForm.description = ''
+  reserveForm.expertName = expert.realName || expert.expertName
+  reserveForm.plantName = ''
+  reserveForm.area = ''
+  reserveForm.address = ''
+  reserveForm.phone = ''
+  reserveForm.soilCondition = ''
+  reserveForm.plantCondition = ''
+  reserveForm.plantDetail = ''
+  reserveForm.message = ''
   reserveDialogVisible.value = true
 }
 
@@ -324,37 +388,6 @@ const handleReserve = (expert) => {
 const handleCloseDialog = () => {
   reserveDialogVisible.value = false
   reserveFormRef.value?.resetFields()
-}
-
-// 禁用过去的日期
-const disabledDate = (time) => {
-  return time.getTime() < Date.now() - 24 * 60 * 60 * 1000
-}
-
-// 禁用非工作时间（9:00-18:00）
-const disabledHours = () => {
-  const hours = []
-  for (let i = 0; i < 9; i++) {
-    hours.push(i)
-  }
-  for (let i = 18; i < 24; i++) {
-    hours.push(i)
-  }
-  return hours
-}
-
-// 禁用非整点或半点
-const disabledMinutes = (hour) => {
-  if (hour >= 9 && hour < 18) {
-    const minutes = []
-    for (let i = 0; i < 60; i++) {
-      if (i !== 0 && i !== 30) {
-        minutes.push(i)
-      }
-    }
-    return minutes
-  }
-  return []
 }
 
 // 提交预约
@@ -365,12 +398,18 @@ const handleSubmitReserve = async () => {
     submitting.value = true
 
     await makeReservation({
-      expertId: reserveForm.expertId,
-      reserveTime: reserveForm.reserveTime,
-      description: reserveForm.description
+      expertName: reserveForm.expertName,
+      plantName: reserveForm.plantName,
+      area: reserveForm.area,
+      address: reserveForm.address,
+      phone: reserveForm.phone,
+      soilCondition: reserveForm.soilCondition,
+      plantCondition: reserveForm.plantCondition,
+      plantDetail: reserveForm.plantDetail,
+      message: reserveForm.message
     })
 
-    ElMessage.success('预约成功，请等待专家确认')
+    ElMessage.success('预约成功，请等待专家处理')
     reserveDialogVisible.value = false
     activeTab.value = 'my-reserves'
     await loadMyReserves()
@@ -391,20 +430,13 @@ const handleCancelReserve = async (reserve) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await cancelReserve(reserve.reserveId)
+    await cancelReserve(reserve.id)
     ElMessage.success('已取消预约')
     await loadMyReserves()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('取消失败')
     }
-  }
-}
-
-// 进入会议
-const handleEnterMeeting = (reserve) => {
-  if (reserve.meetingLink) {
-    window.open(reserve.meetingLink, '_blank')
   }
 }
 

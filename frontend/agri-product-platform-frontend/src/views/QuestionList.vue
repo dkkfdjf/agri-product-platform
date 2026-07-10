@@ -52,7 +52,7 @@
           <div class="question-header">
             <div
               class="status-badge"
-              :class="`status-${question.status}`"
+              :class="question.status === 1 ? 'status-answered' : 'status-pending'"
             >
               {{ getStatusText(question.status) }}
             </div>
@@ -123,20 +123,18 @@ const pagination = reactive({
   total: 0
 })
 
-// 状态标签
+// 状态标签 - 使用整数状态码与后端保持一致
 const statusTabs = [
-  { value: 'all', label: '全部' },
-  { value: 'pending', label: '待回答' },
-  { value: 'answered', label: '已回答' },
-  { value: 'closed', label: '已关闭' }
+  { value: -1, label: '全部' },
+  { value: 0, label: '待回答' },
+  { value: 1, label: '已回答' }
 ]
 
 // 获取状态文本
 const getStatusText = (status) => {
   const map = {
-    pending: '待回答',
-    answered: '已回答',
-    closed: '已关闭'
+    0: '待回答',
+    1: '已回答'
   }
   return map[status] || '未知'
 }
@@ -177,7 +175,7 @@ const loadQuestions = async () => {
       pageSize: pagination.pageSize
     }
 
-    if (currentStatus.value !== 'all') {
+    if (currentStatus.value !== -1) {
       params.status = currentStatus.value
     }
 

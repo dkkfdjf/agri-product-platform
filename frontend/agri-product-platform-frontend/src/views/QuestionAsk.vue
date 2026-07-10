@@ -25,18 +25,6 @@
           />
         </el-form-item>
 
-        <!-- 问题分类 -->
-        <el-form-item label="问题分类" prop="category">
-          <el-select v-model="formData.category" placeholder="请选择问题分类">
-            <el-option
-              v-for="cat in categories"
-              :key="cat.value"
-              :label="cat.label"
-              :value="cat.value"
-            />
-          </el-select>
-        </el-form-item>
-
         <!-- 问题详情 -->
         <el-form-item label="问题描述" prop="content">
           <el-input
@@ -115,22 +103,9 @@ const imageList = ref([])
 // 表单数据
 const formData = reactive({
   title: '',
-  category: '',
   content: '',
   images: []
 })
-
-// 分类选项
-const categories = [
-  { value: 'grain', label: '粮食作物' },
-  { value: 'vegetable', label: '蔬菜种植' },
-  { value: 'fruit', label: '果树栽培' },
-  { value: 'soil', label: '土壤肥料' },
-  { value: 'pest', label: '病虫害防治' },
-  { value: 'technology', label: '农业技术' },
-  { value: 'breeding', label: '养殖问题' },
-  { value: 'other', label: '其他问题' }
-]
 
 // 表单验证规则
 const formRules = {
@@ -138,12 +113,9 @@ const formRules = {
     { required: true, message: '请输入问题标题', trigger: 'blur' },
     { min: 5, max: 100, message: '标题长度应在5-100个字符之间', trigger: 'blur' }
   ],
-  category: [
-    { required: true, message: '请选择问题分类', trigger: 'change' }
-  ],
   content: [
     { required: true, message: '请输入问题描述', trigger: 'blur' },
-    { min: 20, max: 2000, message: '描述长度应在20-2000个字符之间', trigger: 'blur' }
+    { min: 10, max: 255, message: '描述长度应在10-255个字符之间', trigger: 'blur' }
   ]
 }
 
@@ -200,8 +172,7 @@ const handleSubmit = async () => {
 
     const submitData = {
       title: formData.title,
-      category: formData.category,
-      content: formData.content,
+      question: formData.content,
       images: formData.images.join(',')
     }
 

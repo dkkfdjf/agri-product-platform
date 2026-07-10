@@ -1,47 +1,354 @@
 <template>
-  <div class="page-placeholder">
-    <div class="placeholder-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
+  <div class="expert-questions-page">
+    <div class="page-header">
+      <h1>问答管理</h1>
+      <p class="subtitle">回答农户和买家的问题</p>
     </div>
-    <h2>问答管理</h2>
-    <p>专家问答管理页面</p>
+
+    <!-- 筛选区 -->
+    <div class="filter-section">
+      <el-radio-group v-model="filterStatus" @change="loadQuestions">
+        <el-radio-button :value="-1">全部</el-radio-button>
+        <el-radio-button :value="0">待回答</el-radio-button>
+        <el-radio-button :value="1">已回答</el-radio-button>
+      </el-radio-group>
+    </div>
+
+    <!-- 问题列表 -->
+    <div class="questions-list" v-loading="loading">
+      <div v-for="question in questionList" :key="question.id" class="question-card">
+        <div class="question-header">
+          <div class="question-info">
+            <h3 class="question-title">{{ question.title }}</h3>
+            <div class="question-meta">
+              <span class="meta-item">
+                <el-icon><User /></el-icon>
+                提问者：{{ question.questioner }}
+              </span>
+              <span class="meta-item" v-if="question.phone">
+                <el-icon><Phone /></el-icon>
+                {{ question.phone }}
+              </span>
+              <span class="meta-item">
+                <el-icon><Calendar /></el-icon>
+                {{ formatDate(question.createTime) }}
+              </span>
+            </div>
+          </div>
+          <el-tag :type="question.status === 1 ? 'success' : 'warning'" size="large">
+            {{ question.status === 1 ? '已回答' : '待回答' }}
+          </el-tag>
+        </div>
+
+        <div class="question-content">
+          <div class="content-section">
+            <h4>问题描述：</h4>
+            <p>{{ question.question }}</p>
+          </div>
+
+          <div class="content-section answer-section" v-if="question.status === 1 && question.answer">
+            <h4>我的回答：</h4>
+            <p class="answer-text">{{ question.answer }}</p>
+          </div>
+        </div>
+
+        <div class="question-actions">
+          <template v-if="question.status === 0">
+            <el-button type="primary" @click="handleAnswer(question)">
+              <el-icon><Edit /></el-icon>
+              回答问题
+            </el-button>
+          </template>
+          <template v-else>
+            <el-button @click="handleEditAnswer(question)">
+              <el-icon><Edit /></el-icon>
+              修改回答
+            </el-button>
+          </template>
+        </div>
+      </div>
+
+      <el-empty v-if="!loading && questionList.length === 0" description="暂无问题" />
+    </div>
+
+    <!-- 分页 -->
+    <div class="pagination" v-if="total > 0">
+      <el-pagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :total="total"
+        :page-sizes="[10, 20, 50]"
+        layout="total, sizes, prev, pager, next"
+        @current-change="loadQuestions"
+        @size-change="loadQuestions"
+      />
+    </div>
+
+    <!-- 回答对话框 -->
+    <el-dialog
+      v-model="answerDialogVisible"
+      :title="isEditing ? '修改回答' : '回答问题'"
+      width="600px"
+    >
+      <el-form :model="answerForm" label-width="80px">
+        <el-form-item label="问题">
+          <div class="question-preview">{{ currentQuestion?.title }}</div>
+        </el-form-item>
+        <el-form-item label="回答内容">
+          <el-input
+            v-model="answerForm.answer"
+            type="textarea"
+            :rows="8"
+            placeholder="请输入您的专业回答..."
+            maxlength="255"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="answerDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitAnswer" :loading="submitting">
+          {{ isEditing ? '保存修改' : '提交回答' }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
+<script setup>
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { User, Phone, Calendar, Edit } from '@element-plus/icons-vue'
+import { getQuestionList, answerQuestion } from '@/api/question'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
+
+const loading = ref(false)
+const submitting = ref(false)
+const filterStatus = ref(-1)
+const currentPage = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+const questionList = ref([])
+
+const answerDialogVisible = ref(false)
+const isEditing = ref(false)
+const currentQuestion = ref(null)
+const answerForm = reactive({
+  questionId: null,
+  answer: ''
+})
+
+// 加载问题列表
+const loadQuestions = async () => {
+  loading.value = true
+  try {
+    const params = {
+      page: currentPage.value,
+      pageSize: pageSize.value
+    }
+
+    if (filterStatus.value !== -1) {
+      params.status = filterStatus.value
+    }
+
+    const res = await getQuestionList(params)
+    if (res.code === 200) {
+      questionList.value = (res.data.records || []).map(q => ({
+        id: q.questionId || q.id,
+        title: q.title,
+        question: q.question,
+        answer: q.answer,
+        questioner: q.questioner,
+        phone: q.phone,
+        status: q.status,
+        createTime: q.createTime
+      }))
+      total.value = res.data.total || 0
+    }
+  } catch (error) {
+    ElMessage.error('加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 回答问题
+const handleAnswer = (question) => {
+  currentQuestion.value = question
+  answerForm.questionId = question.id
+  answerForm.answer = ''
+  isEditing.value = false
+  answerDialogVisible.value = true
+}
+
+// 修改回答
+const handleEditAnswer = (question) => {
+  currentQuestion.value = question
+  answerForm.questionId = question.id
+  answerForm.answer = question.answer || ''
+  isEditing.value = true
+  answerDialogVisible.value = true
+}
+
+// 提交回答
+const submitAnswer = async () => {
+  if (!answerForm.answer.trim()) {
+    ElMessage.warning('请输入回答内容')
+    return
+  }
+
+  submitting.value = true
+  try {
+    await answerQuestion(answerForm.questionId, { answer: answerForm.answer })
+    ElMessage.success(isEditing.value ? '修改成功' : '回答成功')
+    answerDialogVisible.value = false
+    loadQuestions()
+  } catch (error) {
+    ElMessage.error('操作失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
+// 格式化日期
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('zh-CN')
+}
+
+onMounted(() => {
+  loadQuestions()
+})
+</script>
+
 <style scoped>
-.page-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  text-align: center;
-  color: var(--color-text-tertiary, #6b7280);
+.expert-questions-page {
+  padding: var(--spacing-6, 24px);
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.placeholder-icon {
-  width: 64px;
-  height: 64px;
-  margin-bottom: var(--spacing-4, 16px);
-  opacity: 0.5;
+.page-header {
+  margin-bottom: var(--spacing-6, 24px);
 }
 
-.placeholder-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.page-placeholder h2 {
-  font-size: var(--font-size-xl, 24px);
-  font-weight: var(--font-weight-semibold, 600);
+.page-header h1 {
+  font-size: var(--font-size-3xl, 38px);
+  font-weight: var(--font-weight-bold, 700);
   color: var(--color-text-primary, #1f2923);
   margin: 0 0 var(--spacing-2, 8px);
 }
 
-.page-placeholder p {
-  font-size: var(--font-size-sm, 14px);
+.subtitle {
+  font-size: var(--font-size-base, 16px);
+  color: var(--color-text-tertiary, #6b7280);
   margin: 0;
+}
+
+.filter-section {
+  margin-bottom: var(--spacing-4, 16px);
+}
+
+.questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4, 16px);
+}
+
+.question-card {
+  background: var(--color-bg-primary, #ffffff);
+  border-radius: var(--radius-lg, 12px);
+  padding: var(--spacing-5, 20px);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.05));
+}
+
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-4, 16px);
+  padding-bottom: var(--spacing-4, 16px);
+  border-bottom: 1px solid var(--color-divider, #edebe6);
+}
+
+.question-info {
+  flex: 1;
+}
+
+.question-title {
+  font-size: var(--font-size-xl, 20px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary, #1f2923);
+  margin: 0 0 var(--spacing-3, 12px);
+}
+
+.question-meta {
+  display: flex;
+  gap: var(--spacing-4, 16px);
+  flex-wrap: wrap;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1, 4px);
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #4a5249);
+}
+
+.question-content {
+  margin-bottom: var(--spacing-4, 16px);
+}
+
+.content-section {
+  margin-bottom: var(--spacing-3, 12px);
+}
+
+.content-section h4 {
+  font-size: var(--font-size-base, 16px);
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-text-secondary, #4a5249);
+  margin: 0 0 var(--spacing-2, 8px);
+}
+
+.content-section p {
+  font-size: var(--font-size-base, 16px);
+  line-height: 1.6;
+  color: var(--color-text-primary, #1f2923);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.answer-section {
+  background: var(--color-bg-secondary, #f7f5f0);
+  padding: var(--spacing-3, 12px);
+  border-radius: var(--radius-base, 8px);
+}
+
+.answer-text {
+  color: var(--color-primary, #2d5a3d);
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.question-actions {
+  display: flex;
+  gap: var(--spacing-2, 8px);
+  justify-content: flex-end;
+}
+
+.question-preview {
+  padding: var(--spacing-2, 8px);
+  background: var(--color-bg-secondary, #f7f5f0);
+  border-radius: var(--radius-base, 8px);
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #4a5249);
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-8, 32px);
 }
 </style>

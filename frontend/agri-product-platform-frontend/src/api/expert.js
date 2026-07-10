@@ -63,12 +63,13 @@ export function getExpertReserveList(params) {
 /**
  * 更新预约状态
  * @param {String|Number} reserveId - 预约ID
- * @param {String} status - 状态 { pending, confirmed, rejected, completed }
+ * @param {Number} status - 状态 0待处理 1已完成 2已拒绝
+ * @param {String} answer - 回复内容（可选）
  */
-export function updateReserveStatus(reserveId, status) {
+export function updateReserveStatus(reserveId, status, answer = '') {
   return request({
     url: `/expert/reserve/${reserveId}/status`,
     method: 'put',
-    params: { status }
+    data: { status, answer }
   })
 }

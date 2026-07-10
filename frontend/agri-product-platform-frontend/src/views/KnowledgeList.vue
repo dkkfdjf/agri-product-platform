@@ -63,10 +63,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { getKnowledgeList } from '@/api/knowledge'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -75,6 +76,8 @@ const selectedCategory = ref('all')
 const searchKeyword = ref('')
 const loading = ref(false)
 const hasMore = ref(true)
+const currentPage = ref(1)
+const pageSize = ref(9)
 
 const categories = [
   { id: 'all', name: '全部' },
@@ -85,82 +88,54 @@ const categories = [
   { id: 'pest', name: '病虫害防治' }
 ]
 
-const knowledgeList = ref([
-  {
-    id: 1,
-    title: '春季小麦田间管理技术要点',
-    excerpt: '详细介绍春季小麦返青后的田间管理措施，包括施肥、浇水、病虫害防治等关键技术',
-    category: '粮食作物',
-    image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&h=250&fit=crop',
-    author: '李建国',
-    time: '2024-03-15',
-    views: 1234,
-    categoryId: 'grain'
-  },
-  {
-    id: 2,
-    title: '温室蔬菜病虫害绿色防控技术',
-    excerpt: '介绍温室蔬菜主要病虫害的识别方法及绿色防控技术，减少农药使用，提高蔬菜品质',
-    category: '蔬菜种植',
-    image: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=400&h=250&fit=crop',
-    author: '王淑芬',
-    time: '2024-03-12',
-    views: 856,
-    categoryId: 'vegetable'
-  },
-  {
-    id: 3,
-    title: '苹果树修剪技术详解',
-    excerpt: '详细介绍苹果树的修剪原则、方法和最佳时机，帮助提高产量和果实品质',
-    category: '果树栽培',
-    image: 'https://images.unsplash.com/photo-1592150621744-aca64f82940c?w=400&h=250&fit=crop',
-    author: '赵海燕',
-    time: '2024-03-10',
-    views: 2341,
-    categoryId: 'fruit'
-  },
-  {
-    id: 4,
-    title: '科学施肥提高农产品品质',
-    excerpt: '讲解如何根据土壤状况和作物需求科学施肥，提高肥料利用率，改善农产品品质',
-    category: '土壤肥料',
-    image: null,
-    author: '张明远',
-    time: '2024-03-08',
-    views: 1567,
-    categoryId: 'soil'
-  },
-  {
-    id: 5,
-    title: '水稻稻瘟病综合防治技术',
-    excerpt: '介绍水稻稻瘟病的识别特征、发生规律及综合防治技术，确保水稻稳产高产',
-    category: '病虫害防治',
-    image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&h=250&fit=crop',
-    author: '李建国',
-    time: '2024-03-05',
-    views: 3456,
-    categoryId: 'pest'
-  },
-  {
-    id: 6,
-    title: '大棚蔬菜标准化种植指南',
-    excerpt: '详细介绍大棚蔬菜的标准化种植流程，从育苗到采收的全过程管理技术',
-    category: '蔬菜种植',
-    image: 'https://images.unsplash.com/photo-1592419044706-39796d40798c?w=400&h=250&fit=crop',
-    author: '王淑芬',
-    time: '2024-03-01',
-    views: 2890,
-    categoryId: 'vegetable'
+const knowledgeList = ref([])
+const total = ref(0)
+
+// 加载知识列表
+const loadKnowledge = async () => {
+  loading.value = true
+  try {
+    const params = {
+      page: currentPage.value,
+      pageSize: pageSize.value
+    }
+
+    const res = await getKnowledgeList(params)
+    if (res.code === 200) {
+      const records = res.data.records || []
+      knowledgeList.value = records.map(k => ({
+        id: k.knowledgeId || k.id,
+        title: k.title,
+        excerpt: k.content?.substring(0, 100) || '',
+        category: '农业知识',
+        image: k.picPath || null,
+        author: k.ownName || '专家',
+        time: formatDate(k.createTime),
+        views: 0,
+        status: k.status
+      }))
+      total.value = res.data.total || 0
+      hasMore.value = knowledgeList.value.length >= pageSize.value
+    }
+  } catch (error) {
+    console.error('加载知识列表失败:', error)
+    ElMessage.error('加载失败')
+  } finally {
+    loading.value = false
   }
-])
+}
+
+// 格式化日期
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('zh-CN')
+}
 
 const filteredKnowledge = computed(() => {
   let result = knowledgeList.value
 
-  // 分类筛选
-  if (selectedCategory.value !== 'all') {
-    result = result.filter(item => item.categoryId === selectedCategory.value)
-  }
+  // 只显示已发布的知识
+  result = result.filter(item => item.status === 1)
 
   // 关键词搜索
   if (searchKeyword.value) {
@@ -175,23 +150,28 @@ const filteredKnowledge = computed(() => {
 })
 
 const handleViewKnowledge = (knowledge) => {
-  if (!userStore.isLoggedIn()) {
-    ElMessage.info('请先登录后查看知识详情')
-    router.push('/login')
-    return
-  }
-  // TODO: 跳转到知识详情页
-  ElMessage.info('查看知识：' + knowledge.title)
+  router.push(`/knowledge/${knowledge.id}`)
 }
 
 const loadMore = () => {
-  loading.value = true
-  // TODO: 从后端加载更多数据
-  setTimeout(() => {
-    loading.value = false
-    hasMore.value = false
-  }, 1000)
+  currentPage.value++
+  loadKnowledge()
 }
+
+// 监听分类变化
+watch(selectedCategory, () => {
+  currentPage.value = 1
+  loadKnowledge()
+})
+
+// 监听搜索变化
+watch(searchKeyword, () => {
+  // 搜索是前端的，不需要重新加载
+})
+
+onMounted(() => {
+  loadKnowledge()
+})
 </script>
 
 <style scoped>
