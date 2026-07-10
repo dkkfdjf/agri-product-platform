@@ -60,6 +60,15 @@ public class UserService {
      * 用户登录
      */
     public Map<String, Object> login(UserLoginRequest request) {
+        // 验证角色参数
+        if (request.getRole() == null || request.getRole().trim().isEmpty()) {
+            throw new RuntimeException("请选择登录角色");
+        }
+        // 验证角色类型
+        if (!request.getRole().matches("farmer|buyer|expert|bank|admin")) {
+            throw new RuntimeException("无效的角色类型");
+        }
+
         // 查询用户
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getUserName, request.getUserName());
@@ -67,6 +76,11 @@ public class UserService {
 
         if (user == null) {
             throw new RuntimeException("用户不存在");
+        }
+
+        // 验证角色是否匹配
+        if (!user.getRole().equals(request.getRole())) {
+            throw new RuntimeException("您选择的角色与账号角色不符，请重新选择");
         }
 
         // 验证密码
