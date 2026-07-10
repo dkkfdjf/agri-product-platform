@@ -40,3 +40,6 @@ logs/
 *.tmp
 *.bak
 *.cache
+
+# Documentation
+开发顺序.md
