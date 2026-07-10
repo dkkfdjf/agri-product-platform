@@ -20,13 +20,13 @@ const routes = [
   },
   {
     path: '/',
-    redirect: '/home'
-  },
-  {
-    path: '/home',
     name: 'Home',
     component: () => import('@/views/Home.vue'),
     meta: { requiresAuth: false }
+  },
+  {
+    path: '/home',
+    redirect: '/'
   },
   // 农户路由
   {
@@ -189,22 +189,22 @@ const routes = [
       {
         path: 'dashboard',
         name: 'AdminDashboard',
-        component: () => import('@/views/admin/Dashboard.vue')
+        component: () => import('@/views/admin/AdminDashboard.vue')
       },
       {
         path: 'users',
         name: 'AdminUsers',
-        component: () => import('@/views/admin/Users.vue')
+        component: () => import('@/views/admin/AdminUser.vue')
       },
       {
         path: 'products',
         name: 'AdminProducts',
-        component: () => import('@/views/admin/Products.vue')
+        component: () => import('@/views/admin/AdminProduct.vue')
       },
       {
         path: 'finances',
         name: 'AdminFinances',
-        component: () => import('@/views/admin/Finances.vue')
+        component: () => import('@/views/admin/AdminFinance.vue')
       },
       {
         path: 'experts',
@@ -214,7 +214,7 @@ const routes = [
       {
         path: 'banners',
         name: 'AdminBanners',
-        component: () => import('@/views/admin/Banners.vue')
+        component: () => import('@/views/admin/AdminBanner.vue')
       }
     ]
   },
@@ -225,11 +225,49 @@ const routes = [
     component: () => import('@/views/Market.vue'),
     meta: { requiresAuth: false }
   },
+  // 商品页面（所有角色可见）
+  {
+    path: '/product',
+    name: 'ProductList',
+    component: () => import('@/views/Product.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/product/:id',
+    name: 'ProductDetail',
+    component: () => import('@/views/ProductDetail.vue'),
+    meta: { requiresAuth: false }
+  },
   {
     path: '/finance-products',
     name: 'FinanceProducts',
     component: () => import('@/views/FinanceProducts.vue'),
     meta: { requiresAuth: false }
+  },
+  // 融资服务页面
+  {
+    path: '/finance',
+    name: 'Finance',
+    component: () => import('@/views/Finance.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/finance/apply',
+    name: 'FinanceApply',
+    component: () => import('@/views/FinanceApply.vue'),
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+  {
+    path: '/finance/my',
+    name: 'MyFinance',
+    component: () => import('@/views/MyFinance.vue'),
+    meta: { requiresAuth: true, roles: ['farmer'] }
+  },
+  {
+    path: '/finance/bank',
+    name: 'BankFinance',
+    component: () => import('@/views/BankFinance.vue'),
+    meta: { requiresAuth: true, roles: ['bank'] }
   },
   {
     path: '/expert-help',
@@ -238,10 +276,92 @@ const routes = [
     meta: { requiresAuth: false }
   },
   {
+    path: '/expert/:userName',
+    name: 'ExpertDetail',
+    component: () => import('@/views/ExpertDetail.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
     path: '/knowledge',
     name: 'KnowledgeList',
     component: () => import('@/views/KnowledgeList.vue'),
     meta: { requiresAuth: false }
+  },
+  {
+    path: '/knowledge/:id',
+    name: 'KnowledgeDetail',
+    component: () => import('@/views/KnowledgeDetail.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/knowledge/publish',
+    name: 'KnowledgePublish',
+    component: () => import('@/views/KnowledgePublish.vue'),
+    meta: { requiresAuth: true, roles: ['expert', 'admin'] }
+  },
+  // 问答页面
+  {
+    path: '/question',
+    name: 'QuestionList',
+    component: () => import('@/views/QuestionList.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/question/:id',
+    name: 'QuestionDetail',
+    component: () => import('@/views/QuestionDetail.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/question/ask',
+    name: 'QuestionAsk',
+    component: () => import('@/views/QuestionAsk.vue'),
+    meta: { requiresAuth: true }
+  },
+  // 预约专家页面
+  {
+    path: '/reserve',
+    name: 'ReserveExpert',
+    component: () => import('@/views/ReserveExpert.vue'),
+    meta: { requiresAuth: false }
+  },
+  // 购物车和订单页面
+  {
+    path: '/cart',
+    name: 'Cart',
+    component: () => import('@/views/Cart.vue'),
+    meta: { requiresAuth: true, roles: ['buyer'] }
+  },
+  {
+    path: '/order',
+    name: 'OrderList',
+    component: () => import('@/views/OrderList.vue'),
+    meta: { requiresAuth: true, roles: ['buyer'] }
+  },
+  {
+    path: '/order/:id',
+    name: 'OrderDetail',
+    component: () => import('@/views/OrderDetail.vue'),
+    meta: { requiresAuth: true, roles: ['buyer'] }
+  },
+  // 个人中心页面（所有认证用户）
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/views/Profile.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/profile/edit',
+    name: 'ProfileEdit',
+    component: () => import('@/views/ProfileEdit.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/address',
+    name: 'AddressManage',
+    component: () => import('@/views/AddressManage.vue'),
+    meta: { requiresAuth: true }
   },
   // 404页面
   {

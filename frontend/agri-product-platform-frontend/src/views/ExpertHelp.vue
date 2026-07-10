@@ -76,13 +76,15 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+const loading = ref(false)
 
 // 处理向专家提问
 const handleAskExpert = (expert) => {
@@ -91,8 +93,56 @@ const handleAskExpert = (expert) => {
     router.push('/login')
     return
   }
-  // TODO: 跳转到提问页面或打开提问对话框
-  ElMessage.info('向专家提问：' + expert.name)
+  router.push('/question/ask')
+}
+
+// 加载专家数据
+const loadExperts = async () => {
+  loading.value = true
+  try {
+    const { getExpertList } = await import('@/api/expert')
+    const { getQuestionList } = await import('@/api/question')
+    const { getKnowledgeList } = await import('@/api/knowledge')
+
+    // 获取专家列表
+    const expertRes = await getExpertList({ page: 1, pageSize: 10 })
+    if (expertRes.code === 200) {
+      experts.value = (expertRes.data.records || []).map(e => ({
+        id: e.expertId || e.id,
+        name: e.realName || e.name,
+        title: e.position || '农业专家',
+        specialty: e.specialty || '农业技术',
+        avatar: e.avatar || '',
+        answersCount: e.answersCount || 0,
+        satisfactionRate: e.satisfactionRate || 95
+      }))
+    }
+
+    // 获取热门问题
+    const questionRes = await getQuestionList({ page: 1, pageSize: 5 })
+    if (questionRes.code === 200) {
+      hotQuestions.value = (questionRes.data.records || []).map(q => ({
+        id: q.questionId || q.id,
+        title: q.title,
+        answersCount: q.answersCount || 0
+      }))
+    }
+
+    // 获取知识推荐
+    const knowledgeRes = await getKnowledgeList({ page: 1, pageSize: 5 })
+    if (knowledgeRes.code === 200) {
+      knowledgeList.value = (knowledgeRes.data.records || []).map(k => ({
+        id: k.knowledgeId || k.id,
+        title: k.title,
+        author: k.ownName || k.author || '专家'
+      }))
+    }
+  } catch (error) {
+    console.error('加载专家数据失败:', error)
+    // 保留默认数据作为fallback
+  } finally {
+    loading.value = false
+  }
 }
 
 const experts = ref([
@@ -134,6 +184,10 @@ const knowledgeList = ref([
   { id: 2, title: '大棚蔬菜标准化种植指南', author: '李种植' },
   { id: 3, title: '科学施肥提高农产品品质', author: '王土壤' }
 ])
+
+onMounted(() => {
+  loadExperts()
+})
 </script>
 
 <style scoped>

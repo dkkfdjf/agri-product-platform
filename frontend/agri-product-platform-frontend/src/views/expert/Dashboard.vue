@@ -7,7 +7,7 @@
     </div>
 
     <!-- 核心指标卡片 -->
-    <div class="stats-grid">
+    <div class="stats-grid" v-loading="loading">
       <div class="stat-card primary">
         <div class="stat-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -16,11 +16,11 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">48</div>
+          <div class="stat-value">{{ stats.knowledgeCount }}</div>
           <div class="stat-label">已发布知识</div>
           <div class="stat-trend positive">
             <el-icon><Top /></el-icon>
-            <span>本月新增 6 篇</span>
+            <span>持续更新</span>
           </div>
         </div>
       </div>
@@ -32,11 +32,11 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">156</div>
+          <div class="stat-value">{{ stats.answeredCount }}</div>
           <div class="stat-label">回答问题</div>
           <div class="stat-trend positive">
             <el-icon><Top /></el-icon>
-            <span>好评率 98%</span>
+            <span>实时更新</span>
           </div>
         </div>
       </div>
@@ -49,7 +49,7 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">12</div>
+          <div class="stat-value">{{ stats.pendingReservations }}</div>
           <div class="stat-label">待处理预约</div>
           <div class="stat-action">
             <router-link to="/expert/reservations">查看预约</router-link>
@@ -64,7 +64,7 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">98%</div>
+          <div class="stat-value">{{ stats.satisfaction }}%</div>
           <div class="stat-label">用户满意度</div>
         </div>
       </div>
@@ -173,10 +173,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { Top } from '@element-plus/icons-vue'
+import { getKnowledgeList } from '@/api/knowledge'
+import { getQuestionList } from '@/api/question'
 
+const router = useRouter()
 const userStore = useUserStore()
 
 const greeting = computed(() => {
@@ -186,54 +191,85 @@ const greeting = computed(() => {
   return '晚上好'
 })
 
-const pendingQuestions = ref([
-  {
-    id: 1,
-    title: '水稻病虫害防治有什么好的方法？',
-    author: '张农户',
-    time: '10分钟前'
-  },
-  {
-    id: 2,
-    title: '夏季蔬菜种植需要注意什么？',
-    author: '李农场',
-    time: '1小时前'
-  },
-  {
-    id: 3,
-    title: '大棚种植温度如何控制？',
-    author: '王种植',
-    time: '2小时前'
-  }
-])
+// 统计数据
+const stats = ref({
+  knowledgeCount: 0,
+  answeredCount: 0,
+  pendingReservations: 0,
+  satisfaction: 98
+})
 
-const recentKnowledge = ref([
-  {
-    id: 1,
-    title: '夏季水稻病虫害综合防治技术指南',
-    views: 1234,
-    comments: 45,
-    time: '3天前'
-  },
-  {
-    id: 2,
-    title: '大棚蔬菜种植管理要点详解',
-    views: 856,
-    comments: 32,
-    time: '1周前'
-  },
-  {
-    id: 3,
-    title: '有机农业种植技术与实践',
-    views: 2345,
-    comments: 78,
-    time: '2周前'
+// 待回答问题
+const pendingQuestions = ref([])
+
+// 最近发布的知识
+const recentKnowledge = ref([])
+
+const loading = ref(false)
+
+// 加载Dashboard数据
+const loadDashboardData = async () => {
+  loading.value = true
+  try {
+    // 获取知识列表（专家自己发布的）
+    const knowledgeRes = await getKnowledgeList({ page: 1, pageSize: 5 })
+    if (knowledgeRes.code === 200) {
+      const knowledge = knowledgeRes.data.records || []
+      stats.value.knowledgeCount = knowledgeRes.data.total || 0
+
+      // 格式化知识数据
+      recentKnowledge.value = knowledge.map(k => ({
+        id: k.knowledgeId || k.id,
+        title: k.title,
+        views: k.views || 0,
+        comments: k.discussCount || 0,
+        time: formatTime(k.createTime)
+      }))
+    }
+
+    // 获取待回答问题
+    const questionRes = await getQuestionList({ page: 1, pageSize: 10, status: 'pending' })
+    if (questionRes.code === 200) {
+      const questions = questionRes.data.records || []
+      stats.value.answeredCount = questionRes.data.total || 0
+
+      // 格式化问题数据
+      pendingQuestions.value = questions.slice(0, 5).map(q => ({
+        id: q.questionId || q.id,
+        title: q.title,
+        author: q.userName || '匿名用户',
+        time: formatTime(q.createTime)
+      }))
+    }
+  } catch (error) {
+    console.error('加载Dashboard数据失败:', error)
+    ElMessage.error('加载数据失败')
+  } finally {
+    loading.value = false
   }
-])
+}
+
+// 格式化时间
+const formatTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  const now = new Date()
+  const diff = now - date
+
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
+  return date.toLocaleDateString()
+}
 
 const answerQuestion = (id) => {
-  ElMessage.info('跳转到问题详情页')
+  router.push(`/question/${id}`)
 }
+
+onMounted(() => {
+  loadDashboardData()
+})
 </script>
 
 <style scoped>
