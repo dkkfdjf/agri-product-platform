@@ -27,8 +27,25 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     public Page<Question> getQuestionList(int page, int pageSize) {
+        return getQuestionList(page, pageSize, null, null, null);
+    }
+
+    @Override
+    public Page<Question> getQuestionList(int page, int pageSize, Integer status, String questioner, String expertName) {
         Page<Question> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<Question> wrapper = new LambdaQueryWrapper<>();
+
+        if (status != null) {
+            wrapper.eq(Question::getStatus, status);
+        }
+        if (questioner != null && !questioner.isEmpty()) {
+            wrapper.eq(Question::getQuestioner, questioner);
+        }
+        if (expertName != null && !expertName.isEmpty()) {
+            // 对于专家名称，需要通过real_name在tb_expert表中查找对应的user_name
+            // 这里暂时使用模糊匹配
+            wrapper.like(Question::getExpertName, expertName);
+        }
         wrapper.orderByDesc(Question::getCreateTime);
         return questionMapper.selectPage(pageParam, wrapper);
     }

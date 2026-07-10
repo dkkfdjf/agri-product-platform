@@ -12,5 +12,6 @@ public interface ExpertService {
     Expert getExpertByUserName(String userName);
     Page<Reserve> getReserveList(String expertName, int page, int pageSize);
     void confirmReserve(Integer reserveId, String expertName, Integer status);
+    void confirmReserve(Integer reserveId, String expertName, Integer status, String answer);
     List<Expert> getAllExperts();
 }

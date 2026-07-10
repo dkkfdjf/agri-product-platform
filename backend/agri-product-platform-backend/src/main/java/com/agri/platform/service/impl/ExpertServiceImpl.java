@@ -52,6 +52,11 @@ public class ExpertServiceImpl implements ExpertService {
 
     @Override
     public void confirmReserve(Integer reserveId, String expertName, Integer status) {
+        confirmReserve(reserveId, expertName, status, null);
+    }
+
+    @Override
+    public void confirmReserve(Integer reserveId, String expertName, Integer status, String answer) {
         Reserve reserve = reserveMapper.selectById(reserveId);
         if (reserve == null) {
             throw new RuntimeException("预约不存在");
@@ -60,6 +65,9 @@ public class ExpertServiceImpl implements ExpertService {
             throw new RuntimeException("无权限处理此预约");
         }
         reserve.setStatus(status);
+        if (answer != null && !answer.isEmpty()) {
+            reserve.setAnswer(answer);
+        }
         reserveMapper.updateById(reserve);
     }
 

@@ -21,8 +21,11 @@ public class QuestionController {
 
     @GetMapping("/list")
     public Result<Page<Question>> list(@RequestParam(defaultValue = "1") int page,
-                                        @RequestParam(defaultValue = "10") int pageSize) {
-        return Result.success(questionService.getQuestionList(page, pageSize));
+                                        @RequestParam(defaultValue = "10") int pageSize,
+                                        @RequestParam(required = false) Integer status,
+                                        @RequestParam(required = false) String questioner,
+                                        @RequestParam(required = false) String expertName) {
+        return Result.success(questionService.getQuestionList(page, pageSize, status, questioner, expertName));
     }
 
     @GetMapping("/{questionId}")

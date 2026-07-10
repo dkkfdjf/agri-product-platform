@@ -25,8 +25,10 @@ public class KnowledgeController {
 
     @GetMapping("/list")
     public Result<Page<Knowledge>> list(@RequestParam(defaultValue = "1") int page,
-                                          @RequestParam(defaultValue = "10") int pageSize) {
-        return Result.success(knowledgeService.getKnowledgeList(page, pageSize));
+                                          @RequestParam(defaultValue = "10") int pageSize,
+                                          @RequestParam(required = false) Integer status,
+                                          @RequestParam(required = false) String ownName) {
+        return Result.success(knowledgeService.getKnowledgeList(page, pageSize, status, ownName));
     }
 
     @GetMapping("/{knowledgeId}")

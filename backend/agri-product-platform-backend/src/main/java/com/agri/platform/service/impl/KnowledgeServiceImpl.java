@@ -34,9 +34,20 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
     @Override
     public Page<Knowledge> getKnowledgeList(int page, int pageSize) {
+        return getKnowledgeList(page, pageSize, 1, null);
+    }
+
+    @Override
+    public Page<Knowledge> getKnowledgeList(int page, int pageSize, Integer status, String ownName) {
         Page<Knowledge> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<Knowledge> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Knowledge::getStatus, 1); // 只显示已发布的
+
+        if (status != null) {
+            wrapper.eq(Knowledge::getStatus, status);
+        }
+        if (ownName != null && !ownName.isEmpty()) {
+            wrapper.eq(Knowledge::getOwnName, ownName);
+        }
         wrapper.orderByDesc(Knowledge::getCreateTime);
         return knowledgeMapper.selectPage(pageParam, wrapper);
     }

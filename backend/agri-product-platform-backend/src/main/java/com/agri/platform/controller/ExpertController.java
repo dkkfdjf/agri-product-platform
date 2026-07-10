@@ -48,10 +48,12 @@ public class ExpertController {
     @PutMapping("/reserve/{reserveId}/status")
     public Result<String> updateReserveStatus(@PathVariable Integer reserveId,
                                               @RequestHeader("Authorization") String token,
-                                              @RequestParam Integer status) {
+                                              @RequestBody java.util.Map<String, Object> payload) {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
         Expert expert = expertService.getExpertByUserName(userName);
-        expertService.confirmReserve(reserveId, expert.getRealName(), status);
+        Integer status = payload.get("status") != null ? Integer.valueOf(payload.get("status").toString()) : 0;
+        String answer = payload.get("answer") != null ? payload.get("answer").toString() : null;
+        expertService.confirmReserve(reserveId, expert.getRealName(), status, answer);
         return Result.success("状态更新成功");
     }
 
