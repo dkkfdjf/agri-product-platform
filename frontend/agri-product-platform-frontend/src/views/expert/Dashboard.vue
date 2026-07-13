@@ -180,9 +180,13 @@ import { ElMessage } from 'element-plus'
 import { Top } from '@element-plus/icons-vue'
 import { getKnowledgeList } from '@/api/knowledge'
 import { getQuestionList } from '@/api/question'
+import { getExpertReserveList } from '@/api/expert'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+// 当前专家 userName（知识 own_name 与问答 expert_name 都用它）
+const expertUserName = computed(() => userStore.userInfo?.userName || '')
 
 const greeting = computed(() => {
   const hour = new Date().getHours()
@@ -209,37 +213,48 @@ const loading = ref(false)
 
 // 加载Dashboard数据
 const loadDashboardData = async () => {
+  if (!expertUserName.value) {
+    loading.value = false
+    return
+  }
   loading.value = true
   try {
-    // 获取知识列表（专家自己发布的）
-    const knowledgeRes = await getKnowledgeList({ page: 1, pageSize: 5 })
+    // 我发布的知识（含草稿）
+    const knowledgeRes = await getKnowledgeList({ page: 1, pageSize: 5, ownName: expertUserName.value })
     if (knowledgeRes.code === 200) {
       const knowledge = knowledgeRes.data.records || []
       stats.value.knowledgeCount = knowledgeRes.data.total || 0
-
-      // 格式化知识数据
       recentKnowledge.value = knowledge.map(k => ({
-        id: k.knowledgeId || k.id,
+        id: k.knowledgeId,
         title: k.title,
-        views: k.views || 0,
-        comments: k.discussCount || 0,
+        views: 0,
+        comments: 0,
         time: formatTime(k.createTime)
       }))
     }
 
-    // 获取待回答问题
-    const questionRes = await getQuestionList({ page: 1, pageSize: 10, status: 'pending' })
-    if (questionRes.code === 200) {
-      const questions = questionRes.data.records || []
-      stats.value.answeredCount = questionRes.data.total || 0
+    // 已回答问题数（expert_name = 我，status=1）
+    const answeredRes = await getQuestionList({ page: 1, pageSize: 1, expertName: expertUserName.value, status: 1 })
+    if (answeredRes.code === 200) {
+      stats.value.answeredCount = answeredRes.data.total || 0
+    }
 
-      // 格式化问题数据
-      pendingQuestions.value = questions.slice(0, 5).map(q => ({
-        id: q.questionId || q.id,
+    // 待回答问题（expert_name = 我，status=0）
+    const pendingRes = await getQuestionList({ page: 1, pageSize: 5, expertName: expertUserName.value, status: 0 })
+    if (pendingRes.code === 200) {
+      const questions = pendingRes.data.records || []
+      pendingQuestions.value = questions.map(q => ({
+        id: q.id,
         title: q.title,
-        author: q.userName || '匿名用户',
+        author: q.questioner || '匿名用户',
         time: formatTime(q.createTime)
       }))
+    }
+
+    // 待处理预约数（expert_name = 我，status=0）
+    const reserveRes = await getExpertReserveList({ page: 1, pageSize: 1, status: 0 })
+    if (reserveRes.code === 200) {
+      stats.value.pendingReservations = reserveRes.data.total || 0
     }
   } catch (error) {
     console.error('加载Dashboard数据失败:', error)

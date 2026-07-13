@@ -58,13 +58,56 @@ export function getUsers(params) {
   })
 }
 
-export function updateUserStatus(userName, data) {
+export function createUser(data) {
   return request({
-    url: `/user/${userName}/status`,
+    url: '/admin/user',
+    method: 'post',
+    data
+  })
+}
+
+export function updateUser(userName, data) {
+  return request({
+    url: `/admin/user/${userName}`,
     method: 'put',
     data
   })
 }
+
+export function deleteUser(userName) {
+  return request({
+    url: `/admin/user/${userName}`,
+    method: 'delete'
+  })
+}
+
+export function updateUserStatus(userName, data) {
+  return request({
+    url: `/admin/user/${userName}/status`,
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * Role Application APIs
+ */
+export function getRoleApplications(params) {
+  return request({
+    url: '/admin/applications',
+    method: 'get',
+    params
+  })
+}
+
+export function reviewRoleApplication(id, data) {
+  return request({
+    url: `/admin/application/${id}`,
+    method: 'put',
+    data
+  })
+}
+
 
 /**
  * Product Management APIs
@@ -121,3 +164,27 @@ export function getAdminExperts(params) {
     params
   })
 }
+
+export function createAdminExpert(data) {
+  return request({
+    url: '/admin/expert',
+    method: 'post',
+    data
+  })
+}
+
+export function updateAdminExpert(userName, data) {
+  return request({
+    url: `/admin/expert/${userName}`,
+    method: 'put',
+    data
+  })
+}
+
+export function deleteAdminExpert(userName) {
+  return request({
+    url: `/admin/expert/${userName}`,
+    method: 'delete'
+  })
+}
+

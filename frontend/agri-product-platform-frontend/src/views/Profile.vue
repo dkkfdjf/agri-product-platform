@@ -62,6 +62,17 @@
       </el-col>
     </el-row>
 
+    <el-row :gutter="20" class="menu-row" v-if="isFarmer || isBuyer">
+      <el-col :span="12">
+        <el-card class="menu-card" @click="$router.push('/role-application')">
+          <div class="menu-item">
+            <el-icon :size="32" color="#b85c38"><Promotion /></el-icon>
+            <span>角色升级申请</span>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <el-row :gutter="20" class="menu-row" v-if="isFarmer">
       <el-col :span="12">
         <el-card class="menu-card" @click="$router.push('/finance/my')">
@@ -139,7 +150,8 @@ import {
   Briefcase,
   ChatLineSquare,
   Reading,
-  DataAnalysis
+  DataAnalysis,
+  Promotion
 } from '@element-plus/icons-vue'
 
 const router = useRouter()

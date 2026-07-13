@@ -12,22 +12,21 @@
       <div class="experts-section">
         <h2 class="section-title">认证专家</h2>
         <div class="experts-list">
-          <div v-for="expert in experts" :key="expert.id" class="expert-card">
+          <div v-for="expert in experts" :key="expert.id" class="expert-card" @click="goToExpertDetail(expert.id)">
             <div class="expert-avatar">
               <img v-if="expert.avatar" :src="expert.avatar" :alt="expert.name">
-              <span v-else>{{ expert.name.charAt(0) }}</span>
+              <span v-else>{{ expert.name?.charAt(0) }}</span>
             </div>
             <div class="expert-info">
               <div class="expert-name">{{ expert.name }}</div>
               <div class="expert-title">{{ expert.title }}</div>
               <div class="expert-specialty">{{ expert.specialty }}</div>
               <div class="expert-stats">
-                <span class="stat-item">{{ expert.answersCount }} 回答</span>
-                <span class="stat-item">满意度 {{ expert.satisfactionRate }}%</span>
+                <span class="stat-item">{{ expert.belong || '农业专家' }}</span>
               </div>
             </div>
             <div class="expert-actions">
-              <el-button type="primary" size="small" @click="handleAskExpert(expert)">提问</el-button>
+              <el-button type="primary" size="small" @click.stop="handleAskExpert(expert)">提问</el-button>
             </div>
           </div>
         </div>
@@ -37,7 +36,7 @@
       <div class="questions-section">
         <h2 class="section-title">热门问答</h2>
         <div class="questions-list">
-          <div v-for="question in hotQuestions" :key="question.id" class="question-item">
+          <div v-for="question in hotQuestions" :key="question.id" class="question-item" @click="router.push(`/question/${question.id}`)">
             <div class="question-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <circle cx="12" cy="12" r="10"/>
@@ -57,7 +56,7 @@
         <!-- 知识推荐 -->
         <h2 class="section-title" style="margin-top: var(--spacing-6, 24px)">知识推荐</h2>
         <div class="knowledge-list">
-          <div v-for="knowledge in knowledgeList" :key="knowledge.id" class="knowledge-item">
+          <div v-for="knowledge in knowledgeList" :key="knowledge.id" class="knowledge-item" @click="router.push(`/knowledge/${knowledge.id}`)">
             <div class="knowledge-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -90,10 +89,15 @@ const loading = ref(false)
 const handleAskExpert = (expert) => {
   if (!userStore.isLoggedIn()) {
     ElMessage.info('请先登录后向专家提问')
-    router.push('/login')
+    router.push({ path: '/login', query: { redirect: `/question/ask?expert=${expert.id}` } })
     return
   }
-  router.push('/question/ask')
+  router.push(`/question/ask?expert=${expert.id}`)
+}
+
+// 跳转专家详情
+const goToExpertDetail = (userName) => {
+  if (userName) router.push(`/expert/${userName}`)
 }
 
 // 加载专家数据
@@ -104,38 +108,46 @@ const loadExperts = async () => {
     const { getQuestionList } = await import('@/api/question')
     const { getKnowledgeList } = await import('@/api/knowledge')
 
-    // 获取专家列表
-    const expertRes = await getExpertList({ page: 1, pageSize: 10 })
+    // 获取专家列表（/expert/list 返回的是数组，不是分页对象）
+    const expertRes = await getExpertList()
     if (expertRes.code === 200) {
-      experts.value = (expertRes.data.records || []).map(e => ({
-        id: e.expertId || e.id,
-        name: e.realName || e.name,
-        title: e.position || '农业专家',
-        specialty: e.specialty || '农业技术',
-        avatar: e.avatar || '',
-        answersCount: e.answersCount || 0,
-        satisfactionRate: e.satisfactionRate || 95
-      }))
+      const list = expertRes.data || []
+      // 只在拿到真实数据时覆盖示例
+      if (list.length > 0) {
+        experts.value = list.map(e => ({
+          id: e.userName,
+          name: e.realName,
+          title: e.position || '农业专家',
+          specialty: e.profession || '农业技术',
+          belong: e.belong || '',
+          avatar: ''
+        }))
+      }
     }
 
     // 获取热门问题
     const questionRes = await getQuestionList({ page: 1, pageSize: 5 })
     if (questionRes.code === 200) {
-      hotQuestions.value = (questionRes.data.records || []).map(q => ({
-        id: q.questionId || q.id,
-        title: q.title,
-        answersCount: q.answersCount || 0
-      }))
+      const qList = questionRes.data.records || []
+      if (qList.length > 0) {
+        hotQuestions.value = qList.map(q => ({
+          id: q.id,
+          title: q.title
+        }))
+      }
     }
 
     // 获取知识推荐
     const knowledgeRes = await getKnowledgeList({ page: 1, pageSize: 5 })
     if (knowledgeRes.code === 200) {
-      knowledgeList.value = (knowledgeRes.data.records || []).map(k => ({
-        id: k.knowledgeId || k.id,
-        title: k.title,
-        author: k.ownName || k.author || '专家'
-      }))
+      const kList = knowledgeRes.data.records || []
+      if (kList.length > 0) {
+        knowledgeList.value = kList.map(k => ({
+          id: k.knowledgeId,
+          title: k.title,
+          author: k.ownName || '专家'
+        }))
+      }
     }
   } catch (error) {
     console.error('加载专家数据失败:', error)

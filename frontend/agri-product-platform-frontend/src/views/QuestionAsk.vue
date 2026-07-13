@@ -15,6 +15,42 @@
         label-width="100px"
         class="ask-form"
       >
+        <!-- 选择专家 -->
+        <el-form-item label="咨询专家" prop="expertName">
+          <el-select
+            v-model="formData.expertName"
+            placeholder="请选择要咨询的专家"
+            style="width: 100%"
+            filterable
+          >
+            <el-option
+              v-for="expert in expertList"
+              :key="expert.userName"
+              :label="`${expert.realName}（${expert.profession || '农业专家'}）`"
+              :value="expert.userName"
+            />
+          </el-select>
+        </el-form-item>
+
+        <!-- 农作物 -->
+        <el-form-item label="农作物" prop="plantName">
+          <el-input
+            v-model="formData.plantName"
+            placeholder="请输入农作物名称，如：水稻、玉米、番茄"
+            maxlength="64"
+            show-word-limit
+          />
+        </el-form-item>
+
+        <!-- 联系电话 -->
+        <el-form-item label="联系电话" prop="phone">
+          <el-input
+            v-model="formData.phone"
+            placeholder="请输入联系电话，方便专家回访"
+            maxlength="20"
+          />
+        </el-form-item>
+
         <!-- 问题标题 -->
         <el-form-item label="问题标题" prop="title">
           <el-input
@@ -26,34 +62,15 @@
         </el-form-item>
 
         <!-- 问题详情 -->
-        <el-form-item label="问题描述" prop="content">
+        <el-form-item label="问题描述" prop="question">
           <el-input
-            v-model="formData.content"
+            v-model="formData.question"
             type="textarea"
             :rows="10"
             placeholder="请详细描述您的问题，包括：&#10;1. 具体情况（种植什么作物、面积、生长阶段等）&#10;2. 出现的问题（症状、发生时间等）&#10;3. 已尝试的解决方法&#10;4. 其他相关信息"
             maxlength="2000"
             show-word-limit
           />
-        </el-form-item>
-
-        <!-- 图片上传（可选） -->
-        <el-form-item label="相关图片">
-          <el-upload
-            class="image-uploader"
-            :show-file-list="true"
-            :file-list="imageList"
-            :on-preview="handlePicturePreview"
-            :on-success="handleImageSuccess"
-            :on-remove="handleImageRemove"
-            :before-upload="beforeImageUpload"
-            list-type="picture-card"
-            action="/api/upload"
-            :limit="3"
-          >
-            <el-icon><Plus /></el-icon>
-          </el-upload>
-          <div class="upload-tip">最多上传3张图片，帮助专家更好地理解您的问题</div>
         </el-form-item>
 
         <!-- 提交按钮 -->
@@ -75,7 +92,6 @@
         </template>
         <ul class="tips-list">
           <li>请详细描述您的问题，以便专家给出准确的解答</li>
-          <li>上传相关照片可以更好地帮助专家诊断问题</li>
           <li>专家将在24小时内回复您的问题</li>
           <li>提问后可在"我的问题"中查看回答状态</li>
           <li>请勿重复提交相同的问题</li>
@@ -87,75 +103,60 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
-import { Plus, InfoFilled } from '@element-plus/icons-vue'
+import { InfoFilled } from '@element-plus/icons-vue'
 import { askQuestion } from '@/api/question'
+import { getExpertList } from '@/api/expert'
 
+const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
 const formRef = ref(null)
 const submitting = ref(false)
-const imageList = ref([])
+const expertList = ref([])
 
-// 表单数据
+// 表单数据（字段对齐后端 QuestionRequest）
 const formData = reactive({
+  expertName: '',
+  plantName: '',
+  phone: '',
   title: '',
-  content: '',
-  images: []
+  question: ''
 })
 
 // 表单验证规则
 const formRules = {
+  expertName: [
+    { required: true, message: '请选择咨询专家', trigger: 'change' }
+  ],
+  plantName: [
+    { required: true, message: '请输入农作物名称', trigger: 'blur' }
+  ],
+  phone: [
+    { required: true, message: '请输入联系电话', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+  ],
   title: [
     { required: true, message: '请输入问题标题', trigger: 'blur' },
     { min: 5, max: 100, message: '标题长度应在5-100个字符之间', trigger: 'blur' }
   ],
-  content: [
+  question: [
     { required: true, message: '请输入问题描述', trigger: 'blur' },
-    { min: 10, max: 255, message: '描述长度应在10-255个字符之间', trigger: 'blur' }
+    { min: 5, max: 2000, message: '描述长度应在5-2000个字符之间', trigger: 'blur' }
   ]
 }
 
-// 图片上传前校验
-const beforeImageUpload = (rawFile) => {
-  const isImage = ['image/jpeg', 'image/png', 'image/jpg'].includes(rawFile.type)
-  const isLt5M = rawFile.size / 1024 / 1024 < 5
-
-  if (!isImage) {
-    ElMessage.error('只能上传JPG/PNG格式的图片')
-    return false
+// 加载专家列表
+const loadExperts = async () => {
+  try {
+    const res = await getExpertList()
+    expertList.value = res.data || []
+  } catch (error) {
+    console.error('加载专家列表失败:', error)
   }
-  if (!isLt5M) {
-    ElMessage.error('图片大小不能超过5MB')
-    return false
-  }
-  return true
-}
-
-// 图片上传成功
-const handleImageSuccess = (response) => {
-  if (response.code === 200) {
-    formData.images.push(response.data.url)
-    ElMessage.success('图片上传成功')
-  } else {
-    ElMessage.error('图片上传失败')
-  }
-}
-
-// 删除图片
-const handleImageRemove = (file) => {
-  const index = formData.images.indexOf(file.url)
-  if (index > -1) {
-    formData.images.splice(index, 1)
-  }
-}
-
-// 预览图片
-const handlePicturePreview = (file) => {
-  window.open(file.url, '_blank')
 }
 
 // 返回
@@ -170,13 +171,13 @@ const handleSubmit = async () => {
 
     submitting.value = true
 
-    const submitData = {
+    await askQuestion({
+      expertName: formData.expertName,
+      plantName: formData.plantName,
+      phone: formData.phone,
       title: formData.title,
-      question: formData.content,
-      images: formData.images.join(',')
-    }
-
-    await askQuestion(submitData)
+      question: formData.question
+    })
     ElMessage.success('提问成功，专家将尽快为您解答')
     router.push('/question')
   } catch (error) {
@@ -193,7 +194,13 @@ onMounted(() => {
   if (!userStore.isLoggedIn()) {
     ElMessage.info('请先登录后提问')
     router.push({ path: '/login', query: { redirect: '/question/ask' } })
+    return
   }
+  // 从路由参数预选专家
+  if (route.query.expert) {
+    formData.expertName = String(route.query.expert)
+  }
+  loadExperts()
 })
 </script>
 
@@ -250,17 +257,6 @@ onMounted(() => {
 
 .ask-form :deep(.el-textarea__inner) {
   line-height: 1.6;
-}
-
-/* ===== 图片上传 ===== */
-.image-uploader {
-  width: 100%;
-}
-
-.upload-tip {
-  margin-top: var(--spacing-2, 8px);
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-tertiary, #6b7280);
 }
 
 /* ===== 提示卡片 ===== */

@@ -212,6 +212,11 @@ const routes = [
         component: () => import('@/views/admin/Experts.vue')
       },
       {
+        path: 'applications',
+        name: 'AdminApplications',
+        component: () => import('@/views/admin/Applications.vue')
+      },
+      {
         path: 'banners',
         name: 'AdminBanners',
         component: () => import('@/views/admin/AdminBanner.vue')
@@ -307,15 +312,15 @@ const routes = [
     meta: { requiresAuth: false }
   },
   {
-    path: '/question/:id',
-    name: 'QuestionDetail',
-    component: () => import('@/views/QuestionDetail.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
     path: '/question/ask',
     name: 'QuestionAsk',
     component: () => import('@/views/QuestionAsk.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/question/:id',
+    name: 'QuestionDetail',
+    component: () => import('@/views/QuestionDetail.vue'),
     meta: { requiresAuth: true }
   },
   // 预约专家页面
@@ -355,6 +360,12 @@ const routes = [
     path: '/profile/edit',
     name: 'ProfileEdit',
     component: () => import('@/views/ProfileEdit.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/role-application',
+    name: 'RoleApplication',
+    component: () => import('@/views/RoleApplication.vue'),
     meta: { requiresAuth: true }
   },
   {

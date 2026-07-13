@@ -12,48 +12,26 @@
         <!-- 专家列表 -->
         <el-tab-pane label="专家列表" name="experts">
           <div v-loading="loadingExperts" class="experts-section">
-            <!-- 分类筛选 -->
-            <div class="filter-section">
-              <div class="filter-tabs">
-                <button
-                  v-for="cat in categories"
-                  :key="cat.value"
-                  class="filter-tab"
-                  :class="{ active: selectedCategory === cat.value }"
-                  @click="selectedCategory = cat.value"
-                >
-                  {{ cat.label }}
-                </button>
-              </div>
-            </div>
-
             <!-- 专家列表 -->
-            <div v-if="filteredExperts.length > 0" class="experts-grid">
+            <div v-if="experts.length > 0" class="experts-grid">
               <div
-                v-for="expert in filteredExperts"
-                :key="expert.expertId"
+                v-for="expert in experts"
+                :key="expert.userName"
                 class="expert-card"
               >
                 <div class="expert-avatar">
                   <el-avatar :size="80" :src="expert.avatar">
                     {{ expert.realName?.charAt(0) }}
                   </el-avatar>
-                  <div class="expert-status" v-if="expert.onlineStatus === 'online'">
-                    在线
-                  </div>
                 </div>
                 <div class="expert-info">
                   <h3 class="expert-name">{{ expert.realName }}</h3>
-                  <div class="expert-title">{{ expert.specialty || '农业专家' }}</div>
-                  <div class="expert-desc">{{ expert.description || '资深农业专家，为您提供专业指导' }}</div>
+                  <div class="expert-title">{{ expert.profession || '农业专家' }}</div>
+                  <div class="expert-desc">{{ expert.position || '' }}{{ expert.belong ? ' · ' + expert.belong : '' }}</div>
                   <div class="expert-stats">
                     <span>
-                      <el-icon><ChatDotRound /></el-icon>
-                      {{ expert.consultCount || 0 }} 次咨询
-                    </span>
-                    <span>
-                      <el-icon><Star /></el-icon>
-                      {{ expert.rating || 5.0 }} 分
+                      <el-icon><Phone /></el-icon>
+                      {{ expert.phone || '—' }}
                     </span>
                   </div>
                 </div>
@@ -82,7 +60,7 @@
               <div v-if="myReserves.length > 0" class="reserves-list">
                 <div
                   v-for="reserve in myReserves"
-                  :key="reserve.reserveId"
+                  :key="reserve.id"
                   class="reserve-card"
                 >
                   <div class="reserve-header">
@@ -239,21 +217,22 @@ import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ChatDotRound,
-  Star,
   Calendar,
   Location,
-  Select
+  Select,
+  Phone
 } from '@element-plus/icons-vue'
+import { useRoute } from 'vue-router'
 import { getExpertList } from '@/api/expert'
 import { makeReservation, getMyReserves, cancelReserve } from '@/api/reserve'
 
+const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
 const activeTab = ref('experts')
 const loadingExperts = ref(false)
 const loadingReserves = ref(false)
-const selectedCategory = ref('all')
 
 const experts = ref([])
 const myReserves = ref([])
@@ -300,25 +279,6 @@ const reserveFormRules = {
   ]
 }
 
-// 分类选项
-const categories = [
-  { value: 'all', label: '全部' },
-  { value: 'grain', label: '粮食作物' },
-  { value: 'vegetable', label: '蔬菜种植' },
-  { value: 'fruit', label: '果树栽培' },
-  { value: 'soil', label: '土壤肥料' },
-  { value: 'pest', label: '病虫害防治' },
-  { value: 'breeding', label: '畜牧养殖' }
-]
-
-// 过滤后的专家列表
-const filteredExperts = computed(() => {
-  if (selectedCategory.value === 'all') {
-    return experts.value
-  }
-  return experts.value.filter(expert => expert.specialty === selectedCategory.value)
-})
-
 // 获取预约状态文本 - 使用整数状态码与后端保持一致
 const getReserveStatusText = (status) => {
   const map = {
@@ -348,35 +308,24 @@ const handleLogin = () => {
 
 // 查看专家详情
 const handleViewDetail = (expert) => {
-  ElMessageBox.alert(
-    `
-    <div style="text-align: left;">
-      <p><strong>姓名：</strong>${expert.realName}</p>
-      <p><strong>专长：</strong>${expert.specialty || '农业专家'}</p>
-      <p><strong>简介：</strong>${expert.description || '暂无简介'}</p>
-      <p><strong>咨询次数：</strong>${expert.consultCount || 0} 次</p>
-      <p><strong>评分：</strong>${expert.rating || 5.0} 分</p>
-    </div>
-    `,
-    '专家详情',
-    { dangerouslyUseHTMLString: true }
-  )
+  router.push(`/expert/${expert.userName}`)
 }
 
 // 预约专家
 const handleReserve = (expert) => {
   if (!userStore.isLoggedIn()) {
     ElMessage.info('请先登录后预约')
-    router.push({ path: '/login', query: { redirect: '/reserve' } })
+    router.push({ path: '/login', query: { redirect: `/reserve?expert=${expert.userName}` } })
     return
   }
 
   selectedExpert.value = expert
-  reserveForm.expertName = expert.realName || expert.expertName
+  // expert_name 存储专家 userName
+  reserveForm.expertName = expert.userName
   reserveForm.plantName = ''
   reserveForm.area = ''
   reserveForm.address = ''
-  reserveForm.phone = ''
+  reserveForm.phone = userStore.userInfo?.phone || ''
   reserveForm.soilCondition = ''
   reserveForm.plantCondition = ''
   reserveForm.plantDetail = ''
@@ -460,7 +409,7 @@ const loadMyReserves = async () => {
   loadingReserves.value = true
   try {
     const res = await getMyReserves()
-    myReserves.value = res.data || []
+    myReserves.value = res.data?.records || []
   } catch (error) {
     ElMessage.error('加载预约记录失败')
   } finally {
@@ -475,10 +424,24 @@ watch(activeTab, (newVal) => {
   }
 })
 
-onMounted(() => {
-  loadExperts()
+// 从路由参数预选专家并打开预约对话框
+const handleExpertQuery = (userName) => {
+  const expert = experts.value.find(e => e.userName === userName)
+  if (expert) {
+    handleReserve(expert)
+  }
+}
+
+onMounted(async () => {
+  await loadExperts()
   if (userStore.isLoggedIn()) {
     loadMyReserves()
+    if (route.query.expert) {
+      handleExpertQuery(String(route.query.expert))
+    }
+  } else if (route.query.expert) {
+    ElMessage.info('请先登录后预约')
+    router.push({ path: '/login', query: { redirect: `/reserve?expert=${route.query.expert}` } })
   }
 })
 </script>

@@ -146,7 +146,9 @@ const loadQuestions = async () => {
   try {
     const params = {
       page: currentPage.value,
-      pageSize: pageSize.value
+      pageSize: pageSize.value,
+      // 仅展示分配给当前专家的问题（expert_name = 我的 userName）
+      expertName: userStore.userInfo?.userName || ''
     }
 
     if (filterStatus.value !== -1) {
@@ -156,7 +158,7 @@ const loadQuestions = async () => {
     const res = await getQuestionList(params)
     if (res.code === 200) {
       questionList.value = (res.data.records || []).map(q => ({
-        id: q.questionId || q.id,
+        id: q.id,
         title: q.title,
         question: q.question,
         answer: q.answer,

@@ -11,21 +11,26 @@
       <el-skeleton v-if="loading" :rows="10" animated />
 
       <!-- 问题详情 -->
-      <div v-else-if="question.questionId" class="question-detail">
+      <div v-else-if="question.id" class="question-detail">
         <!-- 问题内容 -->
         <article class="question-article">
           <header class="question-header">
-            <div
-              class="status-badge"
-              :class="`status-${question.status}`"
-            >
+            <div class="status-badge" :class="`status-${question.status}`">
               {{ getStatusText(question.status) }}
             </div>
             <h1 class="question-title">{{ question.title }}</h1>
             <div class="question-meta">
               <span class="meta-item">
                 <el-icon><User /></el-icon>
-                提问者：{{ question.ownName }}
+                提问者：{{ question.questioner }}
+              </span>
+              <span class="meta-item" v-if="question.plantName">
+                <el-icon><ChatDotRound /></el-icon>
+                农作物：{{ question.plantName }}
+              </span>
+              <span class="meta-item" v-if="question.phone">
+                <el-icon><Phone /></el-icon>
+                {{ question.phone }}
               </span>
               <span class="meta-item">
                 <el-icon><Calendar /></el-icon>
@@ -35,27 +40,30 @@
           </header>
 
           <div class="question-content">
-            {{ question.content }}
+            {{ question.question }}
           </div>
 
           <!-- 操作按钮 -->
-          <div class="question-actions" v-if="canClose">
+          <div class="question-actions" v-if="canClose || canDelete">
             <el-button
+              v-if="canClose"
               type="warning"
               @click="handleCloseQuestion"
-              :disabled="question.status === 'closed'"
+              :disabled="question.status === 2"
             >
               <el-icon><Close /></el-icon>
               关闭问题
             </el-button>
+            <el-button v-if="canDelete" type="danger" @click="handleDeleteQuestion">
+              <el-icon><Delete /></el-icon>
+              删除问题
+            </el-button>
           </div>
         </article>
 
-        <!-- 回答列表 -->
+        <!-- 回答区 -->
         <div class="answers-section">
-          <h3 class="section-title">
-            专家回答 ({{ answers.length }})
-          </h3>
+          <h3 class="section-title">专家解答</h3>
 
           <!-- 专家回答表单 -->
           <div v-if="canAnswer" class="answer-form">
@@ -77,23 +85,19 @@
             </el-button>
           </div>
 
-          <!-- 回答列表 -->
-          <div v-if="answers.length > 0" class="answer-list">
-            <div v-for="answer in answers" :key="answer.answerId" class="answer-item">
-              <div class="answer-header">
-                <div class="expert-info">
-                  <el-avatar :size="40" :src="answer.expertAvatar">
-                    {{ answer.expertName?.charAt(0) }}
-                  </el-avatar>
-                  <div class="expert-detail">
-                    <div class="expert-name">{{ answer.expertName }}</div>
-                    <div class="expert-title">{{ answer.expertTitle || '农业专家' }}</div>
-                  </div>
+          <!-- 已有回答 -->
+          <div v-if="question.answer" class="answer-item">
+            <div class="answer-header">
+              <div class="expert-info">
+                <el-avatar :size="40">{{ question.expertName?.charAt(0) || '专' }}</el-avatar>
+                <div class="expert-detail">
+                  <div class="expert-name">{{ question.expertName }}</div>
+                  <div class="expert-title">农业专家</div>
                 </div>
-                <span class="answer-time">{{ formatDate(answer.createTime) }}</span>
               </div>
-              <div class="answer-content">{{ answer.content }}</div>
+              <span class="answer-time" v-if="question.updateTime">{{ formatDate(question.updateTime) }}</span>
             </div>
+            <div class="answer-content">{{ question.answer }}</div>
           </div>
           <el-empty
             v-else
@@ -113,8 +117,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, User, Calendar, Close } from '@element-plus/icons-vue'
-import { getQuestionDetail, answerQuestion, closeQuestion } from '@/api/question'
+import { ArrowLeft, User, Calendar, Close, Delete, Phone, ChatDotRound } from '@element-plus/icons-vue'
+import { getQuestionDetail, answerQuestion, closeQuestion, deleteQuestion } from '@/api/question'
 
 const route = useRoute()
 const router = useRouter()
@@ -123,29 +127,31 @@ const userStore = useUserStore()
 const loading = ref(true)
 const submitting = ref(false)
 const question = ref({})
-const answers = ref([])
 const answerContent = ref('')
 
-// 是否可以回答（专家）
+const currentUserName = computed(() => userStore.userInfo?.userName || '')
+
+// 是否可以回答（分配给该专家且未回答；或未指派专家时任意专家可答）
 const canAnswer = computed(() => {
-  if (!userStore.isLoggedIn()) return false
-  return userStore.hasRole(['expert']) && question.value.status !== 'closed'
+  if (!userStore.isLoggedIn() || !userStore.hasRole(['expert'])) return false
+  if (question.value.status !== 0) return false
+  const assigned = question.value.expertName
+  return !assigned || assigned === currentUserName.value
 })
 
 // 是否可以关闭问题（提问者本人）
 const canClose = computed(() => {
-  if (!userStore.isLoggedIn()) return false
-  return question.value.ownName === userStore.userInfo?.userName &&
-         question.value.status !== 'closed'
+  return question.value.questioner === currentUserName.value && question.value.status !== 2
 })
 
-// 获取状态文本
+// 是否可以删除（提问者本人）
+const canDelete = computed(() => {
+  return question.value.questioner === currentUserName.value
+})
+
+// 获取状态文本（后端为整数：0未回答 1已回答 2已关闭）
 const getStatusText = (status) => {
-  const map = {
-    pending: '待回答',
-    answered: '已回答',
-    closed: '已关闭'
-  }
+  const map = { 0: '待回答', 1: '已回答', 2: '已关闭' }
   return map[status] || '未知'
 }
 
@@ -174,9 +180,27 @@ const handleCloseQuestion = async () => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await closeQuestion(question.value.questionId)
+    await closeQuestion(question.value.id)
     ElMessage.success('问题已关闭')
     await loadQuestion()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('操作失败')
+    }
+  }
+}
+
+// 删除问题
+const handleDeleteQuestion = async () => {
+  try {
+    await ElMessageBox.confirm('确定要删除这个问题吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await deleteQuestion(question.value.id)
+    ElMessage.success('删除成功')
+    router.push('/question')
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('操作失败')
@@ -192,9 +216,7 @@ const handleSubmitAnswer = async () => {
   }
   submitting.value = true
   try {
-    await answerQuestion(question.value.questionId, {
-      content: answerContent.value.trim()
-    })
+    await answerQuestion(question.value.id, { answer: answerContent.value.trim() })
     ElMessage.success('回答成功')
     answerContent.value = ''
     await loadQuestion()
@@ -210,8 +232,7 @@ const loadQuestion = async () => {
   loading.value = true
   try {
     const res = await getQuestionDetail(route.params.id)
-    question.value = res.data.question || {}
-    answers.value = res.data.answers || []
+    question.value = res.data || {}
   } catch (error) {
     ElMessage.error('加载失败')
   } finally {
@@ -271,17 +292,17 @@ onMounted(() => {
   margin-bottom: var(--spacing-3, 12px);
 }
 
-.status-pending {
+.status-0 {
   color: #e6a23c;
   background: #fdf6ec;
 }
 
-.status-answered {
+.status-1 {
   color: #67c23a;
   background: #f0f9ff;
 }
 
-.status-closed {
+.status-2 {
   color: #909399;
   background: #f4f4f5;
 }
@@ -320,6 +341,8 @@ onMounted(() => {
   margin-top: var(--spacing-6, 24px);
   padding-top: var(--spacing-6, 24px);
   border-top: 1px solid var(--color-border, #e5e0d8);
+  display: flex;
+  gap: var(--spacing-3, 12px);
 }
 
 /* ===== 回答区 ===== */
@@ -345,12 +368,6 @@ onMounted(() => {
   padding: var(--spacing-4, 16px);
   background: var(--color-bg-secondary, #f7f5f0);
   border-radius: var(--radius-base, 8px);
-}
-
-.answer-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4, 16px);
 }
 
 .answer-item {

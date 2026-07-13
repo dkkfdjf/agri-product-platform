@@ -45,7 +45,7 @@
       <div v-else-if="questionList.length > 0" class="question-list">
         <div
           v-for="question in questionList"
-          :key="question.questionId"
+          :key="question.id"
           class="question-item"
           @click="handleViewDetail(question)"
         >
@@ -58,23 +58,23 @@
             </div>
             <h3 class="question-title">{{ question.title }}</h3>
           </div>
-          <p class="question-content">{{ question.content }}</p>
+          <p class="question-content">{{ question.question }}</p>
           <div class="question-meta">
             <span class="meta-item">
               <el-icon><User /></el-icon>
-              {{ question.ownName }}
+              {{ question.questioner }}
             </span>
             <span class="meta-item">
               <el-icon><Calendar /></el-icon>
               {{ formatDate(question.createTime) }}
             </span>
-            <span class="meta-item" v-if="question.answerCount !== undefined">
+            <span class="meta-item" v-if="question.plantName">
               <el-icon><ChatDotRound /></el-icon>
-              {{ question.answerCount }} 回答
+              {{ question.plantName }}
             </span>
           </div>
-          <!-- 已回答时显示简略回答 -->
-          <div v-if="question.status === 'answered'" class="answer-preview">
+          <!-- 已回答时显示回答者 -->
+          <div v-if="question.status === 1" class="answer-preview">
             <div class="answer-author">
               回答者：{{ question.expertName || '专家' }}
             </div>
@@ -114,7 +114,7 @@ const userStore = useUserStore()
 
 const loading = ref(false)
 const searchKeyword = ref('')
-const currentStatus = ref('all')
+const currentStatus = ref(-1)
 const questionList = ref([])
 
 const pagination = reactive({
@@ -163,7 +163,7 @@ const handleSearch = () => {
 
 // 查看详情
 const handleViewDetail = (question) => {
-  router.push(`/question/${question.questionId}`)
+  router.push(`/question/${question.id}`)
 }
 
 // 加载问题列表

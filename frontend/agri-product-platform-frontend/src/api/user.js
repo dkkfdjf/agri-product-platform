@@ -53,3 +53,25 @@ export function updatePassword(data) {
     data
   })
 }
+
+/**
+ * 提交角色升级申请（农户/买家 → 专家/银行）
+ */
+export function applyRole(data) {
+  return request({
+    url: '/user/apply-role',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 查看我的角色申请记录
+ */
+export function getMyApplications() {
+  return request({
+    url: '/user/my/applications',
+    method: 'get'
+  })
+}
+

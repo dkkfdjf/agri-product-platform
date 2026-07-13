@@ -35,6 +35,11 @@ const adminMenuItems = [
     icon: 'Avatar'
   },
   {
+    path: '/admin/applications',
+    title: '申请审核',
+    icon: 'Stamp'
+  },
+  {
     path: '/admin/banners',
     title: '轮播图管理',
     icon: 'Picture'

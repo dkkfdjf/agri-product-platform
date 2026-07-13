@@ -31,7 +31,7 @@ export function getExpertDetail(expertId) {
  */
 export function getExpertInfo() {
   return request({
-    url: '/expert/info',
+    url: '/expert/my/info',
     method: 'get'
   })
 }
@@ -42,7 +42,7 @@ export function getExpertInfo() {
  */
 export function updateExpertInfo(data) {
   return request({
-    url: '/expert/info',
+    url: '/expert/my/info',
     method: 'put',
     data
   })

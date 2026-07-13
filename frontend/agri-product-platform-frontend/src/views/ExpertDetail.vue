@@ -107,10 +107,10 @@ const loadExpertDetail = async () => {
     const res = await getExpertDetail(userName)
     if (res.code === 200) {
       expert.value = res.data
-      // 加载专家的知识
-      if (expert.value.realName) {
-        loadExpertKnowledge(expert.value.realName)
-        loadExpertQuestions(expert.value.realName)
+      // 知识 own_name 与问答 expert_name 都存储专家 userName
+      if (expert.value.userName) {
+        loadExpertKnowledge(expert.value.userName)
+        loadExpertQuestions(expert.value.userName)
       }
     } else {
       ElMessage.error('加载专家信息失败')
@@ -125,7 +125,7 @@ const loadExpertDetail = async () => {
 const loadExpertKnowledge = async (expertName) => {
   knowledgeLoading.value = true
   try {
-    const res = await getKnowledgeList({ page: 1, pageSize: 10, ownName: expertName })
+    const res = await getKnowledgeList({ page: 1, pageSize: 10, ownName: expertName, status: 1 })
     if (res.code === 200) {
       knowledgeList.value = (res.data.records || []).map(k => ({
         knowledgeId: k.knowledgeId || k.id,
@@ -169,7 +169,7 @@ const handleAsk = () => {
     router.push({ path: '/login', query: { redirect: route.fullPath } })
     return
   }
-  router.push('/question/ask')
+  router.push(`/question/ask?expert=${expert.value?.userName}`)
 }
 
 const handleReserve = () => {
@@ -178,7 +178,7 @@ const handleReserve = () => {
     router.push({ path: '/login', query: { redirect: route.fullPath } })
     return
   }
-  router.push({ path: '/reserve', query: { expert: expert.value?.realName } })
+  router.push({ path: '/reserve', query: { expert: expert.value?.userName } })
 }
 
 const goToKnowledge = (id) => {
