@@ -22,9 +22,32 @@ public class ReserveServiceImpl implements ReserveService {
 
     @Override
     public void makeReservation(String userName, ReserveRequest request) {
+        // expert_name 存储目标专家的 userName
+        String expertName = request.getExpertName() != null ? request.getExpertName() : request.getExpertId();
+        if (expertName == null || expertName.isEmpty()) {
+            throw new RuntimeException("请选择要预约的专家");
+        }
+        if (request.getPhone() == null || request.getPhone().isEmpty()) {
+            throw new RuntimeException("请填写联系电话");
+        }
+        if (request.getAddress() == null || request.getAddress().isEmpty()) {
+            throw new RuntimeException("请填写地址");
+        }
+        if (request.getPlantName() == null || request.getPlantName().isEmpty()) {
+            throw new RuntimeException("请填写农作物");
+        }
+        if (request.getSoilCondition() == null || request.getSoilCondition().isEmpty()) {
+            throw new RuntimeException("请填写土壤条件");
+        }
+        if (request.getPlantCondition() == null || request.getPlantCondition().isEmpty()) {
+            throw new RuntimeException("请填写作物条件");
+        }
+        if (request.getPlantDetail() == null || request.getPlantDetail().isEmpty()) {
+            throw new RuntimeException("请填写作物详情");
+        }
+
         Reserve reserve = new Reserve();
-        // 使用传入的expertName而不是查找expert表
-        reserve.setExpertName(request.getExpertName() != null ? request.getExpertName() : request.getExpertId());
+        reserve.setExpertName(expertName);
         reserve.setQuestioner(userName);
         reserve.setPhone(request.getPhone());
         reserve.setAddress(request.getAddress());

@@ -28,7 +28,8 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         knowledge.setContent(request.getContent());
         knowledge.setPicPath(request.getPicPath());
         knowledge.setOwnName(userName);
-        knowledge.setStatus(request.getStatus() != null ? request.getStatus() : 0);
+        // 默认发布（1）；草稿需显式传 0
+        knowledge.setStatus(request.getStatus() != null ? request.getStatus() : 1);
         knowledgeMapper.insert(knowledge);
     }
 
@@ -44,6 +45,9 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
         if (status != null) {
             wrapper.eq(Knowledge::getStatus, status);
+        } else if (ownName == null || ownName.isEmpty()) {
+            // 公共列表（未指定发布者）只展示已发布，避免泄露他人草稿
+            wrapper.eq(Knowledge::getStatus, 1);
         }
         if (ownName != null && !ownName.isEmpty()) {
             wrapper.eq(Knowledge::getOwnName, ownName);
@@ -99,6 +103,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         return discussMapper.selectList(
             new LambdaQueryWrapper<Discuss>()
                 .eq(Discuss::getKnowledgeId, knowledgeId)
+                .orderByAsc(Discuss::getCreateTime)
         );
     }
 

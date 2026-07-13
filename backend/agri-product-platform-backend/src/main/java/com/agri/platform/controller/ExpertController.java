@@ -22,13 +22,13 @@ public class ExpertController {
     @Autowired
     private JwtUtil jwtUtil;
 
-    @GetMapping("/info")
+    @GetMapping("/my/info")
     public Result<Expert> getInfo(@RequestHeader("Authorization") String token) {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
         return Result.success(expertService.getExpertByUserName(userName));
     }
 
-    @PutMapping("/info")
+    @PutMapping("/my/info")
     public Result<String> updateInfo(@RequestHeader("Authorization") String token,
                                      @RequestBody ExpertRequest request) {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
@@ -39,10 +39,15 @@ public class ExpertController {
     @GetMapping("/reserve/list")
     public Result<Page<Reserve>> reserveList(@RequestHeader("Authorization") String token,
                                               @RequestParam(defaultValue = "1") int page,
-                                              @RequestParam(defaultValue = "10") int pageSize) {
+                                              @RequestParam(defaultValue = "10") int pageSize,
+                                              @RequestParam(required = false) Integer status) {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
         Expert expert = expertService.getExpertByUserName(userName);
-        return Result.success(expertService.getReserveList(expert.getRealName(), page, pageSize));
+        if (expert == null) {
+            return Result.error("专家信息不存在");
+        }
+        // expert_name 存储的是专家 userName
+        return Result.success(expertService.getReserveList(expert.getUserName(), page, pageSize, status));
     }
 
     @PutMapping("/reserve/{reserveId}/status")
@@ -51,9 +56,12 @@ public class ExpertController {
                                               @RequestBody java.util.Map<String, Object> payload) {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
         Expert expert = expertService.getExpertByUserName(userName);
+        if (expert == null) {
+            return Result.error("专家信息不存在");
+        }
         Integer status = payload.get("status") != null ? Integer.valueOf(payload.get("status").toString()) : 0;
         String answer = payload.get("answer") != null ? payload.get("answer").toString() : null;
-        expertService.confirmReserve(reserveId, expert.getRealName(), status, answer);
+        expertService.confirmReserve(reserveId, expert.getUserName(), status, answer);
         return Result.success("状态更新成功");
     }
 

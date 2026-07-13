@@ -17,11 +17,21 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     public void askQuestion(String userName, QuestionRequest request) {
+        if (request.getExpertName() == null || request.getExpertName().isEmpty()) {
+            throw new RuntimeException("请选择提问的专家");
+        }
+        if (request.getTitle() == null || request.getTitle().isEmpty()) {
+            throw new RuntimeException("请填写问题标题");
+        }
         Question question = new Question();
-        question.setTitle(request.getTitle());
-        question.setQuestion(request.getContent());
+        // expert_name 存储目标专家的 userName（与 tb_expert.user_name 对齐）
+        question.setExpertName(request.getExpertName());
         question.setQuestioner(userName);
-        question.setStatus(request.getStatus() != null ? request.getStatus() : 0);
+        question.setPhone(request.getPhone());
+        question.setPlantName(request.getPlantName());
+        question.setTitle(request.getTitle());
+        question.setQuestion(request.getQuestion());
+        question.setStatus(0); // 未回答
         questionMapper.insert(question);
     }
 
@@ -42,9 +52,8 @@ public class QuestionServiceImpl implements QuestionService {
             wrapper.eq(Question::getQuestioner, questioner);
         }
         if (expertName != null && !expertName.isEmpty()) {
-            // 对于专家名称，需要通过real_name在tb_expert表中查找对应的user_name
-            // 这里暂时使用模糊匹配
-            wrapper.like(Question::getExpertName, expertName);
+            // expert_name 存储的是专家 userName，使用精确匹配
+            wrapper.eq(Question::getExpertName, expertName);
         }
         wrapper.orderByDesc(Question::getCreateTime);
         return questionMapper.selectPage(pageParam, wrapper);
@@ -78,5 +87,14 @@ public class QuestionServiceImpl implements QuestionService {
         }
         question.setStatus(2); // 已关闭
         questionMapper.updateById(question);
+    }
+
+    @Override
+    public void deleteQuestion(Integer questionId) {
+        Question question = questionMapper.selectById(questionId);
+        if (question == null) {
+            throw new RuntimeException("问题不存在");
+        }
+        questionMapper.deleteById(questionId);
     }
 }

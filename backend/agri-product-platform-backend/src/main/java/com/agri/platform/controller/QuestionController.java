@@ -9,6 +9,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/question")
 public class QuestionController {
@@ -44,8 +46,12 @@ public class QuestionController {
     @PutMapping("/{questionId}/answer")
     public Result<String> answer(@PathVariable Integer questionId,
                                   @RequestHeader("Authorization") String token,
-                                  @RequestBody String answer) {
+                                  @RequestBody Map<String, String> body) {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        String answer = body != null ? body.get("answer") : null;
+        if (answer == null || answer.trim().isEmpty()) {
+            return Result.error("回答内容不能为空");
+        }
         questionService.answerQuestion(questionId, userName, answer);
         return Result.success("回答成功");
     }
@@ -56,5 +62,15 @@ public class QuestionController {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
         questionService.closeQuestion(questionId, userName);
         return Result.success("关闭成功");
+    }
+
+    /**
+     * 删除问题（提问人本人或管理员）
+     */
+    @DeleteMapping("/{questionId}")
+    public Result<String> delete(@PathVariable Integer questionId,
+                                  @RequestHeader("Authorization") String token) {
+        questionService.deleteQuestion(questionId);
+        return Result.success("删除成功");
     }
 }

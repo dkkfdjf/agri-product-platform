@@ -11,4 +11,5 @@ public interface QuestionService {
     Question getQuestionById(Integer questionId);
     void answerQuestion(Integer questionId, String userName, String answer);
     void closeQuestion(Integer questionId, String userName);
+    void deleteQuestion(Integer questionId);
 }

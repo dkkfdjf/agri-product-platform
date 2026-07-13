@@ -42,10 +42,13 @@ public class ExpertServiceImpl implements ExpertService {
     }
 
     @Override
-    public Page<Reserve> getReserveList(String expertName, int page, int pageSize) {
+    public Page<Reserve> getReserveList(String expertName, int page, int pageSize, Integer status) {
         Page<Reserve> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<Reserve> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Reserve::getExpertName, expertName);
+        if (status != null) {
+            wrapper.eq(Reserve::getStatus, status);
+        }
         wrapper.orderByDesc(Reserve::getCreateTime);
         return reserveMapper.selectPage(pageParam, wrapper);
     }

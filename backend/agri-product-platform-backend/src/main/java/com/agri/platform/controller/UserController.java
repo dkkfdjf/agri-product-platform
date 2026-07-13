@@ -1,13 +1,17 @@
 package com.agri.platform.controller;
 
 import com.agri.platform.common.Result;
+import com.agri.platform.dto.RoleApplicationRequest;
 import com.agri.platform.dto.UserLoginRequest;
 import com.agri.platform.dto.UserRegisterRequest;
+import com.agri.platform.entity.RoleApplication;
 import com.agri.platform.entity.User;
+import com.agri.platform.service.RoleApplicationService;
 import com.agri.platform.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -19,6 +23,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private RoleApplicationService roleApplicationService;
 
     /**
      * 用户注册
@@ -151,5 +158,29 @@ public class UserController {
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }
+    }
+
+    /**
+     * 提交角色升级申请（农户/买家 → 专家/银行）
+     */
+    @PostMapping("/apply-role")
+    public Result<String> applyRole(@RequestHeader("Authorization") String token,
+                                     @RequestBody RoleApplicationRequest request) {
+        try {
+            String userName = userService.getUserByUserNameFromToken(token);
+            roleApplicationService.apply(userName, request);
+            return Result.success("申请已提交，请等待管理员审核");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 查看我的角色申请记录
+     */
+    @GetMapping("/my/applications")
+    public Result<List<RoleApplication>> myApplications(@RequestHeader("Authorization") String token) {
+        String userName = userService.getUserByUserNameFromToken(token);
+        return Result.success(roleApplicationService.listMine(userName));
     }
 }
