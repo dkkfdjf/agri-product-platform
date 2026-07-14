@@ -17,7 +17,7 @@
           >
             <el-form-item label="头像">
               <div class="avatar-upload">
-                <el-avatar :size="100" :src="userForm.avatar || '/default-avatar.png'" />
+                <el-avatar :size="100" :src="userForm.avatar || '/images/default-avatar.png'" />
                 <el-button type="primary" link @click="changeAvatar">更换头像</el-button>
               </div>
             </el-form-item>

@@ -122,7 +122,7 @@ export function getAdminProducts(params) {
 
 export function updateAdminProduct(orderId, data) {
   return request({
-    url: `/product/${orderId}`,
+    url: `/admin/product/${orderId}`,
     method: 'put',
     data
   })
@@ -130,7 +130,7 @@ export function updateAdminProduct(orderId, data) {
 
 export function deleteProduct(orderId) {
   return request({
-    url: `/product/${orderId}`,
+    url: `/admin/product/${orderId}`,
     method: 'delete'
   })
 }
@@ -140,16 +140,16 @@ export function deleteProduct(orderId) {
  */
 export function getAdminFinances(params) {
   return request({
-    url: '/finance/list',
+    url: '/admin/finances',
     method: 'get',
     params
   })
 }
 
-export function approveFinance(data) {
+export function approveFinance(id, data) {
   return request({
-    url: '/finance/approve',
-    method: 'post',
+    url: `/finance/apply/${id}`,
+    method: 'put',
     data
   })
 }

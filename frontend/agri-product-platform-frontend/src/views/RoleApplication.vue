@@ -2,6 +2,7 @@
   <div class="role-application-page">
     <div class="container">
       <div class="page-header">
+        <el-button @click="$router.back()" style="margin-bottom: 12px;">← 返回</el-button>
         <h1>角色升级申请</h1>
         <p class="subtitle">农户/买家可申请成为「专家」或「银行」角色，提交后由管理员审核</p>
       </div>

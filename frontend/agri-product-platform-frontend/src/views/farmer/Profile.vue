@@ -1,48 +1,8 @@
 <template>
-  <div class="page-placeholder">
-    <div class="placeholder-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <circle cx="12" cy="8" r="3"/>
-        <path d="M8 21v-5a4 4 0 014-4M8 21h8"/>
-      </svg>
-    </div>
-    <h2>个人中心</h2>
-    <p>农户个人中心页面</p>
-  </div>
+  <!-- 复用通用个人中心：内含角色升级申请入口（角色申请）及农户专属功能卡 -->
+  <Profile />
 </template>
 
-<style scoped>
-.page-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  text-align: center;
-  color: var(--color-text-tertiary, #6b7280);
-}
-
-.placeholder-icon {
-  width: 64px;
-  height: 64px;
-  margin-bottom: var(--spacing-4, 16px);
-  opacity: 0.5;
-}
-
-.placeholder-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.page-placeholder h2 {
-  font-size: var(--font-size-xl, 24px);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text-primary, #1f2923);
-  margin: 0 0 var(--spacing-2, 8px);
-}
-
-.page-placeholder p {
-  font-size: var(--font-size-sm, 14px);
-  margin: 0;
-}
-</style>
+<script setup>
+import Profile from '@/views/Profile.vue'
+</script>

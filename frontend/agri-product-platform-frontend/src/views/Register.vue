@@ -158,19 +158,8 @@
                   <span class="role-desc">采购优质农产品</span>
                 </div>
               </el-option>
-              <el-option label="专家" value="expert">
-                <div class="role-option">
-                  <span class="role-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                      <path d="M22 10v6M2 10l2-4h16l2 4M12 2v3M12 10a3 3 0 100 6 3 3 0 000-6z"/>
-                      <path d="M12 16c-3 0-5 1.5-6 3v2h12v-2c-1-1.5-3-3-6-3z"/>
-                    </svg>
-                  </span>
-                  <span>专家</span>
-                  <span class="role-desc">发布知识，解答问题</span>
-                </div>
-              </el-option>
             </el-select>
+            <p class="role-tip">想成为<span>专家</span>或<span>银行</span>角色？请先以农户/买家注册登录，再在「个人中心 → 角色申请」提交申请，由管理员审核开通。</p>
           </el-form-item>
 
           <el-form-item>
@@ -593,6 +582,22 @@ const handleRegister = async () => {
   font-size: 12px;
   color: var(--color-text-light);
   margin-left: auto;
+}
+
+.role-tip {
+  margin: 10px 2px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-light);
+  background: var(--color-bg);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border-left: 3px solid var(--color-secondary);
+}
+
+.role-tip span {
+  color: var(--color-primary);
+  font-weight: 600;
 }
 
 /* 提交按钮 */

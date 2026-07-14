@@ -2,6 +2,7 @@
   <div class="knowledge-list-page">
     <!-- 页面标题区 -->
     <div class="page-header">
+      <el-button @click="$router.back()" style="margin-bottom: 12px;">← 返回</el-button>
       <h1 class="page-title">农业知识库</h1>
       <p class="page-subtitle">专业农业知识分享，助您科学种植</p>
     </div>

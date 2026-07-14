@@ -4,75 +4,82 @@
       <h2>商品管理</h2>
       <el-input
         v-model="searchKeyword"
-        placeholder="搜索商品"
+        placeholder="按标题搜索商品"
         style="width: 250px"
         clearable
         @clear="loadProducts"
+        @keyup.enter="loadProducts"
       >
         <template #prefix>
           <el-icon><Search /></el-icon>
         </template>
+        <template #append>
+          <el-button @click="loadProducts">搜索</el-button>
+        </template>
       </el-input>
     </div>
 
-    <el-table :data="products" style="width: 100%" v-loading="loading">
-      <el-table-column label="商品图片" width="100">
+    <el-table :data="products" style="width: 100%" v-loading="loading" border>
+      <el-table-column label="图片" width="90">
         <template #default="{ row }">
-          <img :src="row.picPath" class="product-preview" @error="handleImageError" />
+          <img v-if="row.picture" :src="row.picture" class="product-preview" @error="handleImageError" />
+          <span v-else class="no-img">无图</span>
         </template>
       </el-table-column>
-      <el-table-column prop="name" label="商品名称" width="200" />
-      <el-table-column prop="description" label="描述" show-overflow-tooltip />
-      <el-table-column prop="price" label="价格" width="100">
+      <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
+      <el-table-column label="类型" width="90">
         <template #default="{ row }">
-          ¥{{ row.price }}
-        </template>
-      </el-table-column>
-      <el-table-column prop="stock" label="库存" width="80" />
-      <el-table-column prop="status" label="状态" width="100">
-        <template #default="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : 'info'">
-            {{ row.status === 1 ? '已上架' : '已下架' }}
+          <el-tag :type="row.type === 'demand' ? 'warning' : 'success'" size="small">
+            {{ typeText(row.type) }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="200" fixed="right">
+      <el-table-column label="价格" width="110">
+        <template #default="{ row }">¥{{ row.price }}</template>
+      </el-table-column>
+      <el-table-column label="交易状态" width="100">
+        <template #default="{ row }">
+          <el-tag :type="orderStatusType(row.orderStatus)" size="small">
+            {{ orderStatusText(row.orderStatus) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="ownName" label="发布人" width="120" />
+      <el-table-column prop="createTime" label="发布时间" width="170" />
+      <el-table-column label="操作" width="150" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="editProduct(row)">编辑</el-button>
-          <el-button
-            link
-            :type="row.status === 1 ? 'warning' : 'success'"
-            @click="toggleStatus(row)"
-          >
-            {{ row.status === 1 ? '下架' : '上架' }}
-          </el-button>
           <el-button link type="danger" @click="deleteProduct(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
 
     <el-dialog v-model="dialogVisible" title="编辑商品" width="600px">
-      <el-form :model="form" label-width="80px">
-        <el-form-item label="商品名称">
-          <el-input v-model="form.name" placeholder="输入商品名称" />
+      <el-form :model="form" label-width="90px">
+        <el-form-item label="标题">
+          <el-input v-model="form.title" placeholder="输入商品标题" />
         </el-form-item>
         <el-form-item label="描述">
-          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="输入商品描述" />
+          <el-input v-model="form.content" type="textarea" :rows="3" placeholder="输入商品描述" />
         </el-form-item>
         <el-form-item label="价格">
           <el-input-number v-model="form.price" :min="0" :precision="2" />
         </el-form-item>
-        <el-form-item label="库存">
-          <el-input-number v-model="form.stock" :min="0" />
+        <el-form-item label="类型">
+          <el-select v-model="form.type" style="width: 100%">
+            <el-option label="货源（出售）" value="goods" />
+            <el-option label="需求（求购）" value="demand" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="图片URL">
-          <el-input v-model="form.picPath" placeholder="输入图片URL" />
+        <el-form-item label="交易状态">
+          <el-select v-model="form.orderStatus" style="width: 100%">
+            <el-option label="待交易" :value="0" />
+            <el-option label="交易中" :value="1" />
+            <el-option label="已完成" :value="2" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="form.status">
-            <el-radio :value="1">上架</el-radio>
-            <el-radio :value="0">下架</el-radio>
-          </el-radio-group>
+        <el-form-item label="图片地址">
+          <el-input v-model="form.picture" placeholder="输入图片URL，如 /images/apple.jpg" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -94,16 +101,20 @@ const saving = ref(false)
 const products = ref([])
 const searchKeyword = ref('')
 const dialogVisible = ref(false)
-const editingProduct = ref(null)
+const editingId = ref(null)
 
 const form = reactive({
-  name: '',
-  description: '',
+  title: '',
+  content: '',
   price: 0,
-  stock: 0,
-  picPath: '',
-  status: 1
+  picture: '',
+  type: 'goods',
+  orderStatus: 0
 })
+
+const typeText = (t) => ({ goods: '货源', demand: '需求' }[t] || t || '—')
+const orderStatusText = (s) => ({ 0: '待交易', 1: '交易中', 2: '已完成' }[s] ?? '—')
+const orderStatusType = (s) => ({ 0: 'warning', 1: 'primary', 2: 'success' }[s] || 'info')
 
 onMounted(() => {
   loadProducts()
@@ -122,63 +133,51 @@ const loadProducts = async () => {
 }
 
 const editProduct = (product) => {
-  editingProduct.value = product
+  editingId.value = product.orderId
   Object.assign(form, {
-    name: product.name,
-    description: product.description,
+    title: product.title,
+    content: product.content,
     price: product.price,
-    stock: product.stock,
-    picPath: product.picPath,
-    status: product.status
+    picture: product.picture,
+    type: product.type || 'goods',
+    orderStatus: product.orderStatus ?? 0
   })
   dialogVisible.value = true
 }
 
 const save = async () => {
-  if (!form.name) {
-    ElMessage.warning('请输入商品名称')
+  if (!form.title) {
+    ElMessage.warning('请输入标题')
     return
   }
-
   saving.value = true
   try {
-    await updateAdminProduct(editingProduct.value.orderId || editingProduct.value.productId, form)
+    await updateAdminProduct(editingId.value, { ...form })
     ElMessage.success('更新成功')
     dialogVisible.value = false
     await loadProducts()
   } catch (error) {
-    ElMessage.error('保存失败')
+    ElMessage.error(error.message || '保存失败')
   } finally {
     saving.value = false
   }
 }
 
-const toggleStatus = async (product) => {
-  try {
-    const newStatus = product.status === 1 ? 0 : 1
-    await updateAdminProduct(product.orderId || product.productId, { status: newStatus })
-    ElMessage.success(newStatus === 1 ? '上架成功' : '下架成功')
-    await loadProducts()
-  } catch (error) {
-    ElMessage.error('操作失败')
-  }
-}
-
 const deleteProduct = async (product) => {
   try {
-    await ElMessageBox.confirm('确定删除此商品吗？', '提示', { type: 'warning' })
-    await deleteProductApi(product.orderId || product.productId)
+    await ElMessageBox.confirm(`确定删除商品「${product.title}」吗？`, '提示', { type: 'warning' })
+    await deleteProductApi(product.orderId)
     ElMessage.success('删除成功')
     await loadProducts()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败')
+      ElMessage.error(error.message || '删除失败')
     }
   }
 }
 
 const handleImageError = (e) => {
-  e.target.src = 'https://via.placeholder.com/80x80?text=No+Image'
+  e.target.style.display = 'none'
 }
 </script>
 
@@ -206,6 +205,18 @@ const handleImageError = (e) => {
   width: 60px;
   height: 60px;
   object-fit: cover;
+  border-radius: 4px;
+}
+
+.no-img {
+  display: inline-block;
+  width: 60px;
+  height: 60px;
+  line-height: 60px;
+  text-align: center;
+  font-size: 12px;
+  color: #999;
+  background: #f5f5f5;
   border-radius: 4px;
 }
 </style>

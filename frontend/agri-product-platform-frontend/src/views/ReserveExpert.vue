@@ -3,6 +3,7 @@
     <div class="container">
       <!-- 页面标题 -->
       <div class="page-header">
+        <el-button @click="$router.back()" style="margin-bottom: 12px;">← 返回</el-button>
         <h1 class="page-title">预约专家</h1>
         <p class="page-subtitle">与农业专家一对一咨询，获取专业指导</p>
       </div>

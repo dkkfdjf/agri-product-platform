@@ -133,8 +133,12 @@ const showNotifications = () => {
 const handleUserCommand = (command) => {
   switch (command) {
     case 'profile':
-      const profilePath = `/${userStore.role}/profile`
-      router.push(profilePath)
+      // farmer/buyer/expert 有角色专属个人中心；admin/bank 无个人中心，回到首页
+      if (['farmer', 'buyer', 'expert'].includes(userStore.role)) {
+        router.push(`/${userStore.role}/profile`)
+      } else {
+        router.push('/')
+      }
       break
     case 'settings':
       ElMessage.info('设置功能开发中')

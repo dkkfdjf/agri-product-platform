@@ -1,10 +1,11 @@
 <template>
   <div class="profile-container">
+    <el-button @click="$router.back()" style="margin-bottom: 16px;">← 返回</el-button>
     <h1>个人中心</h1>
 
     <el-card class="user-card">
       <div class="user-info">
-        <el-avatar :size="80" :src="userStore.userAvatar() || '/default-avatar.png'" />
+        <el-avatar :size="80" :src="userStore.userAvatar() || '/images/default-avatar.png'" />
         <div class="info">
           <h2>{{ userStore.displayName() }}</h2>
           <p class="role">{{ getRoleText(userStore.role) }}</p>

@@ -1,6 +1,7 @@
 <template>
   <div class="expert-detail-page">
     <div class="container">
+      <el-button @click="$router.back()" style="margin-bottom: 16px;">← 返回</el-button>
       <!-- 专家基本信息卡片 -->
       <el-card class="expert-info-card" v-if="expert" v-loading="loading">
         <div class="expert-header">
