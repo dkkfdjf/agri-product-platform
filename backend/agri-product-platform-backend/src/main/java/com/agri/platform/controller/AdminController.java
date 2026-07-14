@@ -4,6 +4,8 @@ import com.agri.platform.common.Result;
 import com.agri.platform.dto.AdminExpertRequest;
 import com.agri.platform.dto.AdminUserRequest;
 import com.agri.platform.entity.Expert;
+import com.agri.platform.entity.Finance;
+import com.agri.platform.entity.Product;
 import com.agri.platform.entity.RoleApplication;
 import com.agri.platform.entity.User;
 import com.agri.platform.mapper.*;
@@ -14,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -347,5 +350,65 @@ public class AdminController {
             userMapper.deleteById(userName);
         }
         return Result.success("删除成功");
+    }
+
+    // ================= 商品管理 =================
+
+    /** 商品列表（可选关键字，按标题模糊） */
+    @GetMapping("/products")
+    public Result<List<Product>> listProducts(@RequestHeader("Authorization") String token,
+                                               @RequestParam(required = false) String keyword) {
+        requireAdmin(token);
+        LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            wrapper.like(Product::getTitle, keyword.trim());
+        }
+        wrapper.orderByDesc(Product::getCreateTime);
+        return Result.success(productMapper.selectList(wrapper));
+    }
+
+    /** 管理员修改商品（不限归属） */
+    @PutMapping("/product/{orderId}")
+    public Result<String> adminUpdateProduct(@RequestHeader("Authorization") String token,
+                                              @PathVariable Integer orderId,
+                                              @RequestBody Map<String, Object> body) {
+        requireAdmin(token);
+        Product p = productMapper.selectById(orderId);
+        if (p == null) {
+            return Result.error("商品不存在");
+        }
+        if (body.containsKey("title")) p.setTitle((String) body.get("title"));
+        if (body.containsKey("content")) p.setContent((String) body.get("content"));
+        if (body.get("price") != null) p.setPrice(new BigDecimal(body.get("price").toString()));
+        if (body.containsKey("picture")) p.setPicture((String) body.get("picture"));
+        if (body.containsKey("type")) p.setType((String) body.get("type"));
+        if (body.get("orderStatus") != null) p.setOrderStatus(Integer.valueOf(body.get("orderStatus").toString()));
+        p.setUpdateTime(LocalDateTime.now());
+        productMapper.updateById(p);
+        return Result.success("修改成功");
+    }
+
+    /** 管理员删除商品（不限归属） */
+    @DeleteMapping("/product/{orderId}")
+    public Result<String> adminDeleteProduct(@RequestHeader("Authorization") String token,
+                                              @PathVariable Integer orderId) {
+        requireAdmin(token);
+        productMapper.deleteById(orderId);
+        return Result.success("删除成功");
+    }
+
+    // ================= 融资管理 =================
+
+    /** 融资申请列表（可选状态过滤：0申请中 1已通过 2已驳回） */
+    @GetMapping("/finances")
+    public Result<List<Finance>> listFinances(@RequestHeader("Authorization") String token,
+                                               @RequestParam(required = false) Integer status) {
+        requireAdmin(token);
+        LambdaQueryWrapper<Finance> wrapper = new LambdaQueryWrapper<>();
+        if (status != null) {
+            wrapper.eq(Finance::getStatus, status);
+        }
+        wrapper.orderByDesc(Finance::getCreateTime);
+        return Result.success(financeMapper.selectList(wrapper));
     }
 }
