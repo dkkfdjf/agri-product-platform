@@ -3,7 +3,10 @@ package com.agri.platform.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.io.File;
 
 /**
  * Web配置
@@ -30,7 +33,17 @@ public class WebConfig implements WebMvcConfigurer {
                         "/knowledge/list",   // 知识列表（公开）
                         "/knowledge/*",      // 知识详情（公开）
                         "/knowledge/*/discuss/list", // 知识评论列表（公开）
-                        "/question/list"     // 问答列表（公开）
+                        "/question/list",    // 问答列表（公开）
+                        "/upload",           // 文件上传（公开，前端 el-upload 直接调用）
+                        "/uploads/**"        // 已上传文件的访问（公开）
                 );
+    }
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 将 /uploads/** 映射到运行目录下的 uploads/ 文件夹，供访问上传的图片/材料
+        String abs = new File("uploads").getAbsolutePath().replace("\\", "/");
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:///" + abs + "/");
     }
 }

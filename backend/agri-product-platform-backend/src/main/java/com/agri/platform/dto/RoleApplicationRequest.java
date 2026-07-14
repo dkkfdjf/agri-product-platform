@@ -19,4 +19,6 @@ public class RoleApplicationRequest {
     private String belong;
     /** 申请理由 */
     private String reason;
+    /** 相关材料文件URL（资质/证明等，可选） */
+    private String materials;
 }

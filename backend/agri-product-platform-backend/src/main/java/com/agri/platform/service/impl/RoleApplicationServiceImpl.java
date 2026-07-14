@@ -59,6 +59,7 @@ public class RoleApplicationServiceImpl implements RoleApplicationService {
         app.setPosition(request.getPosition());
         app.setBelong(request.getBelong());
         app.setReason(request.getReason());
+        app.setMaterials(request.getMaterials());
         app.setStatus(0);
         roleApplicationMapper.insert(app);
     }

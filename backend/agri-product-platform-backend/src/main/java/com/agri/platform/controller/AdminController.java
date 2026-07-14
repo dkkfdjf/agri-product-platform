@@ -193,13 +193,28 @@ public class AdminController {
     public Result<String> updateUserStatus(@RequestHeader("Authorization") String token,
                                             @PathVariable String userName,
                                             @RequestBody Map<String, Object> body) {
-        requireAdmin(token);
+        User admin = requireAdmin(token);
         User user = userMapper.selectById(userName);
         if (user == null) {
             return Result.error("用户不存在");
         }
         Object st = body.get("status");
-        user.setStatus(st != null && Integer.valueOf(1).equals(Integer.valueOf(st.toString())) ? 1 : 0);
+        int newStatus = (st != null && Integer.valueOf(1).equals(Integer.valueOf(st.toString()))) ? 1 : 0;
+
+        // 禁用保护：不能禁用当前登录的管理员；不能禁用最后一个启用的管理员
+        if (newStatus == 0) {
+            if (admin.getUserName().equals(userName)) {
+                return Result.error("不能禁用当前登录的管理员账号");
+            }
+            if ("admin".equals(user.getRole())) {
+                Long activeAdmins = userMapper.selectCount(
+                        new LambdaQueryWrapper<User>().eq(User::getRole, "admin").eq(User::getStatus, 1));
+                if (activeAdmins != null && activeAdmins <= 1) {
+                    return Result.error("系统至少需保留一个启用的管理员账号");
+                }
+            }
+        }
+        user.setStatus(newStatus);
         user.setUpdateTime(LocalDateTime.now());
         userMapper.updateById(user);
         return Result.success("操作成功");

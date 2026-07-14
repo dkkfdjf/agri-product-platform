@@ -24,6 +24,8 @@ public class RoleApplication {
     private String position;
     private String belong;
     private String reason;
+    /** 相关材料文件URL（资质/证明等，可选） */
+    private String materials;
     /** 0待审核 1通过 2驳回 */
     private Integer status;
     private String reviewRemark;
