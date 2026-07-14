@@ -18,7 +18,26 @@
             <el-form-item label="头像">
               <div class="avatar-upload">
                 <el-avatar :size="100" :src="userForm.avatar || '/images/default-avatar.png'" />
-                <el-button type="primary" link @click="changeAvatar">更换头像</el-button>
+                <el-upload
+                  action="/api/upload"
+                  :before-upload="beforeAvatarUpload"
+                  :on-success="handleAvatarSuccess"
+                  :show-file-list="false"
+                  accept="image/*"
+                >
+                  <el-button type="primary" link>上传头像</el-button>
+                </el-upload>
+                <div class="avatar-presets">
+                  <span class="preset-label">或选预设：</span>
+                  <img
+                    v-for="p in presetAvatars"
+                    :key="p"
+                    :src="p"
+                    class="preset-avatar"
+                    :class="{ active: userForm.avatar === p }"
+                    @click="userForm.avatar = p"
+                  />
+                </div>
               </div>
             </el-form-item>
 
@@ -246,8 +265,25 @@ const resetPasswordForm = () => {
   passwordFormRef.value?.resetFields()
 }
 
-const changeAvatar = () => {
-  ElMessage.info('头像上传功能待实现')
+const presetAvatars = [
+  '/images/头像1.png',
+  '/images/头像2.png',
+  '/images/头像3.jpg',
+  '/images/(专家)头像4.png'
+]
+const beforeAvatarUpload = (raw) => {
+  const isImg = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(raw.type)
+  if (!isImg) { ElMessage.error('只能上传图片'); return false }
+  if (raw.size / 1024 / 1024 > 5) { ElMessage.error('图片不能超过 5MB'); return false }
+  return true
+}
+const handleAvatarSuccess = (response) => {
+  if (response.code === 200) {
+    userForm.avatar = response.data.url
+    ElMessage.success('头像上传成功，记得点「保存更改」')
+  } else {
+    ElMessage.error(response.message || '上传失败')
+  }
 }
 
 const goBack = () => {
@@ -288,5 +324,36 @@ const goBack = () => {
   flex-direction: column;
   align-items: center;
   gap: 10px;
+}
+
+.avatar-presets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.preset-label {
+  font-size: 12px;
+  color: #909399;
+}
+
+.preset-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.preset-avatar:hover {
+  border-color: #c0c4cc;
+}
+
+.preset-avatar.active {
+  border-color: #409eff;
 }
 </style>

@@ -24,6 +24,12 @@
         </template>
       </el-table-column>
       <el-table-column prop="reason" label="申请理由" show-overflow-tooltip />
+      <el-table-column label="材料" width="70">
+        <template #default="{ row }">
+          <el-link v-if="row.materials" :href="row.materials" target="_blank" type="primary">查看</el-link>
+          <span v-else style="color:#c0c4cc">—</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="status" label="状态" width="90">
         <template #default="{ row }">
           <el-tag :type="statusType(row.status)">{{ statusText(row.status) }}</el-tag>
@@ -45,6 +51,10 @@
     <el-dialog v-model="reviewVisible" :title="reviewStatus === 1 ? '通过申请' : '驳回申请'" width="480px">
       <el-form label-width="90px">
         <el-form-item label="申请人">{{ current?.userName }}（{{ roleMap[current?.targetRole] }}）</el-form-item>
+        <el-form-item label="相关材料">
+          <el-link v-if="current?.materials" :href="current.materials" target="_blank" type="primary">查看上传材料</el-link>
+          <span v-else style="color:#909399">未上传</span>
+        </el-form-item>
         <el-form-item label="审核备注">
           <el-input v-model="reviewRemark" type="textarea" :rows="3" placeholder="可选：填写审核意见" maxlength="255" show-word-limit />
         </el-form-item>

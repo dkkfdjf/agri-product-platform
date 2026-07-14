@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
-  <rect width="400" height="400" fill="#FFF3E0"/>
-  <ellipse cx="200" cy="180" rx="80" ry="70" fill="#FF9800"/>
-  <circle cx="170" cy="160" r="10" fill="white"/>
-  <circle cx="230" cy="160" r="10" fill="white"/>
-  <text x="200" y="320" font-family="Arial, sans-serif" font-size="24" fill="#E65100" text-anchor="middle">散养土鸡</text>
-</svg>

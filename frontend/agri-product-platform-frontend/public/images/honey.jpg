@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
-  <rect width="400" height="400" fill="#FFFDE7"/>
-  <ellipse cx="200" cy="180" rx="80" ry="60" fill="#FFC107"/>
-  <circle cx="200" cy="180" r="30" fill="#FF6F00"/>
-  <text x="200" y="320" font-family="Arial, sans-serif" font-size="24" fill="#FF6F00" text-anchor="middle">纯天然蜂蜜</text>
-</svg>

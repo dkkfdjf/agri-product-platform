@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
-  <rect width="400" height="400" fill="#F1F8E9"/>
-  <ellipse cx="180" cy="200" rx="60" ry="40" fill="#689F38"/>
-  <ellipse cx="220" cy="180" rx="40" ry="30" fill="#8BC34A"/>
-  <path d="M200 100 L200 60" stroke="#795548" stroke-width="4"/>
-  <text x="200" y="320" font-family="Arial, sans-serif" font-size="24" fill="#558B2F" text-anchor="middle">精品绿茶</text>
-</svg>

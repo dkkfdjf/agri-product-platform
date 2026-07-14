@@ -44,6 +44,22 @@
           <el-form-item label="申请理由" prop="reason">
             <el-input v-model="form.reason" type="textarea" :rows="4" placeholder="请简述申请理由及相关资质" maxlength="255" show-word-limit />
           </el-form-item>
+          <el-form-item label="相关材料">
+            <el-upload
+              action="/api/upload"
+              :before-upload="beforeMaterialUpload"
+              :on-success="handleMaterialSuccess"
+              :on-remove="handleMaterialRemove"
+              :file-list="materialFileList"
+              :limit="1"
+              :on-exceed="() => ElMessage.warning('最多上传1个材料文件')"
+            >
+              <el-button type="primary" plain>上传材料</el-button>
+              <template #tip>
+                <div class="el-upload__tip">资质证书/相关证明，支持 jpg/png/pdf，单个 &lt; 10MB（可选）</div>
+              </template>
+            </el-upload>
+          </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="submit" :loading="submitting">提交申请</el-button>
           </el-form-item>
@@ -65,6 +81,12 @@
             <template #default="{ row }">{{ row.targetRole === 'bank' ? row.belong : row.profession }}</template>
           </el-table-column>
           <el-table-column prop="reason" label="申请理由" show-overflow-tooltip />
+          <el-table-column label="材料" width="80">
+            <template #default="{ row }">
+              <el-link v-if="row.materials" :href="row.materials" target="_blank" type="primary">查看</el-link>
+              <span v-else style="color:#c0c4cc">—</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="status" label="状态" width="100">
             <template #default="{ row }">
               <el-tag :type="statusType(row.status)">{{ statusText(row.status) }}</el-tag>
@@ -105,7 +127,8 @@ const form = reactive({
   profession: '',
   position: '',
   belong: '',
-  reason: ''
+  reason: '',
+  materials: ''
 })
 
 const rules = {
@@ -135,6 +158,27 @@ const loadApplications = async () => {
   }
 }
 
+const materialFileList = ref([])
+const beforeMaterialUpload = (raw) => {
+  const okType = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'].includes(raw.type)
+  if (!okType) { ElMessage.error('仅支持 JPG/PNG/PDF 格式'); return false }
+  if (raw.size / 1024 / 1024 > 10) { ElMessage.error('文件不能超过 10MB'); return false }
+  return true
+}
+const handleMaterialSuccess = (response, file) => {
+  if (response.code === 200) {
+    form.materials = response.data.url
+    materialFileList.value = [file]
+    ElMessage.success('材料上传成功')
+  } else {
+    ElMessage.error(response.message || '上传失败')
+  }
+}
+const handleMaterialRemove = () => {
+  form.materials = ''
+  materialFileList.value = []
+}
+
 const submit = async () => {
   try {
     await formRef.value.validate()
@@ -145,6 +189,8 @@ const submit = async () => {
     form.position = ''
     form.belong = ''
     form.reason = ''
+    form.materials = ''
+    materialFileList.value = []
     loadApplications()
   } catch (e) {
     if (e !== false) ElMessage.error(e.message || '提交失败')
