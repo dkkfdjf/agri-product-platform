@@ -26,7 +26,7 @@ public class ProductServiceImpl implements ProductService {
         product.setTitle(request.getTitle());
         product.setPrice(request.getPrice());
         product.setContent(request.getContent());
-        product.setPicture(request.getPicture());
+        product.setPicPath(request.getPicPath());
         product.setType(request.getType());
         product.setOwnName(userName);
         product.setOrderStatus(0); // 默认待交易
@@ -61,7 +61,7 @@ public class ProductServiceImpl implements ProductService {
         if (request.getTitle() != null) product.setTitle(request.getTitle());
         if (request.getPrice() != null) product.setPrice(request.getPrice());
         if (request.getContent() != null) product.setContent(request.getContent());
-        if (request.getPicture() != null) product.setPicture(request.getPicture());
+        if (request.getPicPath() != null) product.setPicPath(request.getPicPath());
         if (request.getOrderStatus() != null) product.setOrderStatus(request.getOrderStatus());
         productMapper.updateById(product);
     }

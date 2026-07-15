@@ -395,7 +395,7 @@ public class AdminController {
         if (body.containsKey("title")) p.setTitle((String) body.get("title"));
         if (body.containsKey("content")) p.setContent((String) body.get("content"));
         if (body.get("price") != null) p.setPrice(new BigDecimal(body.get("price").toString()));
-        if (body.containsKey("picture")) p.setPicture((String) body.get("picture"));
+        if (body.containsKey("picPath")) p.setPicPath((String) body.get("picPath"));
         if (body.containsKey("type")) p.setType((String) body.get("type"));
         if (body.get("orderStatus") != null) p.setOrderStatus(Integer.valueOf(body.get("orderStatus").toString()));
         p.setUpdateTime(LocalDateTime.now());

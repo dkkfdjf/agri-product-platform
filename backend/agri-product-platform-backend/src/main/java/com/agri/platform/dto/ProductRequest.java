@@ -9,7 +9,7 @@ public class ProductRequest {
     private String title;
     private BigDecimal price;
     private String content;
-    private String picture;
+    private String picPath;
     private String type; // goods货源/demand需求
     private Integer orderStatus; // 0待交易 1交易中 2已完成
 }
