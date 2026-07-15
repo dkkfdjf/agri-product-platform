@@ -121,7 +121,7 @@ const deleteBanner = async (banner) => {
 }
 
 const handleImageError = (e) => {
-  e.target.src = 'https://via.placeholder.com/150x80?text=No+Image'
+  e.target.style.display = 'none'
 }
 </script>
 

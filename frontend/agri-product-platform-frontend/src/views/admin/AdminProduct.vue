@@ -22,7 +22,7 @@
     <el-table :data="products" style="width: 100%" v-loading="loading" border>
       <el-table-column label="图片" width="90">
         <template #default="{ row }">
-          <img v-if="row.picture" :src="row.picture" class="product-preview" @error="handleImageError" />
+          <img v-if="row.picPath" :src="row.picPath" class="product-preview" @error="handleImageError" />
           <span v-else class="no-img">无图</span>
         </template>
       </el-table-column>
@@ -79,7 +79,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="图片地址">
-          <el-input v-model="form.picture" placeholder="输入图片URL，如 /images/apple.jpg" />
+          <el-input v-model="form.picPath" placeholder="输入图片URL，如 /images/青苹果.jpg" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -107,7 +107,7 @@ const form = reactive({
   title: '',
   content: '',
   price: 0,
-  picture: '',
+  picPath: '',
   type: 'goods',
   orderStatus: 0
 })
@@ -138,7 +138,7 @@ const editProduct = (product) => {
     title: product.title,
     content: product.content,
     price: product.price,
-    picture: product.picture,
+    picPath: product.picPath,
     type: product.type || 'goods',
     orderStatus: product.orderStatus ?? 0
   })

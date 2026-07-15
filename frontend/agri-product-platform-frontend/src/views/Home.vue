@@ -476,175 +476,23 @@ const scrollToSection = (id) => {
   }
 }
 
-// 轮播图数据
-const banners = ref([
-  { bannerId: 1, picPath: '/images/banner1.jpg', title: '优质农产品' },
-  { bannerId: 2, picPath: '/images/banner2.jpg', title: '融资服务' },
-  { bannerId: 3, picPath: '/images/banner3.jpg', title: '专家助力' }
-])
+// 轮播图数据（来自 API）
+const banners = ref([])
 
-// 模拟数据 - 精选产品 (fallback data if API fails)
-const featuredProducts = ref([
-  {
-    id: 1,
-    name: '五常有机大米',
-    category: '粮食',
-    origin: '黑龙江·五常',
-    price: '5.8',
-    unit: '斤',
-    image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop',
-    badge: '优选'
-  },
-  {
-    id: 2,
-    name: '寿光新鲜蔬菜',
-    category: '蔬菜',
-    origin: '山东·寿光',
-    price: '3.5',
-    unit: '斤',
-    image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=300&fit=crop',
-    badge: '直供'
-  },
-  {
-    id: 3,
-    name: '烟台红富士苹果',
-    category: '水果',
-    origin: '山东·烟台',
-    price: '8.5',
-    unit: '斤',
-    image: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400&h=300&fit=crop',
-    badge: null
-  },
-  {
-    id: 4,
-    name: '优质散养土鸡',
-    category: '畜禽',
-    origin: '湖南·湘西',
-    price: '45',
-    unit: '只',
-    image: 'https://images.unsplash.com/photo-1589974593766-7ac39ecdb4e1?w=400&h=300&fit=crop',
-    badge: '生态'
-  }
-])
+// 精选产品（来自 API）
+const featuredProducts = ref([])
 
-// 融资项目
-const financingItems = ref([
-  {
-    id: 1,
-    title: '农户种植贷款',
-    description: '为种植户提供生产资金支持，覆盖种子、化肥、农药等投入',
-    features: ['低利率', '手续简便', '放款快'],
-    amount: '5-50万'
-  },
-  {
-    id: 2,
-    title: '农业设施贷款',
-    description: '支持建设大棚、灌溉系统、仓储等农业基础设施',
-    features: ['期限长', '额度高', '可循环'],
-    amount: '10-100万'
-  },
-  {
-    id: 3,
-    title: '农产品收购贷款',
-    description: '为收购商提供季节性资金支持，助力农产品流通',
-    features: ['随借随还', '灵活使用'],
-    amount: '20-200万'
-  }
-])
+// 融资项目（来自 API）
+const financingItems = ref([])
 
-// 专家列表
-const featuredExperts = ref([
-  {
-    id: 1,
-    name: '李建国',
-    title: '高级农艺师',
-    specialty: '水稻种植与病虫害防治',
-    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&h=100&fit=crop',
-    rating: 4.9,
-    answers: 328,
-    online: true
-  },
-  {
-    id: 2,
-    name: '王淑芬',
-    title: '蔬菜栽培专家',
-    specialty: '温室蔬菜栽培技术',
-    avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=100&h=100&fit=crop',
-    rating: 4.8,
-    answers: 256,
-    online: true
-  },
-  {
-    id: 3,
-    name: '张明远',
-    title: '土壤肥料专家',
-    specialty: '土壤改良与科学施肥',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-    rating: 4.9,
-    answers: 189,
-    online: false
-  },
-  {
-    id: 4,
-    name: '赵海燕',
-    title: '果树栽培专家',
-    specialty: '果树修剪与病虫害防治',
-    avatar: 'https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=100&h=100&fit=crop',
-    rating: 4.7,
-    answers: 143,
-    online: false
-  }
-])
+// 专家列表（来自 API）
+const featuredExperts = ref([])
 
-// 知识文章
-const knowledgeArticles = ref([
-  {
-    id: 1,
-    title: '春季小麦田间管理技术要点',
-    excerpt: '详细介绍春季小麦返青后的田间管理措施，包括施肥、浇水、病虫害防治等关键技术...',
-    category: '粮食作物',
-    image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=300&h=200&fit=crop',
-    author: '李建国',
-    date: '2024-03-15'
-  },
-  {
-    id: 2,
-    title: '温室蔬菜病虫害绿色防控技术',
-    excerpt: '介绍温室蔬菜主要病虫害的识别方法及绿色防控技术，减少农药使用，提高蔬菜品质...',
-    category: '蔬菜种植',
-    image: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=300&h=200&fit=crop',
-    author: '王淑芬',
-    date: '2024-03-12'
-  }
-])
+// 知识文章（来自 API）
+const knowledgeArticles = ref([])
 
-// 问答
-const featuredQA = ref([
-  {
-    id: 1,
-    title: '水稻稻瘟病如何防治？',
-    question: '我的水稻出现了稻瘟病，请问应该用什么药？什么时候喷药效果最好？',
-    expert: '李建国',
-    answered: true,
-    answers: 3
-  },
-  {
-    id: 2,
-    title: '番茄脐腐病怎么解决？',
-    question: '温室种植的番茄经常出现脐腐病，是缺钙吗？应该如何预防和治疗？',
-    expert: '王淑芬',
-    answered: true,
-    answers: 5
-  },
-  {
-    id: 3,
-    title: '苹果树什么时候修剪最好？',
-    question: '请问苹果树的最佳修剪时间是什么时候？应该如何修剪才能提高产量？',
-    expert: '赵海燕',
-    answered: true,
-    answers: 2
-  }
-])
+// 问答（来自 API）
+const featuredQA = ref([])
 
 // 点击处理
 const viewProductDetail = (product) => {
@@ -707,13 +555,6 @@ const loadHomeData = async () => {
     const bannerRes = await getBanners()
     if (bannerRes.code === 200 && bannerRes.data && bannerRes.data.length > 0) {
       banners.value = bannerRes.data
-    } else {
-      // Fallback to default banners if API returns no data
-      banners.value = [
-        { bannerId: 1, picPath: '/images/banner1.jpg', title: '优质农产品' },
-        { bannerId: 2, picPath: '/images/banner2.jpg', title: '融资服务' },
-        { bannerId: 3, picPath: '/images/banner3.jpg', title: '专家助力' }
-      ]
     }
 
     // Load products (8 items as per brief)

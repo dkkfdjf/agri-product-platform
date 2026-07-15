@@ -112,7 +112,7 @@ const loadExperts = async () => {
     const expertRes = await getExpertList()
     if (expertRes.code === 200) {
       const list = expertRes.data || []
-      // 只在拿到真实数据时覆盖示例
+      // 拿到真实数据时填充列表
       if (list.length > 0) {
         experts.value = list.map(e => ({
           id: e.userName,
@@ -151,51 +151,17 @@ const loadExperts = async () => {
     }
   } catch (error) {
     console.error('加载专家数据失败:', error)
-    // 保留默认数据作为fallback
+    // API 返回空时各列表保持空状态（不再使用兜底假数据）
   } finally {
     loading.value = false
   }
 }
 
-const experts = ref([
-  {
-    id: 1,
-    name: '张农学',
-    title: '高级农艺师',
-    specialty: '水稻种植、病虫害防治',
-    answersCount: 156,
-    satisfactionRate: 98
-  },
-  {
-    id: 2,
-    name: '李种植',
-    title: '农业技术推广专家',
-    specialty: '设施农业、大棚技术',
-    answersCount: 89,
-    satisfactionRate: 95
-  },
-  {
-    id: 3,
-    name: '王土壤',
-    title: '土壤肥料专家',
-    specialty: '土壤改良、科学施肥',
-    answersCount: 67,
-    satisfactionRate: 96
-  }
-])
+const experts = ref([])
 
-const hotQuestions = ref([
-  { id: 1, title: '水稻病虫害如何有效防治？', answersCount: 23 },
-  { id: 2, title: '大棚蔬菜种植需要注意什么？', answersCount: 18 },
-  { id: 3, title: '如何提高农作物产量？', answersCount: 15 },
-  { id: 4, title: '有机农业种植技术有哪些？', answersCount: 12 }
-])
+const hotQuestions = ref([])
 
-const knowledgeList = ref([
-  { id: 1, title: '夏季水稻病虫害综合防治技术', author: '张农学' },
-  { id: 2, title: '大棚蔬菜标准化种植指南', author: '李种植' },
-  { id: 3, title: '科学施肥提高农产品品质', author: '王土壤' }
-])
+const knowledgeList = ref([])
 
 onMounted(() => {
   loadExperts()

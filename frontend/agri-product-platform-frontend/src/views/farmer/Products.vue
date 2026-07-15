@@ -253,7 +253,7 @@ const resetForm = () => {
 
 // 处理图片加载错误
 const handleImageError = (e) => {
-  e.target.src = 'https://via.placeholder.com/60x60?text=No+Image'
+  e.target.style.display = 'none'
 }
 
 onMounted(() => {
