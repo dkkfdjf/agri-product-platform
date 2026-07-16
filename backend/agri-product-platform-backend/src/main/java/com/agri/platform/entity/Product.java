@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -11,7 +12,8 @@ import java.time.LocalDateTime;
 @Data
 @TableName("tb_product")
 public class Product {
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "order_id", type = IdType.AUTO)
+    @JsonProperty("productId")
     private Integer orderId;
     private String title;
     private BigDecimal price;

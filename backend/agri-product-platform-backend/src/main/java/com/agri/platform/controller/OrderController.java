@@ -2,6 +2,7 @@ package com.agri.platform.controller;
 
 import com.agri.platform.common.Result;
 import com.agri.platform.dto.OrderRequest;
+import com.agri.platform.dto.OrderResponse;
 import com.agri.platform.entity.Purchase;
 import com.agri.platform.service.OrderService;
 import com.agri.platform.util.JwtUtil;
@@ -9,6 +10,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -35,6 +37,14 @@ public class OrderController {
                                         @RequestParam(defaultValue = "10") int pageSize) {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
         return Result.success(orderService.getOrderList(userName, page, pageSize));
+    }
+
+    @GetMapping("/list/details")
+    public Result<List<OrderResponse>> listWithDetails(@RequestHeader("Authorization") String token,
+                                                       @RequestParam(defaultValue = "1") int page,
+                                                       @RequestParam(defaultValue = "10") int pageSize) {
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        return Result.success(orderService.getOrderListWithDetails(userName, page, pageSize));
     }
 
     @GetMapping("/{purchaseId}")

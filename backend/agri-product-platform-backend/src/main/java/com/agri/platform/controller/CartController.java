@@ -2,7 +2,7 @@ package com.agri.platform.controller;
 
 import com.agri.platform.common.Result;
 import com.agri.platform.dto.CartRequest;
-import com.agri.platform.entity.ShoppingCart;
+import com.agri.platform.dto.CartResponse;
 import com.agri.platform.service.CartService;
 import com.agri.platform.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +30,7 @@ public class CartController {
     }
 
     @GetMapping("/list")
-    public Result<List<ShoppingCart>> list(@RequestHeader("Authorization") String token) {
+    public Result<List<CartResponse>> list(@RequestHeader("Authorization") String token) {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
         return Result.success(cartService.getCartList(userName));
     }
