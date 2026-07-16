@@ -195,6 +195,28 @@
         </div>
       </div>
     </div>
+
+    <!-- 人机验证弹窗：点击「创建账号」且表单校验通过后出现，验证通过自动提交注册 -->
+    <el-dialog
+      v-model="turnstileDialogVisible"
+      title="安全验证"
+      width="380px"
+      align-center
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
+      <div style="text-align:center; padding:8px 0 4px;">
+        <p style="font-size:13px;color:#6B7280;margin:0 0 16px;line-height:1.6;">
+          为确认是您本人操作，请完成下方人机验证后自动提交注册
+        </p>
+        <Turnstile
+          ref="turnstileRef"
+          @verified="onVerified"
+          @expired="onExpired"
+          @error="onError"
+        />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -203,6 +225,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import Turnstile from '@/components/Turnstile.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -218,6 +241,29 @@ const registerForm = reactive({
   phone: '',
   role: ''
 })
+
+// Cloudflare Turnstile 人机验证（点击「创建账号」且表单校验通过后弹窗）
+const turnstileDialogVisible = ref(false)
+const turnstileToken = ref('')
+const turnstileRef = ref(null)
+// 弹窗内验证通过 → 拿到 token → 关闭弹窗 → 自动提交注册
+const onVerified = (token) => {
+  turnstileToken.value = token
+  turnstileDialogVisible.value = false
+  submitRegister()
+}
+// 验证过期：重置组件让用户重试（token 一次性）
+const onExpired = () => {
+  turnstileToken.value = ''
+  turnstileRef.value?.reset()
+  ElMessage.warning('人机验证已过期，请重新完成验证')
+}
+// 验证失败：重置组件让用户重试
+const onError = () => {
+  turnstileToken.value = ''
+  turnstileRef.value?.reset()
+  ElMessage.error('人机验证失败，请重试')
+}
 
 // 页面跳转
 const goTo = (path) => {
@@ -257,22 +303,28 @@ const rules = {
   ]
 }
 
+// 点击「创建账号」：先做表单校验，通过后弹人机验证窗口（不在此处提交）
 const handleRegister = async () => {
   const valid = await registerFormRef.value?.validate().catch(() => false)
   if (!valid) {
     ElMessage.warning('请填写完整且正确的注册信息')
     return
   }
+  turnstileToken.value = ''
+  turnstileDialogVisible.value = true
+}
 
+// 人机验证通过后真正提交注册（token 一次性，由弹窗验证通过触发）
+const submitRegister = async () => {
   loading.value = true
-
   try {
     const result = await userStore.registerUser({
       userName: registerForm.userName,
       password: registerForm.password,
       realName: registerForm.realName,
       phone: registerForm.phone,
-      role: registerForm.role
+      role: registerForm.role,
+      cfTurnstileToken: turnstileToken.value
     })
 
     if (result.success) {
@@ -280,9 +332,11 @@ const handleRegister = async () => {
       router.push('/login')
     } else {
       ElMessage.error(result.message || '注册失败')
+      turnstileToken.value = '' // token 已消耗；用户改完信息重新点「创建账号」会再次弹验证
     }
   } catch (error) {
     ElMessage.error(error.message || '注册失败，请稍后重试')
+    turnstileToken.value = ''
   } finally {
     loading.value = false
   }
