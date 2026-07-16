@@ -153,27 +153,26 @@
         </div>
 
         <div class="products-grid">
-          <div v-for="product in featuredProducts" :key="product.id"
+          <div v-for="product in featuredProducts" :key="product.productId"
                class="product-card"
                @click="viewProductDetail(product)">
             <div class="product-image">
-              <img :src="product.image" :alt="product.name" />
-              <span v-if="product.badge" class="product-badge">{{ product.badge }}</span>
+              <img v-if="product.picPath" :src="product.picPath" :alt="product.title" />
+              <div v-else class="image-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7,10 12,15 17,10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </div>
+              <span class="product-tag supply">供</span>
             </div>
             <div class="product-content">
-              <div class="product-category">{{ product.category }}</div>
-              <h3 class="product-name">{{ product.name }}</h3>
-              <p class="product-origin">{{ product.origin }}</p>
+              <h3 class="product-name">{{ product.title }}</h3>
+              <p class="product-desc">{{ product.content }}</p>
               <div class="product-footer">
-                <div class="product-price">
-                  <span class="price-value">¥{{ product.price }}</span>
-                  <span class="price-unit">/{{ product.unit }}</span>
-                </div>
-                <button class="product-action">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M5 8h10M5 8l2 10h6l2-10M5 8V6a2 2 0 012-2h6a2 2 0 012 2v2"/>
-                  </svg>
-                </button>
+                <div class="product-price">¥{{ product.price }}</div>
+                <div class="product-seller">{{ product.ownName || '农户' }}</div>
               </div>
             </div>
           </div>
@@ -441,6 +440,8 @@ const getDashboardPath = () => {
   switch (role) {
     case 'farmer':
       return '/farmer/dashboard'
+    case 'buyer':
+      return '/buyer/dashboard'
     case 'expert':
       return '/expert/dashboard'
     case 'bank':
@@ -501,8 +502,8 @@ const viewProductDetail = (product) => {
     router.push('/login')
     return
   }
-  // TODO: 跳转到产品详情
-  ElMessage.info('查看产品详情：' + product.name)
+  // 跳转到市场页面并查看产品详情
+  router.push('/market?productId=' + product.productId)
 }
 
 const handleFinancingClick = () => {
@@ -553,12 +554,16 @@ const loadHomeData = async () => {
   try {
     // Load banners
     const bannerRes = await getBanners()
+    console.log('首页轮播图响应:', bannerRes)
     if (bannerRes.code === 200 && bannerRes.data && bannerRes.data.length > 0) {
       banners.value = bannerRes.data
+      console.log('轮播图加载成功，数量:', banners.value.length)
+    } else {
+      console.warn('轮播图数据为空或格式不正确')
     }
 
     // Load products (8 items as per brief)
-    const productRes = await getProducts({ page: 1, pageSize: 8 })
+    const productRes = await getProducts({ page: 1, pageSize: 8, type: 'goods' })
     if (productRes.code === 200 && productRes.data) {
       featuredProducts.value = productRes.data.records || productRes.data || []
     }
@@ -610,6 +615,10 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: high-quality;
 }
 
 /* ===== Header ===== */
