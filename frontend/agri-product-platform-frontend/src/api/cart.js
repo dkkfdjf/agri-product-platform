@@ -5,11 +5,11 @@ import request from '@/utils/request'
 
 /**
  * 添加商品到购物车
- * @param {Object} data - { productId, quantity }
+ * @param {Object} data - { productId, count }
  */
 export function addToCart(data) {
   return request({
-    url: '/cart/add',
+    url: '/cart',
     method: 'post',
     data
   })
@@ -28,13 +28,13 @@ export function getCartList() {
 /**
  * 更新购物车商品数量
  * @param {String|Number} id - 购物车项ID
- * @param {Number} quantity - 数量
+ * @param {Number} count - 数量
  */
-export function updateCartItem(id, quantity) {
+export function updateCartItem(id, count) {
   return request({
     url: `/cart/${id}`,
     method: 'put',
-    data: { quantity }
+    data: { count }
   })
 }
 

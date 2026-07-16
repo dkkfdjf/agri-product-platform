@@ -77,7 +77,7 @@
       <div class="content-card">
         <div class="card-header">
           <h3 class="card-title">推荐商品</h3>
-          <router-link to="/market" class="card-link">查看更多</router-link>
+          <router-link to="/buyer/market" class="card-link">查看更多</router-link>
         </div>
         <div class="product-grid">
           <div v-for="product in recommendedProducts" :key="product.id" class="product-card">
@@ -104,7 +104,7 @@
           <h3 class="card-title">快捷操作</h3>
         </div>
         <div class="quick-actions">
-          <router-link to="/market" class="quick-action">
+          <router-link to="/buyer/market" class="quick-action">
             <div class="action-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <circle cx="11" cy="11" r="8"/>

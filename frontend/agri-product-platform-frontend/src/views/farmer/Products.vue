@@ -16,31 +16,31 @@
             <img :src="row.picPath" class="product-preview" @error="handleImageError" />
           </template>
         </el-table-column>
-        <el-table-column prop="name" label="商品名称" width="200" />
-        <el-table-column prop="description" label="描述" show-overflow-tooltip />
+        <el-table-column prop="title" label="商品名称" width="200" />
+        <el-table-column prop="content" label="描述" show-overflow-tooltip />
         <el-table-column prop="price" label="价格" width="100">
           <template #default="{ row }">
             ¥{{ row.price }}
           </template>
         </el-table-column>
-        <el-table-column prop="stock" label="库存" width="80" />
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="type" label="类型" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'">
-              {{ row.status === 1 ? '已上架' : '已下架' }}
+            <el-tag :type="row.type === 'goods' ? 'success' : 'warning'" size="small">
+              {{ row.type === 'goods' ? '货源' : '需求' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column prop="orderStatus" label="交易状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="getOrderStatusType(row.orderStatus)" size="small">
+              {{ getOrderStatusText(row.orderStatus) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="发布时间" width="170" />
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="editProduct(row)">编辑</el-button>
-            <el-button
-              link
-              :type="row.status === 1 ? 'warning' : 'success'"
-              @click="toggleStatus(row)"
-            >
-              {{ row.status === 1 ? '下架' : '上架' }}
-            </el-button>
             <el-button link type="danger" @click="deleteProduct(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -67,12 +67,12 @@
       @close="resetForm"
     >
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
-        <el-form-item label="商品名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入商品名称" />
+        <el-form-item label="商品名称" prop="title">
+          <el-input v-model="form.title" placeholder="请输入商品名称" />
         </el-form-item>
-        <el-form-item label="商品描述" prop="description">
+        <el-form-item label="商品描述" prop="content">
           <el-input
-            v-model="form.description"
+            v-model="form.content"
             type="textarea"
             :rows="3"
             placeholder="请输入商品描述"
@@ -81,17 +81,50 @@
         <el-form-item label="价格" prop="price">
           <el-input-number v-model="form.price" :min="0" :precision="2" :step="0.01" />
         </el-form-item>
-        <el-form-item label="库存" prop="stock">
-          <el-input-number v-model="form.stock" :min="0" :step="1" />
-        </el-form-item>
-        <el-form-item label="图片URL" prop="picPath">
-          <el-input v-model="form.picPath" placeholder="请输入图片URL" />
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="form.status">
-            <el-radio :value="1">上架</el-radio>
-            <el-radio :value="0">下架</el-radio>
+        <el-form-item label="商品类型" prop="type">
+          <el-radio-group v-model="form.type">
+            <el-radio value="goods">货源（出售）</el-radio>
+            <el-radio value="demand">需求（求购）</el-radio>
           </el-radio-group>
+        </el-form-item>
+        <el-form-item label="商品图片" prop="picPath">
+          <div class="product-image-upload">
+            <div class="image-preview">
+              <img v-if="form.picPath" :src="form.picPath" alt="预览" />
+              <div v-else class="no-image">暂无图片</div>
+            </div>
+            <div class="image-actions">
+              <el-upload
+                action="/api/upload"
+                :before-upload="beforeImageUpload"
+                :on-success="handleImageSuccess"
+                :show-file-list="false"
+                accept="image/*"
+              >
+                <el-button type="primary" size="small">上传图片</el-button>
+              </el-upload>
+              <span class="divider">或</span>
+              <el-select
+                v-model="form.picPath"
+                placeholder="选择本地图片"
+                clearable
+                filterable
+                size="small"
+              >
+                <el-option
+                  v-for="img in localImages"
+                  :key="img.path"
+                  :label="img.name"
+                  :value="img.path"
+                >
+                  <div class="image-option">
+                    <img :src="img.path" :alt="img.name" />
+                    <span>{{ img.name }}</span>
+                  </div>
+                </el-option>
+              </el-select>
+            </div>
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -106,7 +139,11 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { getProducts, publishProduct, updateProduct, deleteProduct as deleteProductApi } from '@/api/product'
+import { getMyProducts, publishProduct, updateProduct, deleteProduct as deleteProductApi } from '@/api/product'
+import { LOCAL_PRODUCT_IMAGES } from '@/config/localImages'
+
+// 本地图片列表
+const localImages = LOCAL_PRODUCT_IMAGES
 
 const loading = ref(false)
 const saving = ref(false)
@@ -121,27 +158,26 @@ const formRef = ref(null)
 const editingProductId = ref(null)
 
 const form = reactive({
-  name: '',
-  description: '',
+  title: '',
+  content: '',
   price: 0,
-  stock: 0,
   picPath: '',
-  status: 1
+  type: 'goods'
 })
 
 const rules = {
-  name: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
-  description: [{ required: true, message: '请输入商品描述', trigger: 'blur' }],
+  title: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
+  content: [{ required: true, message: '请输入商品描述', trigger: 'blur' }],
   price: [{ required: true, message: '请输入价格', trigger: 'blur' }],
-  stock: [{ required: true, message: '请输入库存', trigger: 'blur' }],
-  picPath: [{ required: true, message: '请输入图片URL', trigger: 'blur' }]
+  type: [{ required: true, message: '请选择商品类型', trigger: 'change' }]
+  // picPath 现在是可选的，可以从下拉列表中选择
 }
 
 // 加载商品列表
 const loadProducts = async () => {
   loading.value = true
   try {
-    const res = await getProducts({
+    const res = await getMyProducts({
       page: currentPage.value,
       pageSize: pageSize.value
     })
@@ -165,14 +201,13 @@ const showAddDialog = () => {
 // 编辑商品
 const editProduct = (product) => {
   dialogMode.value = 'edit'
-  editingProductId.value = product.productId || product.id
+  editingProductId.value = product.productId || product.orderId
   Object.assign(form, {
-    name: product.name,
-    description: product.description,
+    title: product.title,
+    content: product.content,
     price: product.price,
-    stock: product.stock,
     picPath: product.picPath,
-    status: product.status
+    type: product.type || 'goods'
   })
   dialogVisible.value = true
 }
@@ -205,11 +240,11 @@ const saveProduct = async () => {
 
 // 切换商品状态
 const toggleStatus = async (product) => {
-  const newStatus = product.status === 1 ? 0 : 1
-  const statusText = newStatus === 1 ? '上架' : '下架'
+  const newStatus = product.orderStatus === 2 ? 0 : 2
+  const statusText = newStatus === 2 ? '完成交易' : '重新开始交易'
 
   try {
-    await updateProduct(product.productId || product.id, { status: newStatus })
+    await updateProduct(product.productId || product.orderId, { orderStatus: newStatus })
     ElMessage.success(`${statusText}成功`)
     await loadProducts()
   } catch (error) {
@@ -221,11 +256,11 @@ const toggleStatus = async (product) => {
 const deleteProduct = async (product) => {
   try {
     await ElMessageBox.confirm(
-      `确定要删除商品"${product.name}"吗？`,
+      `确定要删除商品"${product.title}"吗？`,
       '提示',
       { type: 'warning' }
     )
-    await deleteProductApi(product.productId || product.id)
+    await deleteProductApi(product.productId || product.orderId)
     ElMessage.success('删除成功')
     await loadProducts()
   } catch (error) {
@@ -235,18 +270,37 @@ const deleteProduct = async (product) => {
   }
 }
 
+// 获取订单状态文本
+const getOrderStatusText = (status) => {
+  const statusMap = {
+    0: '待交易',
+    1: '交易中',
+    2: '已完成'
+  }
+  return statusMap[status] || '未知'
+}
+
+// 获取订单状态类型
+const getOrderStatusType = (status) => {
+  const typeMap = {
+    0: 'warning',
+    1: 'primary',
+    2: 'success'
+  }
+  return typeMap[status] || 'info'
+}
+
 // 重置表单
 const resetForm = () => {
   if (formRef.value) {
     formRef.value.resetFields()
   }
   Object.assign(form, {
-    name: '',
-    description: '',
+    title: '',
+    content: '',
     price: 0,
-    stock: 0,
     picPath: '',
-    status: 1
+    type: 'goods'
   })
   editingProductId.value = null
 }
@@ -256,8 +310,45 @@ const handleImageError = (e) => {
   e.target.style.display = 'none'
 }
 
+// 图片上传前的验证
+const beforeImageUpload = (raw) => {
+  const isImg = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(raw.type)
+  if (!isImg) {
+    ElMessage.error('只能上传图片')
+    return false
+  }
+  if (raw.size / 1024 / 1024 > 5) {
+    ElMessage.error('图片不能超过 5MB')
+    return false
+  }
+  return true
+}
+
+// 图片上传成功回调
+const handleImageSuccess = (response) => {
+  if (response.code === 200) {
+    form.picPath = response.data.url
+    ElMessage.success('图片上传成功')
+  } else {
+    ElMessage.error(response.message || '上传失败')
+  }
+}
+
 onMounted(() => {
   loadProducts()
+
+  // 检查是否需要编辑特定商品（从订单列表跳转过来）
+  const editProductId = sessionStorage.getItem('editProductId')
+  if (editProductId) {
+    sessionStorage.removeItem('editProductId')
+    // 加载产品列表后找到该产品并打开编辑
+    setTimeout(() => {
+      const productToEdit = products.value.find(p => p.orderId == editProductId || p.productId == editProductId)
+      if (productToEdit) {
+        editProduct(productToEdit)
+      }
+    }, 300)
+  }
 })
 </script>
 
@@ -295,5 +386,61 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   margin-top: 20px;
+}
+
+/* 图片选择器选项样式 */
+.image-option {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2, 8px);
+}
+
+.image-option img {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: var(--radius-sm, 4px);
+}
+
+/* 商品图片上传区域 */
+.product-image-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3, 12px);
+}
+
+.image-preview {
+  width: 120px;
+  height: 120px;
+  border: 2px dashed var(--color-border, #e5e0d8);
+  border-radius: var(--radius-base, 8px);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-secondary, #f7f5f0);
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.no-image {
+  color: var(--color-text-tertiary, #6b7280);
+  font-size: var(--font-size-sm, 14px);
+}
+
+.image-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2, 8px);
+  flex-wrap: wrap;
+}
+
+.divider {
+  color: var(--color-text-tertiary, #6b7280);
+  font-size: var(--font-size-sm, 14px);
 }
 </style>

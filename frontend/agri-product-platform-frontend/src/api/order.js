@@ -9,19 +9,19 @@ import request from '@/utils/request'
  */
 export function createOrder(data) {
   return request({
-    url: '/order',
+    url: '/purchase',
     method: 'post',
     data
   })
 }
 
 /**
- * 获取订单列表
- * @param {Object} params - { page, pageSize, status }
+ * 获取订单列表（包含商品详情）
+ * @param {Object} params - { page, pageSize }
  */
 export function getOrders(params) {
   return request({
-    url: '/order/list',
+    url: '/purchase/list/details',
     method: 'get',
     params
   })
@@ -33,7 +33,7 @@ export function getOrders(params) {
  */
 export function getOrderDetail(id) {
   return request({
-    url: `/order/${id}`,
+    url: `/purchase/${id}`,
     method: 'get'
   })
 }
@@ -44,7 +44,7 @@ export function getOrderDetail(id) {
  */
 export function cancelOrder(id) {
   return request({
-    url: `/order/${id}`,
+    url: `/purchase/${id}`,
     method: 'delete'
   })
 }
@@ -56,7 +56,7 @@ export function cancelOrder(id) {
  */
 export function updateOrderStatus(id, data) {
   return request({
-    url: `/order/${id}/status`,
+    url: `/purchase/${id}/status`,
     method: 'put',
     data
   })

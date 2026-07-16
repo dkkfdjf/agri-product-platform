@@ -10,9 +10,7 @@
       <main class="layout-main" :class="{ 'expanded': isCollapsed }">
         <div class="main-content">
           <router-view v-slot="{ Component, route }">
-            <transition name="fade" mode="out-in">
-              <component :is="Component" :key="route.path" />
-            </transition>
+            <component :is="Component" :key="route.path" />
           </router-view>
         </div>
       </main>

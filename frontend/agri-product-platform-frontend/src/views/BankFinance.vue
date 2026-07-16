@@ -13,7 +13,7 @@
       <div class="match-header">
         <el-icon class="match-icon"><Bell /></el-icon>
         <span>有 {{ matchCount }} 个新匹配的融资意向</span>
-        <el-button type="text" @click="showMatchDialog = true">查看详情</el-button>
+        <el-button type="primary" link @click="showMatchDialog = true">查看详情</el-button>
       </div>
     </el-card>
 
