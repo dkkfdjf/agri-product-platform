@@ -11,4 +11,10 @@ public interface ProductService {
     void updateProduct(Integer orderId, String userName, ProductRequest request);
     void deleteProduct(Integer orderId, String userName);
     Page<Product> getUserProducts(String userName, int page, int pageSize);
+
+    /**
+     * 批量迁移已发布商品的发布方名称为真实姓名
+     * @return 更新的记录数
+     */
+    int migratePublisherNamesToRealNames();
 }

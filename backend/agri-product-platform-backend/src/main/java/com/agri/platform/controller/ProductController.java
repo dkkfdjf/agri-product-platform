@@ -3,6 +3,8 @@ package com.agri.platform.controller;
 import com.agri.platform.common.Result;
 import com.agri.platform.dto.ProductRequest;
 import com.agri.platform.entity.Product;
+import com.agri.platform.entity.User;
+import com.agri.platform.mapper.UserMapper;
 import com.agri.platform.service.ProductService;
 import com.agri.platform.util.JwtUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -18,6 +20,9 @@ public class ProductController {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private UserMapper userMapper;
 
     @PostMapping
     public Result<String> publish(@RequestHeader("Authorization") String token,
@@ -62,5 +67,26 @@ public class ProductController {
                                             @RequestParam(defaultValue = "10") int pageSize) {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
         return Result.success(productService.getUserProducts(userName, page, pageSize));
+    }
+
+    /**
+     * 批量迁移发布方名称为真实姓名（管理功能）
+     */
+    @PostMapping("/migrate-names")
+    public Result<String> migratePublisherNames() {
+        int count = productService.migratePublisherNamesToRealNames();
+        return Result.success("成功迁移 " + count + " 条记录");
+    }
+
+    /**
+     * 检查用户真实姓名（调试用）
+     */
+    @GetMapping("/check-user/{userName}")
+    public Result<User> checkUser(@PathVariable String userName) {
+        User user = userMapper.selectById(userName);
+        if (user == null) {
+            return Result.error("用户不存在");
+        }
+        return Result.success(user);
     }
 }
