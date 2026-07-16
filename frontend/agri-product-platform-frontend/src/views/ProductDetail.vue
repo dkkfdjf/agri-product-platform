@@ -22,39 +22,52 @@
 
         <!-- 右侧信息区 -->
         <div class="info-section">
-          <h1 class="product-name">{{ product.name }}</h1>
-          <div class="product-meta">
-            <span class="product-id">商品编号: {{ product.productId }}</span>
+          <div class="product-badges">
+            <span class="badge-type" :class="product.type === 'goods' ? 'supply' : 'demand'">
+              {{ product.type === 'goods' ? '货源供应' : '求购需求' }}
+            </span>
+            <span class="badge-status" :class="getStatusClass(product.orderStatus)">
+              {{ getStatusText(product.orderStatus) }}
+            </span>
           </div>
 
-          <div class="price-section">
+          <h1 class="product-name">{{ product.title }}</h1>
+          <div class="product-meta">
+            <span class="product-id">商品编号: {{ product.productId }}</span>
+            <span class="product-seller">发布方: {{ product.ownName || '农户' }}</span>
+          </div>
+
+          <div class="price-section" v-if="product.type === 'goods'">
             <span class="price-label">价格</span>
             <span class="price-value">¥{{ product.price }}</span>
             <span class="price-unit">/ kg</span>
           </div>
 
-          <div class="stock-section">
-            <span class="stock-label">库存</span>
-            <span class="stock-value" :class="{ low: product.stock < 10 }">
-              {{ product.stock }} 件
-            </span>
-            <span v-if="product.stock < 10" class="stock-warning">库存紧张</span>
+          <div class="price-section" v-else>
+            <span class="price-label">预算</span>
+            <span class="price-value">{{ product.price ? '¥' + product.price : '面议' }}</span>
           </div>
 
           <div class="divider"></div>
 
           <div class="description-section">
-            <h3 class="section-title">商品描述</h3>
-            <p class="description">{{ product.description }}</p>
+            <h3 class="section-title">{{ product.type === 'goods' ? '商品描述' : '需求描述' }}</h3>
+            <p class="description">{{ product.content }}</p>
           </div>
 
-          <div class="action-section">
+          <div class="meta-section">
+            <div class="meta-item">
+              <span class="meta-label">发布时间:</span>
+              <span class="meta-value">{{ formatTime(product.createTime) }}</span>
+            </div>
+          </div>
+
+          <div class="action-section" v-if="product.type === 'goods' && product.orderStatus !== 2">
             <div class="quantity-selector">
               <span class="quantity-label">数量：</span>
               <el-input-number
                 v-model="quantity"
                 :min="1"
-                :max="product.stock"
                 size="large"
               />
             </div>
@@ -62,7 +75,7 @@
               <el-button
                 type="primary"
                 size="large"
-                :disabled="product.stock <= 0"
+                :disabled="product.orderStatus === 2"
                 @click="addToCart"
               >
                 <el-icon><ShoppingCart /></el-icon>
@@ -71,7 +84,7 @@
               <el-button
                 type="success"
                 size="large"
-                :disabled="product.stock <= 0"
+                :disabled="product.orderStatus === 2"
                 @click="buyNow"
               >
                 立即购买
@@ -79,13 +92,19 @@
             </div>
           </div>
 
-          <!-- 卖家信息 -->
+          <div class="action-section" v-else-if="product.type === 'demand'">
+            <el-button type="primary" size="large" @click="contactSeller">
+              <el-icon><ChatLineSquare /></el-icon>
+              联系发布方
+            </el-button>
+          </div>
+
           <div class="seller-section">
             <div class="seller-info">
-              <span class="seller-label">卖家：</span>
-              <span class="seller-name">{{ product.farmerName || '农户' }}</span>
+              <span class="seller-label">发布方：</span>
+              <span class="seller-name">{{ product.ownName || '农户' }}</span>
             </div>
-            <el-button type="text" size="small">联系卖家</el-button>
+            <el-button type="primary" link size="small" @click="contactSeller">联系卖家</el-button>
           </div>
         </div>
       </div>
@@ -96,20 +115,32 @@
           <el-tab-pane label="商品详情" name="detail">
             <div class="tab-content">
               <div class="detail-item">
-                <h4>商品名称</h4>
-                <p>{{ product.name }}</p>
+                <h4>{{ product.type === 'goods' ? '商品名称' : '需求标题' }}</h4>
+                <p>{{ product.title }}</p>
               </div>
               <div class="detail-item">
-                <h4>商品描述</h4>
-                <p>{{ product.description }}</p>
+                <h4>{{ product.type === 'goods' ? '商品描述' : '需求描述' }}</h4>
+                <p>{{ product.content }}</p>
               </div>
               <div class="detail-item">
                 <h4>价格</h4>
-                <p>¥{{ product.price }} / kg</p>
+                <p>{{ product.type === 'goods' ? `¥${product.price} / kg` : (product.price ? `¥${product.price} / kg` : '面议') }}</p>
               </div>
               <div class="detail-item">
-                <h4>库存</h4>
-                <p>{{ product.stock }} 件</p>
+                <h4>类型</h4>
+                <p>{{ product.type === 'goods' ? '货源供应' : '求购需求' }}</p>
+              </div>
+              <div class="detail-item">
+                <h4>交易状态</h4>
+                <p>{{ getStatusText(product.orderStatus) }}</p>
+              </div>
+              <div class="detail-item">
+                <h4>发布方</h4>
+                <p>{{ product.ownName || '未知' }}</p>
+              </div>
+              <div class="detail-item">
+                <h4>发布时间</h4>
+                <p>{{ formatTime(product.createTime) }}</p>
               </div>
             </div>
           </el-tab-pane>
@@ -158,7 +189,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, ShoppingCart } from '@element-plus/icons-vue'
+import { ArrowLeft, ShoppingCart, ChatLineSquare } from '@element-plus/icons-vue'
 import { getProductDetail } from '@/api/product'
 import { addToCart as addCartItem } from '@/api/cart'
 
@@ -177,6 +208,8 @@ onMounted(() => {
 
 const loadProductDetail = async () => {
   const id = route.params.id
+  console.log('路由参数:', route.params, '商品ID:', id)
+
   if (!id) {
     ElMessage.error('商品ID不存在')
     goBack()
@@ -186,10 +219,8 @@ const loadProductDetail = async () => {
   loading.value = true
   try {
     const res = await getProductDetail(id)
+    console.log('商品详情数据:', res.data)
     product.value = res.data
-    if (product.value && product.value.stock > 0) {
-      quantity.value = Math.min(1, product.value.stock)
-    }
   } catch (error) {
     console.error('加载商品详情失败:', error)
     ElMessage.error('加载商品详情失败')
@@ -199,7 +230,12 @@ const loadProductDetail = async () => {
 }
 
 const goBack = () => {
-  router.push('/product')
+  // 返回市场页面
+  if (userStore.role === 'buyer') {
+    router.push('/buyer/market')
+  } else {
+    router.push('/market')
+  }
 }
 
 const addToCart = async () => {
@@ -209,15 +245,34 @@ const addToCart = async () => {
     return
   }
 
-  if (!product.value || product.value.stock <= 0) {
-    ElMessage.warning('商品缺货')
+  if (!product.value) {
+    ElMessage.warning('商品信息未加载')
+    return
+  }
+
+  if (product.value.orderStatus === 2) {
+    ElMessage.warning('该商品已完成交易，无法加入购物车')
+    return
+  }
+
+  if (product.value.type !== 'goods') {
+    ElMessage.warning('求购信息无法加入购物车')
+    return
+  }
+
+  if (!product.value.productId) {
+    ElMessage.warning('商品ID无效')
     return
   }
 
   try {
+    console.log('=== 添加购物车参数 ===', {
+      orderId: product.value.productId,
+      productData: product.value
+    })
     await addCartItem({
-      productId: product.value.productId,
-      quantity: quantity.value
+      orderId: product.value.productId,
+      count: quantity.value
     })
     ElMessage.success('已加入购物车')
   } catch (error) {
@@ -233,16 +288,31 @@ const buyNow = async () => {
     return
   }
 
-  if (!product.value || product.value.stock <= 0) {
-    ElMessage.warning('商品缺货')
+  if (!product.value) {
+    ElMessage.warning('商品信息未加载')
+    return
+  }
+
+  if (product.value.orderStatus === 2) {
+    ElMessage.warning('该商品已完成交易')
+    return
+  }
+
+  if (product.value.type !== 'goods') {
+    ElMessage.warning('求购信息无法直接购买')
+    return
+  }
+
+  if (!product.value.productId) {
+    ElMessage.warning('商品ID无效')
     return
   }
 
   // 先加入购物车
   try {
     await addCartItem({
-      productId: product.value.productId,
-      quantity: quantity.value
+      orderId: product.value.productId,
+      count: quantity.value
     })
     // 跳转到购物车页面
     router.push('/buyer/cart')
@@ -252,8 +322,42 @@ const buyNow = async () => {
   }
 }
 
+const contactSeller = () => {
+  ElMessage.info('联系卖家功能即将上线')
+}
+
 const handleImageError = (e) => {
   e.target.src = '/placeholder.jpg'
+}
+
+const getStatusText = (status) => {
+  const statusMap = {
+    0: '待交易',
+    1: '交易中',
+    2: '已完成'
+  }
+  return statusMap[status] || '未知'
+}
+
+const getStatusClass = (status) => {
+  const classMap = {
+    0: 'pending',
+    1: 'trading',
+    2: 'completed'
+  }
+  return classMap[status] || ''
+}
+
+const formatTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 </script>
 
@@ -318,6 +422,54 @@ const handleImageError = (e) => {
   gap: var(--spacing-4, 16px);
 }
 
+/* 徽章区 */
+.product-badges {
+  display: flex;
+  gap: var(--spacing-2, 8px);
+  margin-bottom: var(--spacing-2, 8px);
+}
+
+.badge-type {
+  padding: var(--spacing-1, 4px) var(--spacing-3, 12px);
+  font-size: var(--font-size-xs, 12px);
+  font-weight: var(--font-weight-medium, 500);
+  border-radius: var(--radius-base, 8px);
+}
+
+.badge-type.supply {
+  background: rgba(74, 124, 89, 0.1);
+  color: var(--color-success, #4a7c59);
+}
+
+.badge-type.demand {
+  background: rgba(201, 166, 97, 0.1);
+  color: var(--color-warning, #c9a661);
+}
+
+.badge-status {
+  padding: var(--spacing-1, 4px) var(--spacing-3, 12px);
+  font-size: var(--font-size-xs, 12px);
+  font-weight: var(--font-weight-medium, 500);
+  border-radius: var(--radius-base, 8px);
+  background: var(--color-bg-secondary, #f7f5f0);
+  color: var(--color-text-tertiary, #6b7280);
+}
+
+.badge-status.pending {
+  background: rgba(201, 166, 97, 0.1);
+  color: var(--color-warning, #c9a661);
+}
+
+.badge-status.trading {
+  background: rgba(45, 90, 61, 0.1);
+  color: var(--color-primary, #2d5a3d);
+}
+
+.badge-status.completed {
+  background: rgba(74, 124, 89, 0.1);
+  color: var(--color-success, #4a7c59);
+}
+
 .product-name {
   font-size: var(--font-size-3xl, 38px);
   font-weight: var(--font-weight-bold, 700);
@@ -327,8 +479,19 @@ const handleImageError = (e) => {
 }
 
 .product-meta {
+  display: flex;
+  gap: var(--spacing-4, 16px);
   font-size: var(--font-size-sm, 14px);
   color: var(--color-text-tertiary, #6b7280);
+  flex-wrap: wrap;
+}
+
+.product-id {
+  color: var(--color-text-tertiary, #6b7280);
+}
+
+.product-seller {
+  color: var(--color-primary, #2d5a3d);
 }
 
 /* 价格区 */
@@ -409,6 +572,32 @@ const handleImageError = (e) => {
   line-height: 1.6;
   color: var(--color-text-secondary, #4a5249);
   margin: 0;
+}
+
+/* 元信息区 */
+.meta-section {
+  padding: var(--spacing-4, 16px);
+  background: var(--color-bg-secondary, #f7f5f0);
+  border-radius: var(--radius-base, 8px);
+  display: flex;
+  gap: var(--spacing-4, 16px);
+  flex-wrap: wrap;
+}
+
+.meta-item {
+  display: flex;
+  gap: var(--spacing-1, 4px);
+}
+
+.meta-label {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #4a5249);
+}
+
+.meta-value {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-primary, #1f2923);
+  font-weight: var(--font-weight-medium, 500);
 }
 
 /* 操作区 */

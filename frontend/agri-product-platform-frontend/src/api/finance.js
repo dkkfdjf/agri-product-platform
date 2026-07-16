@@ -44,7 +44,7 @@ export function applyFinance(data) {
  */
 export function getMyFinanceApplications(params) {
   return request({
-    url: '/finance/my',
+    url: '/finance/apply/list',
     method: 'get',
     params
   })

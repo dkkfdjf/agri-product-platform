@@ -9,7 +9,7 @@ import request from '@/utils/request'
  */
 export function getProducts(params) {
   return request({
-    url: '/product/list',
+    url: '/product/page',
     method: 'get',
     params
   })
@@ -22,6 +22,18 @@ export function getProducts(params) {
 export function getProductPage(params) {
   return request({
     url: '/product/page',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 获取当前用户的商品列表
+ * @param {Object} params - 查询参数 { page, pageSize }
+ */
+export function getMyProducts(params) {
+  return request({
+    url: '/product/user',
     method: 'get',
     params
   })

@@ -15,7 +15,7 @@ const buyerMenuItems = [
     icon: 'DataAnalysis'
   },
   {
-    path: '/market',
+    path: '/buyer/market',
     title: '农产品市场',
     icon: 'ShoppingBag'
   },

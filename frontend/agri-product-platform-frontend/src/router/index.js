@@ -51,7 +51,7 @@ const routes = [
       {
         path: 'orders',
         name: 'FarmerOrders',
-        component: () => import('@/views/farmer/Orders.vue')
+        component: () => import('@/views/OrderList.vue')
       },
       {
         path: 'finance',
@@ -86,6 +86,11 @@ const routes = [
         component: () => import('@/views/buyer/Dashboard.vue')
       },
       {
+        path: 'market',
+        name: 'BuyerMarket',
+        component: () => import('@/views/Market.vue')
+      },
+      {
         path: 'cart',
         name: 'BuyerCart',
         component: () => import('@/views/buyer/Cart.vue')
@@ -93,7 +98,7 @@ const routes = [
       {
         path: 'orders',
         name: 'BuyerOrders',
-        component: () => import('@/views/buyer/Orders.vue')
+        component: () => import('@/views/OrderList.vue')
       },
       {
         path: 'expert',

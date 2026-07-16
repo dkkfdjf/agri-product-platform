@@ -221,17 +221,35 @@ const loadDashboardData = async () => {
     // 获取订单列表和统计
     const orderRes = await getOrders({ page: 1, pageSize: 10 })
     if (orderRes.code === 200) {
-      const orders = orderRes.data.records || []
-      stats.value.pendingOrders = orders.filter(o => o.status === '待发货' || o.status === '待付款').length
+      // 处理分页数据
+      const orderData = orderRes.data
+      const orders = orderData.records || []
+
+      stats.value.pendingOrders = orders.filter(o => o.purchaseStatus === 1 || o.purchaseStatus === 2).length
+
+      // 计算本月销售额（已完成订单）
+      const now = new Date()
+      const currentMonth = now.getMonth()
+      const currentYear = now.getFullYear()
+      stats.value.monthlySales = orders
+        .filter(o => {
+          if (o.purchaseStatus !== 4) return false // 仅计算已完成订单
+          const orderDate = new Date(o.createTime)
+          return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear
+        })
+        .reduce((sum, o) => sum + (o.totalPrice ? Number(o.totalPrice) : 0), 0)
 
       // 格式化最近订单数据
-      recentOrders.value = orders.slice(0, 5).map(order => ({
-        id: order.orderId || order.id,
-        product: order.productName || order.items?.[0]?.productName || '未知商品',
-        time: formatTime(order.createTime),
-        status: order.statusText || order.status,
-        statusClass: getStatusClass(order.status)
-      }))
+      recentOrders.value = orders.slice(0, 5).map(order => {
+        const statusText = getStatusText(order.purchaseStatus)
+        return {
+          id: order.purchaseId || order.id,
+          product: `订单 #${order.purchaseId || order.id}`,
+          time: formatTime(order.createTime),
+          status: statusText,
+          statusClass: getStatusClass(statusText)
+        }
+      })
     }
 
     // 获取融资申请数量
@@ -264,12 +282,25 @@ const formatTime = (time) => {
 // 获取状态样式类
 const getStatusClass = (status) => {
   const statusMap = {
-    '待发货': 'pending',
     '待付款': 'warning',
+    '待发货': 'pending',
+    '待收货': 'info',
     '已完成': 'success',
     '已取消': 'info'
   }
   return statusMap[status] || 'info'
+}
+
+// 获取状态文本
+const getStatusText = (statusCode) => {
+  const statusMap = {
+    1: '待付款',
+    2: '待发货',
+    3: '待收货',
+    4: '已完成',
+    5: '已取消'
+  }
+  return statusMap[statusCode] || '未知'
 }
 
 onMounted(() => {
