@@ -71,13 +71,9 @@
           </div>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="profile">
-                <el-icon><User /></el-icon>
-                个人中心
-              </el-dropdown-item>
-              <el-dropdown-item command="settings">
-                <el-icon><Setting /></el-icon>
-                设置
+              <el-dropdown-item command="goHome">
+                <el-icon><HomeFilled /></el-icon>
+                返回首页
               </el-dropdown-item>
               <el-dropdown-item divided command="logout">
                 <el-icon><SwitchButton /></el-icon>
@@ -100,6 +96,7 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { HomeFilled } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -125,16 +122,10 @@ const showNotifications = () => {
 
 const handleUserCommand = (command) => {
   switch (command) {
-    case 'profile':
-      // farmer/buyer/expert 有角色专属个人中心；admin/bank 无个人中心，回到首页
-      if (['farmer', 'buyer', 'expert'].includes(userStore.role)) {
-        router.push(`/${userStore.role}/profile`)
-      } else {
-        router.push('/')
-      }
-      break
-    case 'settings':
-      ElMessage.info('设置功能开发中')
+    case 'goHome':
+      router.push('/').catch(err => {
+        console.error('导航失败:', err)
+      })
       break
     case 'logout':
       ElMessageBox.confirm('确定要退出登录吗？', '退出登录', {

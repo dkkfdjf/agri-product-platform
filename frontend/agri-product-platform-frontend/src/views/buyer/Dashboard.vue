@@ -1,5 +1,12 @@
 <template>
   <div class="buyer-dashboard">
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-state">
+      <el-skeleton :rows="5" animated />
+    </div>
+
+    <!-- 内容区域 -->
+    <template v-else>
     <!-- 页面标题区 -->
     <div class="page-header">
       <h1 class="page-title">{{ greeting }}，{{ userStore.displayName() }}</h1>
@@ -17,12 +24,8 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">23</div>
+          <div class="stat-value">{{ stats.totalOrders }}</div>
           <div class="stat-label">累计订单</div>
-          <div class="stat-trend positive">
-            <el-icon><Top /></el-icon>
-            <span>本月新增 5 笔</span>
-          </div>
         </div>
       </div>
 
@@ -34,7 +37,7 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">¥ 45,200</div>
+          <div class="stat-value">¥ {{ formatMoney(stats.totalSpent) }}</div>
           <div class="stat-label">累计消费</div>
         </div>
       </div>
@@ -46,7 +49,7 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">8</div>
+          <div class="stat-value">{{ stats.cartCount }}</div>
           <div class="stat-label">购物车商品</div>
           <div class="stat-action">
             <router-link to="/buyer/cart">去结算</router-link>
@@ -62,7 +65,7 @@
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">2</div>
+          <div class="stat-value">{{ stats.expertCount }}</div>
           <div class="stat-label">专家咨询</div>
           <div class="stat-action">
             <router-link to="/buyer/expert">继续咨询</router-link>
@@ -80,9 +83,10 @@
           <router-link to="/buyer/market" class="card-link">查看更多</router-link>
         </div>
         <div class="product-grid">
-          <div v-for="product in recommendedProducts" :key="product.id" class="product-card">
+          <div v-for="product in recommendedProducts" :key="product.productId" class="product-card" @click="goToProduct(product)">
             <div class="product-image">
-              <div class="image-placeholder">
+              <img v-if="product.picPath" :src="product.picPath" :alt="product.title" />
+              <div v-else class="image-placeholder">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
                   <path d="M12 7v5l3 3"/>
@@ -90,9 +94,9 @@
               </div>
             </div>
             <div class="product-info">
-              <div class="product-name">{{ product.name }}</div>
-              <div class="product-origin">{{ product.origin }}</div>
-              <div class="product-price">¥{{ product.price }}/{{ product.unit }}</div>
+              <div class="product-name">{{ product.title }}</div>
+              <div class="product-desc">{{ product.content }}</div>
+              <div class="product-price">{{ product.type === 'goods' ? `¥${product.price}` : '面议' }}</div>
             </div>
           </div>
         </div>
@@ -150,27 +154,59 @@
         <router-link to="/buyer/orders" class="card-link">查看全部</router-link>
       </div>
       <div class="order-list">
-        <div v-for="order in recentOrders" :key="order.id" class="order-item">
-          <div class="order-info">
-            <div class="order-products">{{ order.products }}</div>
-            <div class="order-meta">
-              <span class="order-id">订单号：{{ order.id }}</span>
-              <span class="order-time">{{ order.time }}</span>
+        <div v-if="recentOrders.length > 0">
+          <div v-for="order in recentOrders" :key="order.orderId" class="order-item">
+            <div class="order-info">
+              <div class="order-products">{{ order.productTitle || '商品订单' }}</div>
+              <div class="order-meta">
+                <span class="order-id">订单号：{{ order.orderId }}</span>
+                <span class="order-time">{{ formatTime(order.createTime) }}</span>
+              </div>
+            </div>
+            <div class="order-amount">¥{{ order.totalPrice }}</div>
+            <div class="order-status" :class="getStatusClass(order.orderStatus)">
+              {{ getStatusText(order.orderStatus) }}
             </div>
           </div>
-          <div class="order-amount">¥{{ order.amount }}</div>
-          <div class="order-status" :class="order.statusClass">{{ order.status }}</div>
+        </div>
+        <div v-else class="empty-orders">
+          <p>暂无订单</p>
+          <router-link to="/buyer/market">去逛逛市场</router-link>
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { Top } from '@element-plus/icons-vue'
+import { getProducts } from '@/api/product'
+import { getOrders } from '@/api/order'
+import { getCartList } from '@/api/cart'
 
+const router = useRouter()
 const userStore = useUserStore()
+
+// 统计数据
+const stats = ref({
+  totalOrders: 0,
+  totalSpent: 0,
+  cartCount: 0,
+  expertCount: 0
+})
+
+// 推荐商品
+const recommendedProducts = ref([])
+
+// 最近订单
+const recentOrders = ref([])
+
+// 加载状态
+const loading = ref(false)
 
 const greeting = computed(() => {
   const hour = new Date().getHours()
@@ -179,39 +215,85 @@ const greeting = computed(() => {
   return '晚上好'
 })
 
-const recommendedProducts = ref([
-  { id: 1, name: '有机东北大米', origin: '黑龙江·五常', price: '8.50', unit: 'kg' },
-  { id: 2, name: '红富士苹果', origin: '陕西·洛川', price: '12.00', unit: 'kg' },
-  { id: 3, name: '散养土鸡蛋', origin: '湖北·荆门', price: '2.50', unit: '个' },
-  { id: 4, name: '新鲜时蔬套餐', origin: '山东·寿光', price: '45.00', unit: '份' }
-])
+// 格式化金额
+const formatMoney = (amount) => {
+  if (!amount) return '0'
+  return Number(amount).toLocaleString('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+}
 
-const recentOrders = ref([
-  {
-    id: 'ORD20240709003',
-    products: '有机大米 50kg × 2',
-    time: '昨天',
-    amount: '850.00',
-    status: '待收货',
-    statusClass: 'pending'
-  },
-  {
-    id: 'ORD20240708005',
-    products: '红富士苹果 30kg',
-    time: '3天前',
-    amount: '360.00',
-    status: '已完成',
-    statusClass: 'success'
-  },
-  {
-    id: 'ORD20240705012',
-    products: '土鸡蛋 100个',
-    time: '1周前',
-    amount: '250.00',
-    status: '已完成',
-    statusClass: 'success'
+// 格式化时间
+const formatTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  const now = new Date()
+  const diff = now - date
+
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
+  return date.toLocaleDateString()
+}
+
+// 获取订单状态样式
+const getStatusClass = (status) => {
+  const statusMap = {
+    0: 'pending',
+    1: 'processing',
+    2: 'success'
   }
-])
+  return statusMap[status] || 'pending'
+}
+
+// 获取订单状态文本
+const getStatusText = (status) => {
+  const statusMap = {
+    0: '待确认',
+    1: '进行中',
+    2: '已完成'
+  }
+  return statusMap[status] || '未知'
+}
+
+// 跳转到产品详情
+const goToProduct = (product) => {
+  router.push(`/buyer/market?productId=${product.productId}`)
+}
+
+// 加载仪表板数据
+const loadDashboardData = async () => {
+  loading.value = true
+  try {
+    // 加载推荐商品
+    const productRes = await getProducts({ page: 1, pageSize: 4, type: 'goods' })
+    if (productRes.code === 200) {
+      recommendedProducts.value = productRes.data.records || []
+    }
+
+    // 加载最近订单
+    const orderRes = await getOrders({ page: 1, pageSize: 5 })
+    if (orderRes.code === 200) {
+      const orders = orderRes.data.records || []
+      recentOrders.value = orders
+      stats.value.totalOrders = orderRes.data.total || 0
+      stats.value.totalSpent = orders.reduce((sum, order) => sum + (order.totalPrice || 0), 0)
+    }
+
+    // 加载购物车数量
+    const cartRes = await getCartList()
+    if (cartRes.code === 200) {
+      stats.value.cartCount = cartRes.data?.length || 0
+    }
+  } catch (error) {
+    console.error('加载仪表板数据失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadDashboardData()
+})
 </script>
 
 <style scoped>
@@ -219,6 +301,10 @@ const recentOrders = ref([
   display: flex;
   flex-direction: column;
   gap: var(--spacing-6, 24px);
+}
+
+.loading-state {
+  padding: var(--spacing-6, 24px);
 }
 
 /* ===== 页面标题 ===== */
@@ -412,6 +498,12 @@ const recentOrders = ref([
   overflow: hidden;
 }
 
+.product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .image-placeholder {
   width: 100%;
   height: 100%;
@@ -436,10 +528,13 @@ const recentOrders = ref([
   text-overflow: ellipsis;
 }
 
-.product-origin {
+.product-desc {
   font-size: var(--font-size-xs, 12px);
   color: var(--color-text-tertiary, #6b7280);
   margin-bottom: var(--spacing-1, 4px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .product-price {
@@ -557,6 +652,31 @@ const recentOrders = ref([
 .order-status.success {
   background: rgba(74, 124, 89, 0.1);
   color: var(--color-success, #4a7c59);
+}
+
+.order-status.processing {
+  background: rgba(91, 138, 158, 0.1);
+  color: var(--color-buyer, #5b8a9e);
+}
+
+.empty-orders {
+  padding: var(--spacing-8, 32px);
+  text-align: center;
+  color: var(--color-text-tertiary, #6b7280);
+}
+
+.empty-orders p {
+  margin: 0 0 var(--spacing-4, 16px);
+}
+
+.empty-orders a {
+  color: var(--color-buyer, #5b8a9e);
+  text-decoration: none;
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.empty-orders a:hover {
+  text-decoration: underline;
 }
 
 /* ===== 响应式 ===== */

@@ -2,7 +2,7 @@
   <div class="market-page">
     <!-- 页面标题区 -->
     <div class="page-header">
-      <el-button :icon="ArrowLeft" @click="goBack" class="back-button">返回</el-button>
+      <el-button v-if="showBackButton" :icon="ArrowLeft" @click="goBack" class="back-button">返回</el-button>
       <div class="header-content">
         <h1 class="page-title">农产品市场</h1>
         <p class="page-subtitle">优质农产品，直接从农户到您手中</p>
@@ -180,7 +180,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { Plus, ArrowLeft } from '@element-plus/icons-vue'
@@ -188,7 +188,13 @@ import { getProducts, publishProduct } from '@/api/product'
 import { LOCAL_PRODUCT_IMAGES } from '@/config/localImages'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
+
+// 判断是否显示返回按钮（仅在公开市场页面显示，不在买家市场页面显示）
+const showBackButton = computed(() => {
+  return route.path === '/market'
+})
 
 // 本地图片列表
 const localImages = LOCAL_PRODUCT_IMAGES
@@ -397,12 +403,12 @@ onMounted(() => {
 .page-header {
   display: flex;
   align-items: center;
-  gap: var(--spacing-4, 16px);
   margin-bottom: var(--spacing-8, 32px);
 }
 
 .back-button {
   flex-shrink: 0;
+  margin-right: var(--spacing-4, 16px);
 }
 
 .header-content {

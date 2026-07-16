@@ -25,18 +25,36 @@ export function getBanners() {
 }
 
 export function addBanner(data) {
+  const params = new URLSearchParams()
+  params.append('picPath', data.picPath)
+  if (data.sortOrder !== undefined && data.sortOrder !== null) {
+    params.append('sortOrder', data.sortOrder)
+  }
   return request({
     url: '/banner',
     method: 'post',
-    data
+    data: params,
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
   })
 }
 
 export function updateBanner(id, data) {
+  const params = new URLSearchParams()
+  if (data.picPath) {
+    params.append('picPath', data.picPath)
+  }
+  if (data.sortOrder !== undefined && data.sortOrder !== null) {
+    params.append('sortOrder', data.sortOrder)
+  }
   return request({
     url: `/banner/${id}`,
     method: 'put',
-    data
+    data: params,
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
   })
 }
 

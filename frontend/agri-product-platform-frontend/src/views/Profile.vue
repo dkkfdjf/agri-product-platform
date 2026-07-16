@@ -1,6 +1,5 @@
 <template>
   <div class="profile-container">
-    <el-button @click="$router.back()" style="margin-bottom: 16px;">← 返回</el-button>
     <h1>个人中心</h1>
 
     <el-card class="user-card">
