@@ -1,9 +1,9 @@
 <template>
   <div class="question-list-page">
     <div class="container">
+      <BackBar to="/" />
       <!-- 页面标题 -->
       <div class="page-header">
-        <el-button @click="$router.back()" style="margin-bottom: 12px;">← 返回</el-button>
         <h1 class="page-title">专家问答</h1>
         <p class="page-subtitle">向农业专家提问，获取专业解答</p>
       </div>
@@ -63,7 +63,7 @@
           <div class="question-meta">
             <span class="meta-item">
               <el-icon><User /></el-icon>
-              {{ question.questioner }}
+              {{ question.questionerRealName || question.questioner }}
             </span>
             <span class="meta-item">
               <el-icon><Calendar /></el-icon>
@@ -77,7 +77,7 @@
           <!-- 已回答时显示回答者 -->
           <div v-if="question.status === 1" class="answer-preview">
             <div class="answer-author">
-              回答者：{{ question.expertName || '专家' }}
+              回答者：{{ question.expertRealName || question.expertName || '专家' }}
             </div>
           </div>
         </div>
@@ -104,13 +104,15 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { Plus, User, Calendar, ChatDotRound } from '@element-plus/icons-vue'
 import { getQuestionList } from '@/api/question'
+import BackBar from '@/components/BackBar.vue'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const loading = ref(false)
@@ -164,7 +166,7 @@ const handleSearch = () => {
 
 // 查看详情
 const handleViewDetail = (question) => {
-  router.push(`/question/${question.id}`)
+  router.push({ path: `/question/${question.id}`, query: { from: route.fullPath } })
 }
 
 // 加载问题列表

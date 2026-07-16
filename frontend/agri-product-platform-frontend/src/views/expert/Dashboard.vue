@@ -174,7 +174,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { Top } from '@element-plus/icons-vue'
@@ -183,6 +183,7 @@ import { getQuestionList } from '@/api/question'
 import { getExpertReserveList } from '@/api/expert'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 // 当前专家 userName（知识 own_name 与问答 expert_name 都用它）
@@ -279,7 +280,7 @@ const formatTime = (time) => {
 }
 
 const answerQuestion = (id) => {
-  router.push(`/question/${id}`)
+  router.push({ path: `/question/${id}`, query: { from: route.fullPath } })
 }
 
 onMounted(() => {

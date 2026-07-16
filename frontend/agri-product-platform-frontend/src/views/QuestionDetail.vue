@@ -1,11 +1,8 @@
 <template>
   <div class="question-detail-page">
     <div class="container">
-      <!-- 返回按钮 -->
-      <el-button @click="handleBack" class="back-btn" link>
-        <el-icon><ArrowLeft /></el-icon>
-        返回列表
-      </el-button>
+      <!-- 返回列表 -->
+      <BackBar to="/question" label="返回列表" />
 
       <!-- 加载状态 -->
       <el-skeleton v-if="loading" :rows="10" animated />
@@ -22,7 +19,11 @@
             <div class="question-meta">
               <span class="meta-item">
                 <el-icon><User /></el-icon>
-                提问者：{{ question.questioner }}
+                提问者：{{ displayName(question.questionerRealName, question.questioner) }}
+              </span>
+              <span class="meta-item" v-if="question.expertRealName || question.expertName">
+                <el-icon><ChatDotRound /></el-icon>
+                专家：{{ displayName(question.expertRealName, question.expertName) }}
               </span>
               <span class="meta-item" v-if="question.plantName">
                 <el-icon><ChatDotRound /></el-icon>
@@ -43,66 +44,79 @@
             {{ question.question }}
           </div>
 
-          <!-- 操作按钮 -->
+          <!-- 操作按钮：结束对话 / 删除问题（仅提问者本人） -->
           <div class="question-actions" v-if="canClose || canDelete">
             <el-button
               v-if="canClose"
               type="warning"
+              plain
               @click="handleCloseQuestion"
               :disabled="question.status === 2"
             >
               <el-icon><Close /></el-icon>
-              关闭问题
+              {{ question.status === 2 ? '对话已结束' : '结束对话' }}
             </el-button>
-            <el-button v-if="canDelete" type="danger" @click="handleDeleteQuestion">
+            <el-button v-if="canDelete" type="danger" plain @click="handleDeleteQuestion">
               <el-icon><Delete /></el-icon>
               删除问题
             </el-button>
           </div>
         </article>
 
-        <!-- 回答区 -->
-        <div class="answers-section">
-          <h3 class="section-title">专家解答</h3>
+        <!-- 对话记录（多轮追问） -->
+        <div class="conversation">
+          <h3 class="section-title">
+            对话记录 <span class="reply-count">（{{ replies.length }} 条）</span>
+          </h3>
 
-          <!-- 专家回答表单 -->
-          <div v-if="canAnswer" class="answer-form">
+          <div v-if="replies.length > 0" class="reply-list">
+            <div
+              v-for="reply in replies"
+              :key="reply.id"
+              class="reply-item"
+              :class="`role-${reply.authorRole}`"
+            >
+              <div class="reply-avatar">
+                {{ (reply.authorRealName || reply.authorUserName || '?').charAt(0) }}
+              </div>
+              <div class="reply-body">
+                <div class="reply-head">
+                  <span class="reply-author">
+                    {{ displayName(reply.authorRealName, reply.authorUserName) }}
+                  </span>
+                  <el-tag size="small" :type="reply.authorRole === 'expert' ? 'success' : 'warning'">
+                    {{ reply.authorRole === 'expert' ? '专家回答' : '追问' }}
+                  </el-tag>
+                  <span class="reply-time">{{ formatDate(reply.createTime) }}</span>
+                </div>
+                <div class="reply-content">{{ reply.content }}</div>
+              </div>
+            </div>
+          </div>
+          <el-empty v-else :description="canReply ? '还没有回复，快来开始对话吧' : '暂无回复'" />
+
+          <!-- 回复输入框 -->
+          <div v-if="canReply" class="reply-form">
             <el-input
-              v-model="answerContent"
+              v-model="replyContent"
               type="textarea"
-              :rows="5"
-              placeholder="请输入您的专业解答..."
-              maxlength="2000"
+              :rows="3"
+              :placeholder="replyPlaceholder"
+              maxlength="1000"
               show-word-limit
             />
             <el-button
               type="primary"
-              @click="handleSubmitAnswer"
+              @click="handleSubmitReply"
               :loading="submitting"
-              :disabled="!answerContent.trim()"
+              :disabled="!replyContent.trim()"
             >
-              提交回答
+              {{ isExpert ? '提交回答' : '提交追问' }}
             </el-button>
           </div>
-
-          <!-- 已有回答 -->
-          <div v-if="question.answer" class="answer-item">
-            <div class="answer-header">
-              <div class="expert-info">
-                <el-avatar :size="40">{{ question.expertName?.charAt(0) || '专' }}</el-avatar>
-                <div class="expert-detail">
-                  <div class="expert-name">{{ question.expertName }}</div>
-                  <div class="expert-title">农业专家</div>
-                </div>
-              </div>
-              <span class="answer-time" v-if="question.updateTime">{{ formatDate(question.updateTime) }}</span>
-            </div>
-            <div class="answer-content">{{ question.answer }}</div>
+          <div v-else-if="question.status === 2" class="closed-tip">
+            <el-alert title="对话已结束，无法继续回复" type="info" :closable="false" />
           </div>
-          <el-empty
-            v-else
-            :description="canAnswer ? '暂无回答，快来解答吧！' : '暂无回答，等待专家解答中...'"
-          />
         </div>
       </div>
 
@@ -117,8 +131,15 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, User, Calendar, Close, Delete, Phone, ChatDotRound } from '@element-plus/icons-vue'
-import { getQuestionDetail, answerQuestion, closeQuestion, deleteQuestion } from '@/api/question'
+import { User, Calendar, Close, Delete, Phone, ChatDotRound } from '@element-plus/icons-vue'
+import BackBar from '@/components/BackBar.vue'
+import {
+  getQuestionDetail,
+  closeQuestion,
+  deleteQuestion,
+  getQuestionReplies,
+  addQuestionReply
+} from '@/api/question'
 
 const route = useRoute()
 const router = useRouter()
@@ -127,35 +148,42 @@ const userStore = useUserStore()
 const loading = ref(true)
 const submitting = ref(false)
 const question = ref({})
-const answerContent = ref('')
+const replies = ref([])
+const replyContent = ref('')
 
 const currentUserName = computed(() => userStore.userInfo?.userName || '')
 
-// 是否可以回答（分配给该专家且未回答；或未指派专家时任意专家可答）
-const canAnswer = computed(() => {
-  if (!userStore.isLoggedIn() || !userStore.hasRole(['expert'])) return false
-  if (question.value.status !== 0) return false
-  const assigned = question.value.expertName
-  return !assigned || assigned === currentUserName.value
-})
+const isQuestioner = computed(() => question.value.questioner === currentUserName.value)
+const isExpert = computed(
+  () => !!question.value.expertName && question.value.expertName === currentUserName.value
+)
+const isAdmin = computed(
+  () => !!userStore.userInfo && userStore.hasRole(['admin'])
+)
 
-// 是否可以关闭问题（提问者本人）
-const canClose = computed(() => {
-  return question.value.questioner === currentUserName.value && question.value.status !== 2
+// 结束对话：仅提问者本人
+const canClose = computed(() => isQuestioner.value)
+// 删除：提问者本人或管理员
+const canDelete = computed(() => isQuestioner.value || isAdmin.value)
+// 可回复：登录 且 (提问者或被指派专家) 且 未关闭
+const canReply = computed(() => {
+  if (!userStore.isLoggedIn()) return false
+  if (question.value.status === 2) return false
+  return isQuestioner.value || isExpert.value
 })
+const replyPlaceholder = computed(() =>
+  isExpert.value ? '请输入专业回答…' : '请输入追问内容，向专家继续请教…'
+)
 
-// 是否可以删除（提问者本人）
-const canDelete = computed(() => {
-  return question.value.questioner === currentUserName.value
-})
+// 优先显示真实姓名，缺省回退到用户名
+const displayName = (realName, userName) => realName || userName || ''
 
-// 获取状态文本（后端为整数：0未回答 1已回答 2已关闭）
+// 状态文本（后端整数：0未回答 1已回答 2已关闭）
 const getStatusText = (status) => {
   const map = { 0: '待回答', 1: '已回答', 2: '已关闭' }
   return map[status] || '未知'
 }
 
-// 格式化日期
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleString('zh-CN', {
@@ -167,22 +195,34 @@ const formatDate = (dateStr) => {
   })
 }
 
-// 返回列表
-const handleBack = () => {
-  router.push('/question')
+// 同时加载问题与对话回复
+const loadAll = async () => {
+  loading.value = true
+  try {
+    const [qRes, rRes] = await Promise.all([
+      getQuestionDetail(route.params.id),
+      getQuestionReplies(route.params.id)
+    ])
+    question.value = qRes.data || {}
+    replies.value = rRes.data || []
+  } catch (error) {
+    ElMessage.error('加载失败')
+  } finally {
+    loading.value = false
+  }
 }
 
-// 关闭问题
+// 结束对话（原"关闭问题"）
 const handleCloseQuestion = async () => {
   try {
-    await ElMessageBox.confirm('确定要关闭这个问题吗？关闭后将无法继续回答。', '提示', {
+    await ElMessageBox.confirm('结束对话后将无法继续回复，确定吗？', '结束对话', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning'
     })
     await closeQuestion(question.value.id)
-    ElMessage.success('问题已关闭')
-    await loadQuestion()
+    ElMessage.success('对话已结束')
+    await loadAll()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('操作失败')
@@ -193,7 +233,7 @@ const handleCloseQuestion = async () => {
 // 删除问题
 const handleDeleteQuestion = async () => {
   try {
-    await ElMessageBox.confirm('确定要删除这个问题吗？', '提示', {
+    await ElMessageBox.confirm('删除后无法恢复，确定删除这个问题吗？', '删除问题', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning'
@@ -208,40 +248,26 @@ const handleDeleteQuestion = async () => {
   }
 }
 
-// 提交回答
-const handleSubmitAnswer = async () => {
-  if (!answerContent.value.trim()) {
-    ElMessage.warning('请输入回答内容')
+// 提交追问/回答
+const handleSubmitReply = async () => {
+  if (!replyContent.value.trim()) {
+    ElMessage.warning('请输入回复内容')
     return
   }
   submitting.value = true
   try {
-    await answerQuestion(question.value.id, { answer: answerContent.value.trim() })
-    ElMessage.success('回答成功')
-    answerContent.value = ''
-    await loadQuestion()
+    await addQuestionReply(question.value.id, { content: replyContent.value.trim() })
+    replyContent.value = ''
+    await loadAll()
   } catch (error) {
-    ElMessage.error(error.message || '回答失败')
+    ElMessage.error(error.message || '回复失败')
   } finally {
     submitting.value = false
   }
 }
 
-// 加载问题详情
-const loadQuestion = async () => {
-  loading.value = true
-  try {
-    const res = await getQuestionDetail(route.params.id)
-    question.value = res.data || {}
-  } catch (error) {
-    ElMessage.error('加载失败')
-  } finally {
-    loading.value = false
-  }
-}
-
 onMounted(() => {
-  loadQuestion()
+  loadAll()
 })
 </script>
 
@@ -256,11 +282,6 @@ onMounted(() => {
   max-width: 900px;
   margin: 0 auto;
   padding: 0 var(--spacing-6, 24px);
-}
-
-.back-btn {
-  margin-bottom: var(--spacing-4, 16px);
-  font-size: var(--font-size-base, 16px);
 }
 
 /* ===== 问题内容 ===== */
@@ -345,8 +366,8 @@ onMounted(() => {
   gap: var(--spacing-3, 12px);
 }
 
-/* ===== 回答区 ===== */
-.answers-section {
+/* ===== 对话记录 ===== */
+.conversation {
   background: var(--color-bg-primary, #ffffff);
   border-radius: var(--radius-lg, 12px);
   padding: var(--spacing-6, 24px);
@@ -360,60 +381,85 @@ onMounted(() => {
   margin: 0 0 var(--spacing-4, 16px);
 }
 
-.answer-form {
+.reply-count {
+  font-size: var(--font-size-sm, 14px);
+  font-weight: var(--font-weight-normal, 400);
+  color: var(--color-text-tertiary, #6b7280);
+}
+
+.reply-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-3, 12px);
+  gap: var(--spacing-4, 16px);
   margin-bottom: var(--spacing-6, 24px);
-  padding: var(--spacing-4, 16px);
-  background: var(--color-bg-secondary, #f7f5f0);
-  border-radius: var(--radius-base, 8px);
 }
 
-.answer-item {
-  padding: var(--spacing-5, 20px);
-  background: var(--color-bg-secondary, #f7f5f0);
-  border-radius: var(--radius-base, 8px);
-}
-
-.answer-header {
+.reply-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-3, 12px);
-}
-
-.expert-info {
-  display: flex;
-  align-items: center;
   gap: var(--spacing-3, 12px);
 }
 
-.expert-detail {
+.reply-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--color-primary, #2d5a3d);
+  color: var(--color-text-inverse, #ffffff);
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-lg, 18px);
+  font-weight: var(--font-weight-semibold, 600);
+  flex-shrink: 0;
 }
 
-.expert-name {
+.role-expert .reply-avatar {
+  background: var(--color-expert, #b85c38);
+}
+
+.reply-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.reply-head {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2, 8px);
+  margin-bottom: var(--spacing-1, 4px);
+}
+
+.reply-author {
   font-weight: var(--font-weight-semibold, 600);
   color: var(--color-text-primary, #1f2923);
 }
 
-.expert-title {
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-primary, #2d5a3d);
-}
-
-.answer-time {
+.reply-time {
   font-size: var(--font-size-xs, 12px);
   color: var(--color-text-tertiary, #6b7280);
+  margin-left: auto;
 }
 
-.answer-content {
+.reply-content {
   font-size: var(--font-size-base, 16px);
   line-height: 1.6;
   color: var(--color-text-primary, #1f2923);
   white-space: pre-wrap;
+  background: var(--color-bg-secondary, #f7f5f0);
+  padding: var(--spacing-3, 12px);
+  border-radius: var(--radius-base, 8px);
+}
+
+.reply-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3, 12px);
+  padding-top: var(--spacing-4, 16px);
+  border-top: 1px solid var(--color-border, #e5e0d8);
+}
+
+.closed-tip {
+  margin-top: var(--spacing-4, 16px);
 }
 
 /* ===== 响应式 ===== */
@@ -423,14 +469,8 @@ onMounted(() => {
   }
 
   .question-article,
-  .answers-section {
+  .conversation {
     padding: var(--spacing-5, 20px);
-  }
-
-  .answer-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-2, 8px);
   }
 }
 </style>

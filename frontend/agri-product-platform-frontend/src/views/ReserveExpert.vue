@@ -1,9 +1,9 @@
 <template>
   <div class="reserve-expert-page">
     <div class="container">
+      <BackBar to="/expert-help" />
       <!-- 页面标题 -->
       <div class="page-header">
-        <el-button @click="$router.back()" style="margin-bottom: 12px;">← 返回</el-button>
         <h1 class="page-title">预约专家</h1>
         <p class="page-subtitle">与农业专家一对一咨询，获取专业指导</p>
       </div>
@@ -67,9 +67,9 @@
                   <div class="reserve-header">
                     <div class="expert-mini">
                       <el-avatar :size="40" :src="reserve.expertAvatar">
-                        {{ reserve.expertName?.charAt(0) }}
+                        {{ (reserve.expertRealName || reserve.expertName)?.charAt(0) }}
                       </el-avatar>
-                      <span class="expert-name">{{ reserve.expertName }}</span>
+                      <span class="expert-name">{{ reserve.expertRealName || reserve.expertName }}</span>
                     </div>
                     <div
                       class="status-badge"
@@ -90,6 +90,10 @@
                     <div class="info-item">
                       <el-icon><Location /></el-icon>
                       地址：{{ reserve.address }}
+                    </div>
+                    <div class="info-item" v-if="reserve.preferredTime">
+                      <el-icon><Calendar /></el-icon>
+                      期望时间：{{ reserve.preferredTime }}
                     </div>
                     <div class="info-item" v-if="reserve.message">
                       <el-icon><ChatDotRound /></el-icon>
@@ -166,6 +170,16 @@
             placeholder="请输入联系电话"
           />
         </el-form-item>
+        <el-form-item label="期望时间">
+          <el-date-picker
+            v-model="reserveForm.preferredTime"
+            type="datetime"
+            placeholder="选择期望的咨询时间"
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DD HH:mm"
+            style="width: 100%"
+          />
+        </el-form-item>
         <el-form-item label="土壤条件" prop="soilCondition">
           <el-input
             v-model="reserveForm.soilCondition"
@@ -226,6 +240,7 @@ import {
 import { useRoute } from 'vue-router'
 import { getExpertList } from '@/api/expert'
 import { makeReservation, getMyReserves, cancelReserve } from '@/api/reserve'
+import BackBar from '@/components/BackBar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -248,6 +263,7 @@ const reserveForm = reactive({
   area: '',
   address: '',
   phone: '',
+  preferredTime: '',
   soilCondition: '',
   plantCondition: '',
   plantDetail: '',
@@ -309,7 +325,7 @@ const handleLogin = () => {
 
 // 查看专家详情
 const handleViewDetail = (expert) => {
-  router.push(`/expert/${expert.userName}`)
+  router.push({ path: `/expert/${expert.userName}`, query: { from: route.fullPath } })
 }
 
 // 预约专家
@@ -327,6 +343,7 @@ const handleReserve = (expert) => {
   reserveForm.area = ''
   reserveForm.address = ''
   reserveForm.phone = userStore.userInfo?.phone || ''
+  reserveForm.preferredTime = ''
   reserveForm.soilCondition = ''
   reserveForm.plantCondition = ''
   reserveForm.plantDetail = ''
@@ -353,6 +370,7 @@ const handleSubmitReserve = async () => {
       area: reserveForm.area,
       address: reserveForm.address,
       phone: reserveForm.phone,
+      preferredTime: reserveForm.preferredTime,
       soilCondition: reserveForm.soilCondition,
       plantCondition: reserveForm.plantCondition,
       plantDetail: reserveForm.plantDetail,

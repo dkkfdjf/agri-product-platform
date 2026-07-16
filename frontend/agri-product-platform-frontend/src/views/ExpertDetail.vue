@@ -1,7 +1,7 @@
 <template>
   <div class="expert-detail-page">
     <div class="container">
-      <el-button @click="$router.back()" style="margin-bottom: 16px;">← 返回</el-button>
+      <BackBar to="/expert-help" />
       <!-- 专家基本信息卡片 -->
       <el-card class="expert-info-card" v-if="expert" v-loading="loading">
         <div class="expert-header">
@@ -30,7 +30,7 @@
               <el-icon><ChatDotRound /></el-icon>
               向TA提问
             </el-button>
-            <el-button size="large" @click="handleReserve">
+            <el-button type="primary" size="large" @click="handleReserve">
               <el-icon><Calendar /></el-icon>
               预约专家
             </el-button>
@@ -68,7 +68,7 @@
               </p>
               <div class="meta">
                 <span>{{ formatDate(item.createTime) }}</span>
-                <span>提问者：{{ item.questioner }}</span>
+                <span>提问者：{{ item.questionerRealName || item.questioner }}</span>
               </div>
             </div>
           </div>
@@ -88,6 +88,7 @@ import { getExpertDetail } from '@/api/expert'
 import { getKnowledgeList } from '@/api/knowledge'
 import { getQuestionList } from '@/api/question'
 import { useUserStore } from '@/stores/user'
+import BackBar from '@/components/BackBar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -154,6 +155,7 @@ const loadExpertQuestions = async (expertName) => {
         question: q.question,
         answer: q.answer,
         questioner: q.questioner,
+        questionerRealName: q.questionerRealName,
         createTime: q.createTime
       }))
     }
@@ -179,15 +181,15 @@ const handleReserve = () => {
     router.push({ path: '/login', query: { redirect: route.fullPath } })
     return
   }
-  router.push({ path: '/reserve', query: { expert: expert.value?.userName } })
+  router.push({ path: '/reserve', query: { expert: expert.value?.userName, from: route.fullPath } })
 }
 
 const goToKnowledge = (id) => {
-  router.push(`/knowledge/${id}`)
+  router.push({ path: `/knowledge/${id}`, query: { from: route.fullPath } })
 }
 
 const goToQuestion = (id) => {
-  router.push(`/question/${id}`)
+  router.push({ path: `/question/${id}`, query: { from: route.fullPath } })
 }
 
 const formatDate = (dateStr) => {

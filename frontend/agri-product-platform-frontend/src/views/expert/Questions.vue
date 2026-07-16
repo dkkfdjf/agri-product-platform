@@ -2,7 +2,7 @@
   <div class="expert-questions-page">
     <div class="page-header">
       <h1>问答管理</h1>
-      <p class="subtitle">回答农户和买家的问题</p>
+      <p class="subtitle">回答农户和买家的问题，支持多轮追问</p>
     </div>
 
     <!-- 筛选区 -->
@@ -23,7 +23,7 @@
             <div class="question-meta">
               <span class="meta-item">
                 <el-icon><User /></el-icon>
-                提问者：{{ question.questioner }}
+                提问者：{{ question.questionerRealName || question.questioner }}
               </span>
               <span class="meta-item" v-if="question.phone">
                 <el-icon><Phone /></el-icon>
@@ -47,24 +47,16 @@
           </div>
 
           <div class="content-section answer-section" v-if="question.status === 1 && question.answer">
-            <h4>我的回答：</h4>
+            <h4>最近回答：</h4>
             <p class="answer-text">{{ question.answer }}</p>
           </div>
         </div>
 
         <div class="question-actions">
-          <template v-if="question.status === 0">
-            <el-button type="primary" @click="handleAnswer(question)">
-              <el-icon><Edit /></el-icon>
-              回答问题
-            </el-button>
-          </template>
-          <template v-else>
-            <el-button @click="handleEditAnswer(question)">
-              <el-icon><Edit /></el-icon>
-              修改回答
-            </el-button>
-          </template>
+          <el-button type="primary" @click="goToConversation(question)">
+            <el-icon><ChatDotRound /></el-icon>
+            {{ question.status === 0 ? '去回答' : '查看 / 回复' }}
+          </el-button>
         </div>
       </div>
 
@@ -83,62 +75,32 @@
         @size-change="loadQuestions"
       />
     </div>
-
-    <!-- 回答对话框 -->
-    <el-dialog
-      v-model="answerDialogVisible"
-      :title="isEditing ? '修改回答' : '回答问题'"
-      width="600px"
-    >
-      <el-form :model="answerForm" label-width="80px">
-        <el-form-item label="问题">
-          <div class="question-preview">{{ currentQuestion?.title }}</div>
-        </el-form-item>
-        <el-form-item label="回答内容">
-          <el-input
-            v-model="answerForm.answer"
-            type="textarea"
-            :rows="8"
-            placeholder="请输入您的专业回答..."
-            maxlength="255"
-            show-word-limit
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="answerDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitAnswer" :loading="submitting">
-          {{ isEditing ? '保存修改' : '提交回答' }}
-        </el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Phone, Calendar, Edit } from '@element-plus/icons-vue'
-import { getQuestionList, answerQuestion } from '@/api/question'
+import { User, Phone, Calendar, ChatDotRound } from '@element-plus/icons-vue'
+import { getQuestionList } from '@/api/question'
 import { useUserStore } from '@/stores/user'
 
+const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const loading = ref(false)
-const submitting = ref(false)
 const filterStatus = ref(-1)
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const questionList = ref([])
 
-const answerDialogVisible = ref(false)
-const isEditing = ref(false)
-const currentQuestion = ref(null)
-const answerForm = reactive({
-  questionId: null,
-  answer: ''
-})
+// 进入问题对话页（在对话流中回答 / 回复追问）
+const goToConversation = (question) => {
+  router.push({ path: `/question/${question.id}`, query: { from: route.fullPath } })
+}
 
 // 加载问题列表
 const loadQuestions = async () => {
@@ -163,6 +125,7 @@ const loadQuestions = async () => {
         question: q.question,
         answer: q.answer,
         questioner: q.questioner,
+        questionerRealName: q.questionerRealName,
         phone: q.phone,
         status: q.status,
         createTime: q.createTime
@@ -173,44 +136,6 @@ const loadQuestions = async () => {
     ElMessage.error('加载失败')
   } finally {
     loading.value = false
-  }
-}
-
-// 回答问题
-const handleAnswer = (question) => {
-  currentQuestion.value = question
-  answerForm.questionId = question.id
-  answerForm.answer = ''
-  isEditing.value = false
-  answerDialogVisible.value = true
-}
-
-// 修改回答
-const handleEditAnswer = (question) => {
-  currentQuestion.value = question
-  answerForm.questionId = question.id
-  answerForm.answer = question.answer || ''
-  isEditing.value = true
-  answerDialogVisible.value = true
-}
-
-// 提交回答
-const submitAnswer = async () => {
-  if (!answerForm.answer.trim()) {
-    ElMessage.warning('请输入回答内容')
-    return
-  }
-
-  submitting.value = true
-  try {
-    await answerQuestion(answerForm.questionId, { answer: answerForm.answer })
-    ElMessage.success(isEditing.value ? '修改成功' : '回答成功')
-    answerDialogVisible.value = false
-    loadQuestions()
-  } catch (error) {
-    ElMessage.error('操作失败')
-  } finally {
-    submitting.value = false
   }
 }
 
@@ -338,14 +263,6 @@ onMounted(() => {
   display: flex;
   gap: var(--spacing-2, 8px);
   justify-content: flex-end;
-}
-
-.question-preview {
-  padding: var(--spacing-2, 8px);
-  background: var(--color-bg-secondary, #f7f5f0);
-  border-radius: var(--radius-base, 8px);
-  font-size: var(--font-size-sm, 14px);
-  color: var(--color-text-secondary, #4a5249);
 }
 
 .pagination {

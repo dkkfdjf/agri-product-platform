@@ -1,17 +1,14 @@
 <template>
   <div class="knowledge-detail-page">
     <div class="container">
-      <!-- 返回按钮 -->
-      <el-button @click="handleBack" class="back-btn" link>
-        <el-icon><ArrowLeft /></el-icon>
-        返回列表
-      </el-button>
+      <!-- 返回列表 -->
+      <BackBar to="/knowledge" label="返回列表" />
 
       <!-- 加载状态 -->
       <el-skeleton v-if="loading" :rows="10" animated />
 
       <!-- 知识详情 -->
-      <div v-else-if="knowledge.id" class="knowledge-detail">
+      <div v-else-if="knowledge.knowledgeId" class="knowledge-detail">
         <article class="knowledge-article">
           <!-- 标题区 -->
           <header class="article-header">
@@ -115,7 +112,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, User, Calendar, View, Edit, Delete } from '@element-plus/icons-vue'
+import { User, Calendar, View, Edit, Delete } from '@element-plus/icons-vue'
+import BackBar from '@/components/BackBar.vue'
 import {
   getKnowledgeDetail,
   getKnowledgeComments,
@@ -159,11 +157,6 @@ const formatDate = (dateStr) => {
     hour: '2-digit',
     minute: '2-digit'
   })
-}
-
-// 返回列表
-const handleBack = () => {
-  router.push('/knowledge')
 }
 
 // 登录

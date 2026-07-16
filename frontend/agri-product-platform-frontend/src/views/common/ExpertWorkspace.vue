@@ -1,5 +1,5 @@
 <template>
-  <div class="buyer-expert-page">
+  <div class="expert-workspace">
     <div class="page-header">
       <h1>专家咨询</h1>
       <p class="subtitle">向农业专家提问，获取专业解答</p>
@@ -15,8 +15,26 @@
               提问
             </el-button>
           </div>
-          <div class="list-container" v-if="questionList.length > 0" v-loading="loading">
-            <div v-for="item in questionList" :key="item.id" class="list-item" @click="goToQuestion(item.id)">
+          <div class="filter-row">
+            <el-radio-group v-model="filterStatus" size="small">
+              <el-radio-button :value="-1">全部</el-radio-button>
+              <el-radio-button :value="0">待回答</el-radio-button>
+              <el-radio-button :value="1">已回答</el-radio-button>
+            </el-radio-group>
+            <el-input
+              v-model="searchKeyword"
+              placeholder="搜索标题或内容"
+              clearable
+              size="small"
+              class="search-input"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+          </div>
+          <div class="list-container" v-if="filteredMyQuestions.length > 0" v-loading="loading">
+            <div v-for="item in filteredMyQuestions" :key="item.id" class="list-item" @click="goToQuestion(item.id)">
               <div class="item-header">
                 <h4 class="item-title">{{ item.title }}</h4>
                 <el-tag :type="item.status === 1 ? 'success' : 'warning'" size="small">
@@ -31,11 +49,12 @@
                 </span>
                 <span class="meta-item" v-if="item.expertName">
                   <el-icon><User /></el-icon>
-                  专家：{{ item.expertName }}
+                  专家：{{ item.expertRealName || item.expertName }}
                 </span>
               </div>
             </div>
           </div>
+          <el-empty v-else-if="questionList.length > 0" description="没有匹配的问题" />
           <el-empty v-else description="暂无提问记录">
             <el-button type="primary" @click="goToAsk">去提问</el-button>
           </el-empty>
@@ -54,7 +73,7 @@
           <div class="list-container" v-if="reserveList.length > 0" v-loading="loading">
             <div v-for="item in reserveList" :key="item.id" class="list-item reserve-item">
               <div class="item-header">
-                <h4 class="item-title">预约 {{ item.expertName }}</h4>
+                <h4 class="item-title">预约 {{ item.expertRealName || item.expertName }}</h4>
                 <el-tag :type="getStatusType(item.status)" size="small">
                   {{ getStatusText(item.status) }}
                 </el-tag>
@@ -71,6 +90,10 @@
                 <div class="detail-row">
                   <span class="detail-label">地址：</span>
                   <span>{{ item.address }}</span>
+                </div>
+                <div class="detail-row" v-if="item.preferredTime">
+                  <span class="detail-label">期望时间：</span>
+                  <span>{{ item.preferredTime }}</span>
                 </div>
                 <div class="detail-row" v-if="item.message">
                   <span class="detail-label">留言：</span>
@@ -99,21 +122,41 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Plus, Calendar, User } from '@element-plus/icons-vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { Plus, Calendar, User, Search } from '@element-plus/icons-vue'
 import { getQuestionList } from '@/api/question'
 import { getMyReserveList } from '@/api/reserve'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const activeTab = ref('questions')
 const questionList = ref([])
 const reserveList = ref([])
 const loading = ref(false)
+
+// 我的问题筛选：状态 + 关键词
+const searchKeyword = ref('')
+const filterStatus = ref(-1)
+
+// 我的问题：按状态 + 关键词做客户端过滤
+const filteredMyQuestions = computed(() => {
+  let list = questionList.value
+  if (filterStatus.value !== -1) {
+    list = list.filter(q => q.status === filterStatus.value)
+  }
+  const kw = searchKeyword.value.trim().toLowerCase()
+  if (kw) {
+    list = list.filter(q =>
+      (q.title || '').toLowerCase().includes(kw) ||
+      (q.question || '').toLowerCase().includes(kw)
+    )
+  }
+  return list
+})
 
 // 加载我的问题
 const loadMyQuestions = async () => {
@@ -128,6 +171,7 @@ const loadMyQuestions = async () => {
         question: q.question,
         status: q.status,
         expertName: q.expertName,
+        expertRealName: q.expertRealName,
         createTime: q.createTime
       }))
     }
@@ -147,9 +191,11 @@ const loadMyReservations = async () => {
       reserveList.value = (res.data.records || []).map(r => ({
         id: r.id,
         expertName: r.expertName,
+        expertRealName: r.expertRealName,
         plantName: r.plantName,
         area: r.area,
         address: r.address,
+        preferredTime: r.preferredTime,
         message: r.message,
         answer: r.answer,
         status: r.status,
@@ -164,7 +210,7 @@ const loadMyReservations = async () => {
 }
 
 const goToQuestion = (id) => {
-  router.push(`/question/${id}`)
+  router.push({ path: `/question/${id}`, query: { from: route.fullPath } })
 }
 
 const goToAsk = () => {
@@ -172,7 +218,7 @@ const goToAsk = () => {
 }
 
 const goToReserve = () => {
-  router.push('/reserve')
+  router.push({ path: '/reserve', query: { from: route.fullPath } })
 }
 
 const formatDate = (dateStr) => {
@@ -198,7 +244,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.buyer-expert-page {
+.expert-workspace {
   padding: var(--spacing-6, 24px);
   max-width: 1000px;
   margin: 0 auto;
@@ -244,6 +290,19 @@ onMounted(() => {
   font-weight: var(--font-weight-semibold, 600);
   color: var(--color-text-primary, #1f2923);
   margin: 0;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3, 12px);
+  margin-bottom: var(--spacing-4, 16px);
+  flex-wrap: wrap;
+}
+
+.filter-row .search-input {
+  margin-left: auto;
+  max-width: 260px;
 }
 
 .list-container {

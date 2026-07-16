@@ -72,3 +72,27 @@ export function deleteQuestion(questionId) {
     method: 'delete'
   })
 }
+
+/**
+ * 获取追问回复列表（多轮对话，按时间正序）
+ * @param {String|Number} questionId - 问题ID
+ */
+export function getQuestionReplies(questionId) {
+  return request({
+    url: `/question/${questionId}/reply/list`,
+    method: 'get'
+  })
+}
+
+/**
+ * 发布追问/回答（多轮对话）
+ * @param {String|Number} questionId - 问题ID
+ * @param {Object} data - { content }
+ */
+export function addQuestionReply(questionId, data) {
+  return request({
+    url: `/question/${questionId}/reply`,
+    method: 'post',
+    data
+  })
+}

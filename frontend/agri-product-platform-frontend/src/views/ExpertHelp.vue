@@ -36,7 +36,7 @@
       <div class="questions-section">
         <h2 class="section-title">热门问答</h2>
         <div class="questions-list">
-          <div v-for="question in hotQuestions" :key="question.id" class="question-item" @click="router.push(`/question/${question.id}`)">
+          <div v-for="question in hotQuestions" :key="question.id" class="question-item" @click="goToQuestion(question.id)">
             <div class="question-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <circle cx="12" cy="12" r="10"/>
@@ -56,7 +56,7 @@
         <!-- 知识推荐 -->
         <h2 class="section-title" style="margin-top: var(--spacing-6, 24px)">知识推荐</h2>
         <div class="knowledge-list">
-          <div v-for="knowledge in knowledgeList" :key="knowledge.id" class="knowledge-item" @click="router.push(`/knowledge/${knowledge.id}`)">
+          <div v-for="knowledge in knowledgeList" :key="knowledge.id" class="knowledge-item" @click="goToKnowledge(knowledge.id)">
             <div class="knowledge-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -76,11 +76,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const loading = ref(false)
@@ -97,7 +98,17 @@ const handleAskExpert = (expert) => {
 
 // 跳转专家详情
 const goToExpertDetail = (userName) => {
-  if (userName) router.push(`/expert/${userName}`)
+  if (userName) router.push({ path: `/expert/${userName}`, query: { from: route.fullPath } })
+}
+
+// 跳转问题详情
+const goToQuestion = (id) => {
+  router.push({ path: `/question/${id}`, query: { from: route.fullPath } })
+}
+
+// 跳转知识详情
+const goToKnowledge = (id) => {
+  router.push({ path: `/knowledge/${id}`, query: { from: route.fullPath } })
 }
 
 // 加载专家数据

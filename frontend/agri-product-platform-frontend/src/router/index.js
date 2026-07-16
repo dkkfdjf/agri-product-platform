@@ -61,7 +61,7 @@ const routes = [
       {
         path: 'expert',
         name: 'FarmerExpert',
-        component: () => import('@/views/farmer/Expert.vue')
+        component: () => import('@/views/common/ExpertWorkspace.vue')
       },
       {
         path: 'profile',
@@ -103,7 +103,7 @@ const routes = [
       {
         path: 'expert',
         name: 'BuyerExpert',
-        component: () => import('@/views/buyer/Expert.vue')
+        component: () => import('@/views/common/ExpertWorkspace.vue')
       },
       {
         path: 'profile',

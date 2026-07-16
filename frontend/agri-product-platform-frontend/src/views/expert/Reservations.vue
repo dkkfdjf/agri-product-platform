@@ -20,11 +20,11 @@
       <div v-for="reserve in reserveList" :key="reserve.id" class="reserve-card">
         <div class="reserve-header">
           <div class="reserve-info">
-            <h3 class="reserve-title">预约 {{ reserve.questioner }}</h3>
+            <h3 class="reserve-title">预约 {{ reserve.questionerRealName || reserve.questioner }}</h3>
             <div class="reserve-meta">
               <span class="meta-item">
                 <el-icon><User /></el-icon>
-                预约人：{{ reserve.questioner }}
+                预约人：{{ reserve.questionerRealName || reserve.questioner }}
               </span>
               <span class="meta-item" v-if="reserve.phone">
                 <el-icon><Phone /></el-icon>
@@ -73,6 +73,10 @@
             <div class="detail-item full-width" v-if="reserve.message">
               <span class="label">留言：</span>
               <span>{{ reserve.message }}</span>
+            </div>
+            <div class="detail-item full-width" v-if="reserve.preferredTime">
+              <span class="label">期望时间：</span>
+              <span>{{ reserve.preferredTime }}</span>
             </div>
             <div class="detail-item full-width" v-if="reserve.answer && reserve.status === 1">
               <span class="label">我的回复：</span>
@@ -125,7 +129,7 @@
     >
       <el-form :model="confirmForm" label-width="80px">
         <el-form-item label="预约人">
-          <el-input :value="currentReserve?.questioner" disabled />
+          <el-input :value="currentReserve?.questionerRealName || currentReserve?.questioner" disabled />
         </el-form-item>
         <el-form-item label="回复内容">
           <el-input
@@ -154,7 +158,7 @@
     >
       <el-form :model="rejectForm" label-width="80px">
         <el-form-item label="预约人">
-          <el-input :value="currentReserve?.questioner" disabled />
+          <el-input :value="currentReserve?.questionerRealName || currentReserve?.questioner" disabled />
         </el-form-item>
         <el-form-item label="拒绝原因">
           <el-input
@@ -186,7 +190,7 @@
         <div class="detail-grid">
           <div class="detail-item">
             <span class="label">预约人：</span>
-            <span>{{ currentReserve.questioner }}</span>
+            <span>{{ currentReserve.questionerRealName || currentReserve.questioner }}</span>
           </div>
           <div class="detail-item">
             <span class="label">电话：</span>
@@ -219,6 +223,10 @@
           <div class="detail-item full-width" v-if="currentReserve.message">
             <span class="label">留言：</span>
             <span>{{ currentReserve.message }}</span>
+          </div>
+          <div class="detail-item full-width" v-if="currentReserve.preferredTime">
+            <span class="label">期望时间：</span>
+            <span>{{ currentReserve.preferredTime }}</span>
           </div>
         </div>
         <div v-if="currentReserve.answer" class="answer-section">
@@ -282,6 +290,7 @@ const loadReservations = async () => {
       reserveList.value = (res.data.records || []).map(r => ({
         id: r.id,
         questioner: r.questioner,
+        questionerRealName: r.questionerRealName,
         phone: r.phone,
         address: r.address,
         area: r.area,
@@ -290,6 +299,7 @@ const loadReservations = async () => {
         plantCondition: r.plantCondition,
         plantDetail: r.plantDetail,
         message: r.message,
+        preferredTime: r.preferredTime,
         answer: r.answer,
         status: r.status,
         createTime: r.createTime
