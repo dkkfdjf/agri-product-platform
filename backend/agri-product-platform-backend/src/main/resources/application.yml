@@ -1,4 +1,7 @@
 spring:
+  # 本地密钥覆盖文件（已被 .gitignore 忽略，不入库）：application-local.yml
+  config:
+    import: optional:file:./application-local.yml
   application:
     name: agri-platform
 
@@ -6,8 +9,8 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/agri_platform?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: root
-    password: 123456
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
 
   # Jackson配置
   jackson:
@@ -38,7 +41,7 @@ mybatis-plus:
 
 # JWT配置
 jwt:
-  secret: agri-platform-secret-key-2026-jwt-token-validation
+  secret: ${JWT_SECRET:}
   expiration: 86400000  # 24小时（毫秒）
 
 # 服务器配置
@@ -46,3 +49,8 @@ server:
   port: 8080
   servlet:
     context-path: /api
+
+# Cloudflare Turnstile 人机验证（Secret Key 走环境变量注入，不写进文件）
+turnstile:
+  enabled: ${TURNSTILE_ENABLED:true}
+  secret-key: ${TURNSTILE_SECRET_KEY:}

@@ -3,12 +3,15 @@ package com.agri.platform;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import com.agri.platform.config.TurnstileProperties;
 
 /**
  * 农产品融销一体平台 - 主启动类
  */
 @SpringBootApplication
 @MapperScan("com.agri.platform.mapper")
+@EnableConfigurationProperties(TurnstileProperties.class)
 public class PlatformApplication {
 
     public static void main(String[] args) {

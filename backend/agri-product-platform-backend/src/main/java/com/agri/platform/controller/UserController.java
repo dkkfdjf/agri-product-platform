@@ -7,6 +7,7 @@ import com.agri.platform.dto.UserRegisterRequest;
 import com.agri.platform.entity.RoleApplication;
 import com.agri.platform.entity.User;
 import com.agri.platform.service.RoleApplicationService;
+import com.agri.platform.service.TurnstileService;
 import com.agri.platform.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +26,9 @@ public class UserController {
     private UserService userService;
 
     @Autowired
+    private TurnstileService turnstileService;
+
+    @Autowired
     private RoleApplicationService roleApplicationService;
 
     /**
@@ -33,6 +37,10 @@ public class UserController {
     @PostMapping("/register")
     public Result<String> register(@RequestBody UserRegisterRequest request) {
         try {
+            // 人机验证（Cloudflare Turnstile）：失败/连不上 Cloudflare 一律拒绝（fail-closed）
+            if (!turnstileService.verify(request.getCfTurnstileToken())) {
+                return Result.error("人机验证失败，请重试");
+            }
             // 验证参数
             if (request.getUserName() == null || request.getUserName().trim().isEmpty()) {
                 return Result.error("用户名不能为空");

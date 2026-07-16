@@ -1,7 +1,9 @@
 package com.agri.platform.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -45,5 +47,13 @@ public class WebConfig implements WebMvcConfigurer {
         String abs = new File("uploads").getAbsolutePath().replace("\\", "/");
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:///" + abs + "/");
+    }
+
+    /**
+     * HTTP 客户端（供 Turnstile siteverify 等出站调用复用）
+     */
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
     }
 }

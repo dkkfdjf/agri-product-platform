@@ -43,3 +43,6 @@ logs/
 
 # Documentation
 开发顺序.md
+
+# 本地密钥配置（不入库，仅本机生效，勿把真实密钥提交到 git）
+application-local.yml

@@ -12,4 +12,5 @@ public class UserRegisterRequest {
     private String realName;
     private String phone;
     private String role;  // farmer, buyer
+    private String cfTurnstileToken;  // Cloudflare Turnstile 人机验证 token（前端验证后带回）
 }
