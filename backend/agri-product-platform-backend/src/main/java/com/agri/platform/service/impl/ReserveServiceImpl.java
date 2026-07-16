@@ -3,8 +3,10 @@ package com.agri.platform.service.impl;
 import com.agri.platform.dto.ReserveRequest;
 import com.agri.platform.entity.Expert;
 import com.agri.platform.entity.Reserve;
+import com.agri.platform.entity.User;
 import com.agri.platform.mapper.ExpertMapper;
 import com.agri.platform.mapper.ReserveMapper;
+import com.agri.platform.mapper.UserMapper;
 import com.agri.platform.service.ReserveService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -19,6 +21,9 @@ public class ReserveServiceImpl implements ReserveService {
 
     @Autowired
     private ExpertMapper expertMapper;
+
+    @Autowired
+    private UserMapper userMapper;
 
     @Override
     public void makeReservation(String userName, ReserveRequest request) {
@@ -57,7 +62,17 @@ public class ReserveServiceImpl implements ReserveService {
         reserve.setPlantCondition(request.getPlantCondition());
         reserve.setPlantDetail(request.getPlantDetail());
         reserve.setMessage(request.getMessage());
+        reserve.setPreferredTime(request.getPreferredTime());
         reserve.setStatus(0); // 待确认
+        // 冗余真实姓名，避免显示登录账号
+        User asker = userMapper.selectById(userName);
+        if (asker != null) {
+            reserve.setQuestionerRealName(asker.getRealName());
+        }
+        User expertUser = userMapper.selectById(expertName);
+        if (expertUser != null) {
+            reserve.setExpertRealName(expertUser.getRealName());
+        }
         reserveMapper.insert(reserve);
     }
 
@@ -108,6 +123,13 @@ public class ReserveServiceImpl implements ReserveService {
         reserve.setStatus(status);
         if (answer != null && !answer.isEmpty()) {
             reserve.setAnswer(answer);
+        }
+        // 冗余专家真实姓名
+        if (reserve.getExpertRealName() == null) {
+            User expertUser = userMapper.selectById(expertName);
+            if (expertUser != null) {
+                reserve.setExpertRealName(expertUser.getRealName());
+            }
         }
         reserveMapper.updateById(reserve);
     }

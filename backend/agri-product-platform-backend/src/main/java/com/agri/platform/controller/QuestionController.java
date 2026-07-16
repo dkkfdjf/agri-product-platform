@@ -3,12 +3,14 @@ package com.agri.platform.controller;
 import com.agri.platform.common.Result;
 import com.agri.platform.dto.QuestionRequest;
 import com.agri.platform.entity.Question;
+import com.agri.platform.entity.QuestionReply;
 import com.agri.platform.service.QuestionService;
 import com.agri.platform.util.JwtUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -70,7 +72,32 @@ public class QuestionController {
     @DeleteMapping("/{questionId}")
     public Result<String> delete(@PathVariable Integer questionId,
                                   @RequestHeader("Authorization") String token) {
-        questionService.deleteQuestion(questionId);
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        questionService.deleteQuestion(questionId, userName);
         return Result.success("删除成功");
+    }
+
+    /**
+     * 追问回复列表（按时间正序）
+     */
+    @GetMapping("/{questionId}/reply/list")
+    public Result<List<QuestionReply>> replyList(@PathVariable Integer questionId) {
+        return Result.success(questionService.getReplies(questionId));
+    }
+
+    /**
+     * 发布追问/回答（多轮对话）：farmer 追问 / expert 回答
+     */
+    @PostMapping("/{questionId}/reply")
+    public Result<String> addReply(@PathVariable Integer questionId,
+                                   @RequestHeader("Authorization") String token,
+                                   @RequestBody Map<String, String> body) {
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        String content = body != null ? body.get("content") : null;
+        if (content == null || content.trim().isEmpty()) {
+            return Result.error("回复内容不能为空");
+        }
+        questionService.addReply(questionId, userName, content.trim());
+        return Result.success("回复成功");
     }
 }

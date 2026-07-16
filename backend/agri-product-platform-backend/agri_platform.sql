@@ -242,13 +242,15 @@ DROP TABLE IF EXISTS `tb_question`;
 CREATE TABLE `tb_question` (
   `id` int NOT NULL AUTO_INCREMENT,
   `expert_name` varchar(64) NOT NULL COMMENT '被提问专家用户名',
+  `expert_real_name` varchar(64) DEFAULT NULL COMMENT '专家真实姓名',
   `questioner` varchar(64) NOT NULL COMMENT '提问者用户名',
+  `questioner_real_name` varchar(64) DEFAULT NULL COMMENT '提问者真实姓名',
   `phone` varchar(20) NOT NULL COMMENT '联系电话',
   `plant_name` varchar(64) NOT NULL COMMENT '农作物名称',
   `title` varchar(255) NOT NULL COMMENT '问题标题',
   `question` text COMMENT '问题详细内容',
   `answer` text COMMENT '专家回答',
-  `status` tinyint DEFAULT 0 COMMENT '状态：0未回答 1已回答',
+  `status` tinyint DEFAULT 0 COMMENT '状态：0未回答 1已回答 2已关闭',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -264,7 +266,9 @@ DROP TABLE IF EXISTS `tb_reserve`;
 CREATE TABLE `tb_reserve` (
   `id` int NOT NULL AUTO_INCREMENT,
   `expert_name` varchar(64) NOT NULL COMMENT '专家用户名',
+  `expert_real_name` varchar(64) DEFAULT NULL COMMENT '专家真实姓名',
   `questioner` varchar(64) NOT NULL COMMENT '预约人用户名',
+  `questioner_real_name` varchar(64) DEFAULT NULL COMMENT '预约人真实姓名',
   `phone` varchar(20) NOT NULL COMMENT '联系电话',
   `address` varchar(255) NOT NULL COMMENT '地址',
   `area` varchar(64) NOT NULL COMMENT '面积',
@@ -273,6 +277,7 @@ CREATE TABLE `tb_reserve` (
   `plant_condition` varchar(255) NOT NULL COMMENT '作物条件',
   `plant_detail` varchar(500) NOT NULL COMMENT '作物详情',
   `message` varchar(255) DEFAULT NULL COMMENT '留言',
+  `preferred_time` varchar(64) DEFAULT NULL COMMENT '期望时间段',
   `answer` varchar(255) DEFAULT NULL COMMENT '专家回复',
   `status` tinyint DEFAULT 0 COMMENT '状态：0待处理 1已完成 2已拒绝',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -282,6 +287,23 @@ CREATE TABLE `tb_reserve` (
   KEY `idx_questioner` (`questioner`),
   KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='专家预约表';
+
+-- ========================================
+-- 14.1 问题追问回复表 (tb_question_reply)
+-- ========================================
+DROP TABLE IF EXISTS `tb_question_reply`;
+CREATE TABLE `tb_question_reply` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `question_id` int NOT NULL COMMENT '所属问题ID（tb_question.id）',
+  `author_user_name` varchar(64) NOT NULL COMMENT '回复人用户名',
+  `author_real_name` varchar(64) DEFAULT NULL COMMENT '回复人真实姓名（冗余）',
+  `author_role` varchar(16) NOT NULL COMMENT '回复人角色：farmer追问 / expert回答',
+  `content` text NOT NULL COMMENT '回复内容',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_question_id` (`question_id`),
+  KEY `idx_author` (`author_user_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='问题追问回复表';
 
 -- ========================================
 -- 15. 轮播图表 (tb_banner)

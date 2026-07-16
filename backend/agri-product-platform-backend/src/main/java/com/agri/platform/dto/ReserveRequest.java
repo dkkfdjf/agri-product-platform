@@ -19,4 +19,5 @@ public class ReserveRequest {
     private String plantCondition;  // 作物条件
     private String plantDetail;     // 作物详情
     private String message;        // 留言
+    private String preferredTime;  // 期望时间段（简单版：如"工作日上午""下个月"）
 }

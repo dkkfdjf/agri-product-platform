@@ -2,18 +2,30 @@ package com.agri.platform.service.impl;
 
 import com.agri.platform.dto.QuestionRequest;
 import com.agri.platform.entity.Question;
+import com.agri.platform.entity.QuestionReply;
+import com.agri.platform.entity.User;
 import com.agri.platform.mapper.QuestionMapper;
+import com.agri.platform.mapper.QuestionReplyMapper;
+import com.agri.platform.mapper.UserMapper;
 import com.agri.platform.service.QuestionService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class QuestionServiceImpl implements QuestionService {
 
     @Autowired
     private QuestionMapper questionMapper;
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Autowired
+    private QuestionReplyMapper replyMapper;
 
     @Override
     public void askQuestion(String userName, QuestionRequest request) {
@@ -32,6 +44,15 @@ public class QuestionServiceImpl implements QuestionService {
         question.setTitle(request.getTitle());
         question.setQuestion(request.getQuestion());
         question.setStatus(0); // 未回答
+        // 冗余真实姓名，避免列表/详情显示登录账号
+        User asker = userMapper.selectById(userName);
+        if (asker != null) {
+            question.setQuestionerRealName(asker.getRealName());
+        }
+        User expertUser = userMapper.selectById(request.getExpertName());
+        if (expertUser != null) {
+            question.setExpertRealName(expertUser.getRealName());
+        }
         questionMapper.insert(question);
     }
 
@@ -70,10 +91,13 @@ public class QuestionServiceImpl implements QuestionService {
         if (question == null) {
             throw new RuntimeException("问题不存在");
         }
-        question.setAnswer(answer);
-        question.setExpertName(userName);
-        question.setStatus(1); // 已回答
-        questionMapper.updateById(question);
+        // 仅被指派的专家本人或管理员可回答（旧接口兼容，统一走对话回复写入）
+        User user = userMapper.selectById(userName);
+        boolean isAdmin = user != null && "admin".equals(user.getRole());
+        if (!userName.equals(question.getExpertName()) && !isAdmin) {
+            throw new RuntimeException("无权回答此问题");
+        }
+        recordReply(question, userName, "expert", answer);
     }
 
     @Override
@@ -90,11 +114,77 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
-    public void deleteQuestion(Integer questionId) {
+    public void deleteQuestion(Integer questionId, String userName) {
         Question question = questionMapper.selectById(questionId);
         if (question == null) {
             throw new RuntimeException("问题不存在");
         }
+        // 仅提问者本人或管理员可删除
+        User user = userMapper.selectById(userName);
+        boolean isAdmin = user != null && "admin".equals(user.getRole());
+        if (!userName.equals(question.getQuestioner()) && !isAdmin) {
+            throw new RuntimeException("无权删除此问题");
+        }
+        // 同步删除追问回复
+        LambdaQueryWrapper<QuestionReply> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(QuestionReply::getQuestionId, questionId);
+        replyMapper.delete(wrapper);
         questionMapper.deleteById(questionId);
+    }
+
+    @Override
+    public List<QuestionReply> getReplies(Integer questionId) {
+        LambdaQueryWrapper<QuestionReply> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(QuestionReply::getQuestionId, questionId);
+        wrapper.orderByAsc(QuestionReply::getCreateTime);
+        return replyMapper.selectList(wrapper);
+    }
+
+    @Override
+    public void addReply(Integer questionId, String userName, String content) {
+        Question question = questionMapper.selectById(questionId);
+        if (question == null) {
+            throw new RuntimeException("问题不存在");
+        }
+        if (question.getStatus() != null && question.getStatus() == 2) {
+            throw new RuntimeException("问题已关闭，无法继续回复");
+        }
+        // 判定角色：提问者追问 / 被指派专家回答
+        String role;
+        if (userName.equals(question.getQuestioner())) {
+            role = "farmer";
+        } else if (userName.equals(question.getExpertName())) {
+            role = "expert";
+        } else {
+            throw new RuntimeException("无权回复此问题");
+        }
+        recordReply(question, userName, role, content);
+    }
+
+    /**
+     * 写入一条回复；专家回复时同步刷新 question.answer（列表预览）并在首答时置为已回答。
+     */
+    private void recordReply(Question question, String userName, String role, String content) {
+        User author = userMapper.selectById(userName);
+        String realName = author != null ? author.getRealName() : null;
+
+        QuestionReply reply = new QuestionReply();
+        reply.setQuestionId(question.getId());
+        reply.setAuthorUserName(userName);
+        reply.setAuthorRealName(realName);
+        reply.setAuthorRole(role);
+        reply.setContent(content);
+        replyMapper.insert(reply);
+
+        if ("expert".equals(role)) {
+            question.setAnswer(content);
+            if (question.getStatus() == null || question.getStatus() == 0) {
+                question.setStatus(1); // 已回答
+            }
+            if (question.getExpertRealName() == null && realName != null) {
+                question.setExpertRealName(realName);
+            }
+            questionMapper.updateById(question);
+        }
     }
 }
