@@ -159,6 +159,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCartList, updateCartItem, deleteCartItem } from '@/api/cart'
+import { createOrder } from '@/api/order'
 
 const router = useRouter()
 
@@ -391,15 +392,48 @@ const handleDeleteSelected = async () => {
   }
 }
 
-// 结算
-const handleCheckout = () => {
-  if (selectedIds.value.length === 0) {
+// 结算：用选中的购物车商品直接下单（purchaseType=2），下单成功后清掉这些购物车项并跳到订单页
+const handleCheckout = async () => {
+  const selected = cartList.value.filter(i => i.selected && !i.isInvalid)
+  if (selected.length === 0) {
     ElMessage.warning('请先选择要结算的商品')
     return
   }
 
-  // TODO: 跳转到结算页面或创建订单
-  ElMessage.info('结算功能即将上线')
+  // 收货地址（简单版：弹窗输入；后续可接「地址管理」选默认地址）
+  let address
+  try {
+    const res = await ElMessageBox.prompt('请输入收货地址', '确认订单', {
+      confirmButtonText: '提交订单',
+      cancelButtonText: '取消',
+      inputPlaceholder: '如：广东省深圳市南山区xx路xx号',
+      inputValidator: (v) => (v && v.trim() ? true : '地址不能为空')
+    })
+    address = res.value.trim()
+  } catch (e) {
+    return // 用户取消
+  }
+
+  loading.value = true
+  try {
+    const items = selected.map(i => ({ orderId: i.productId, count: i.count }))
+    await createOrder({ purchaseType: 2, address, items })
+
+    // 下单成功后把这些商品移出购物车
+    for (const item of selected) {
+      if (item.cartId) {
+        try { await deleteCartItem(item.cartId) } catch (e) { /* 忽略单项删除失败 */ }
+      }
+    }
+    ElMessage.success('下单成功')
+    // 跳到订单列表（保持在买家工作台内），方便立刻去支付
+    router.push('/buyer/orders')
+  } catch (error) {
+    console.error('下单失败:', error)
+    ElMessage.error(error.message || '下单失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 跳转到商品详情
