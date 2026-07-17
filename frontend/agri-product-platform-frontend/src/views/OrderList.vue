@@ -98,6 +98,15 @@
             <el-button
               v-if="order.purchaseStatus === 1"
               size="small"
+              type="primary"
+              :loading="payingId === order.purchaseId"
+              @click="payOrderNow(order)"
+            >
+              去支付
+            </el-button>
+            <el-button
+              v-if="order.purchaseStatus === 1"
+              size="small"
               type="danger"
               @click="cancelOrder(order)"
             >
@@ -179,17 +188,45 @@
         <el-button type="primary" @click="handleSaveEdit" :loading="saving">保存修改</el-button>
       </template>
     </el-dialog>
+
+    <!-- 支付二维码对话框 -->
+    <el-dialog
+      v-model="payQrVisible"
+      title="支付宝扫码支付"
+      width="360px"
+      @close="handleQrDialogClose"
+    >
+      <div class="pay-qr-box">
+        <p class="pay-qr-tip">请使用 <b>支付宝（沙箱版App）</b> 扫描下方二维码完成付款</p>
+        <img v-if="qrImgSrc" :src="qrImgSrc" class="pay-qr-img" alt="支付二维码" />
+        <p v-if="payOrderInfo" class="pay-qr-amount">
+          订单号：{{ payOrderInfo.purchaseId }}　金额：¥{{ payOrderInfo.totalPrice }}
+        </p>
+        <p class="pay-qr-status">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          正在等待支付结果…
+        </p>
+      </div>
+      <template #footer>
+        <el-button @click="payQrVisible = false">关闭</el-button>
+        <el-button type="primary" @click="refreshPayStatus(payOrderInfo?.purchaseId)">
+          我已支付，查询结果
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeMount, watch } from 'vue'
+import { ref, reactive, onMounted, onBeforeMount, watch, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ShoppingCart, Box } from '@element-plus/icons-vue'
+import { ShoppingCart, Box, Loading } from '@element-plus/icons-vue'
 import { getOrders, cancelOrder as cancelOrderApi } from '@/api/order'
+import { payOrder, queryPay } from '@/api/alipay'
+import QRCode from 'qrcode'
 import { getMyProducts, deleteProduct as deleteProductApi, updateProduct } from '@/api/product'
 import { LOCAL_PRODUCT_IMAGES } from '@/config/localImages'
 
@@ -205,6 +242,12 @@ const demands = ref([])
 const orders = ref([])
 const demandCount = ref(0)
 const orderCount = ref(0)
+const payingId = ref(null)
+const payQrVisible = ref(false)
+const qrImgSrc = ref('')
+const payOrderInfo = ref(null)
+const payPolling = ref(false)
+let payTimer = null
 
 const loading = reactive({
   demand: false,
@@ -237,6 +280,10 @@ const pagination = reactive({
 
 onMounted(() => {
   loadData()
+})
+
+onUnmounted(() => {
+  stopPayPolling()
 })
 
 // 监听路由变化，确保每次导航都重新加载数据
@@ -450,6 +497,81 @@ const cancelOrder = async (order) => {
       ElMessage.error(error.message || '取消订单失败')
     }
   }
+}
+
+// 发起支付宝扫码支付：生成二维码并在弹窗展示，同时轮询支付结果
+const payOrderNow = async (order) => {
+  payingId.value = order.purchaseId
+  try {
+    const res = await payOrder(order.purchaseId)
+    const qrCodeUrl = res?.data?.qrCode
+    if (!qrCodeUrl) {
+      ElMessage.error('二维码生成失败')
+      return
+    }
+    // 把支付宝返回的二维码链接渲染成图片
+    qrImgSrc.value = await QRCode.toDataURL(qrCodeUrl, { width: 240, margin: 1 })
+    payOrderInfo.value = order
+    payQrVisible.value = true
+    startPayPolling(order.purchaseId)
+  } catch (error) {
+    console.error('发起支付失败:', error)
+    ElMessage.error(error.message || '发起支付失败')
+  } finally {
+    payingId.value = null
+  }
+}
+
+// 轮询支付结果，每 2.5s 查一次，查到已支付即关闭弹窗并刷新订单
+const startPayPolling = (purchaseId) => {
+  stopPayPolling()
+  payPolling.value = true
+  const tick = async () => {
+    try {
+      const res = await queryPay(purchaseId)
+      if (res?.data?.paid) {
+        ElMessage.success('支付成功')
+        stopPayPolling()
+        payQrVisible.value = false
+        await loadOrders()
+      }
+    } catch (e) {
+      // 单次查询失败先忽略，下一轮继续
+    }
+  }
+  payTimer = setInterval(tick, 2500)
+}
+
+const stopPayPolling = () => {
+  payPolling.value = false
+  if (payTimer) {
+    clearInterval(payTimer)
+    payTimer = null
+  }
+}
+
+// 手动触发查询（弹窗里「我已支付」按钮）
+const refreshPayStatus = async (purchaseId) => {
+  if (!purchaseId) return
+  try {
+    const res = await queryPay(purchaseId)
+    if (res?.data?.paid) {
+      ElMessage.success('支付成功')
+      stopPayPolling()
+      payQrVisible.value = false
+      await loadOrders()
+    } else {
+      ElMessage.warning('暂未检测到支付，请完成扫码后重试')
+    }
+  } catch (e) {
+    ElMessage.error(e.message || '查询失败')
+  }
+}
+
+const handleQrDialogClose = () => {
+  stopPayPolling()
+  qrImgSrc.value = ''
+  payOrderInfo.value = null
 }
 
 const goToMarket = () => {
@@ -695,5 +817,38 @@ const goToMarket = () => {
   height: 32px;
   object-fit: cover;
   border-radius: 4px;
+}
+
+/* 支付二维码对话框 */
+.pay-qr-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+.pay-qr-tip {
+  margin: 0;
+  font-size: 13px;
+  color: #606266;
+  text-align: center;
+}
+.pay-qr-img {
+  width: 240px;
+  height: 240px;
+}
+.pay-qr-amount {
+  margin: 0;
+  font-size: 14px;
+  color: #f56c6c;
+  font-weight: 600;
+}
+.pay-qr-status {
+  margin: 0;
+  font-size: 13px;
+  color: #909399;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 </style>
