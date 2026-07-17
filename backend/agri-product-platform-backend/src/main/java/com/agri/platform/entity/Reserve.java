@@ -12,7 +12,9 @@ public class Reserve {
     @TableId(type = IdType.AUTO)
     private Integer id;
     private String expertName;
+    private String expertRealName;
     private String questioner;
+    private String questionerRealName;
     private String phone;
     private String address;
     private String area;
@@ -21,6 +23,7 @@ public class Reserve {
     private String plantCondition;
     private String plantDetail;
     private String message;
+    private String preferredTime;
     private String answer;
     private Integer status; // 0待处理 1已完成 2已拒绝
     private LocalDateTime createTime;
