@@ -50,6 +50,7 @@ public class OrderServiceImpl implements OrderService {
         purchase.setAddress(request.getAddress());
         purchase.setPurchaseType(request.getPurchaseType());
         purchase.setPurchaseStatus(1); // 待付款
+        purchase.setTotalPrice(BigDecimal.ZERO); // 占位：total_price 在 DB 里非空，先给 0，下面算完总价会 updateById 覆盖
         purchaseMapper.insert(purchase);
 
         BigDecimal totalPrice = BigDecimal.ZERO;
