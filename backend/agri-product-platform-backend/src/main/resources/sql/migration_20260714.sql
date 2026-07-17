@@ -3,7 +3,7 @@
 -- 说明：
 --   * 与 agri_platform.sql 互相独立，只跑这一个文件即可。
 --   * 可重复执行（列已存在则跳过），不会删除/修改任何现有数据。
--- 执行：USE agri_platform; SOURCE database/migration_20260714.sql;
+-- 执行：USE agri_platform; SOURCE src/main/resources/sql/migration_20260714.sql;
 -- ============================================================
 USE agri_platform;
 

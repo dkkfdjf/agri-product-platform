@@ -37,7 +37,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "/knowledge/*/discuss/list", // 知识评论列表（公开）
                         "/question/list",    // 问答列表（公开）
                         "/upload",           // 文件上传（公开，前端 el-upload 直接调用）
-                        "/uploads/**"        // 已上传文件的访问（公开）
+                        "/uploads/**",       // 已上传文件的访问（公开）
+                        "/alipay/notify"     // 支付宝异步回调（无 JWT，需放行）
                 );
     }
 

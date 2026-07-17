@@ -90,6 +90,13 @@
             <version>5.8.23</version>
         </dependency>
 
+        <!-- 支付宝 SDK（沙箱/正式通用） -->
+        <dependency>
+            <groupId>com.alipay.sdk</groupId>
+            <artifactId>alipay-sdk-java</artifactId>
+            <version>4.40.231.ALL</version>
+        </dependency>
+
         <!-- Spring Boot Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

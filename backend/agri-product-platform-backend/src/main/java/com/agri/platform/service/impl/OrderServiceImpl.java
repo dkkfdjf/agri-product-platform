@@ -129,6 +129,19 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public void markOrderPaid(Integer purchaseId) {
+        Purchase purchase = purchaseMapper.selectById(purchaseId);
+        if (purchase == null) {
+            return; // 订单不存在，忽略（幂等）
+        }
+        // 仅待付款订单推进，避免重复回调把已发货/已完成订单改回去
+        if (purchase.getPurchaseStatus() != null && purchase.getPurchaseStatus() == 1) {
+            purchase.setPurchaseStatus(2); // 待发货
+            purchaseMapper.updateById(purchase);
+        }
+    }
+
+    @Override
     public void updateOrderStatus(Integer purchaseId, Integer status) {
         Purchase purchase = purchaseMapper.selectById(purchaseId);
         if (purchase == null) {

@@ -5,7 +5,7 @@
 #   application-local.yml 已被 .gitignore 忽略，不会提交到 git，请勿把真实密钥提交。
 #
 # 运行时 Spring Boot 会自动加载【启动后端的那个目录】下的 application-local.yml，
-# 覆盖 application.yml 里的占位符（${DB_PASSWORD:}、${JWT_SECRET:}、${TURNSTILE_SECRET_KEY:}）。
+# 覆盖 application.yml 里的占位符（${DB_PASSWORD:}、${JWT_SECRET:}、${TURNSTILE_SECRET_KEY:}、${ALIPAY_*:}）。
 # 所以这个文件要放在 backend/ 根目录（和你运行 mvn / IDEA 启动的那层一致）。
 # ==========================================================================
 
@@ -24,3 +24,12 @@ jwt:
 turnstile:
   enabled: true
   secret-key: 找负责人拿Secret-Key填这里
+
+# 支付宝沙箱支付（电脑网站支付 alipay.trade.page.pay，公钥模式）
+# - AppID / 应用私钥 / 支付宝公钥：登录支付宝开放平台「沙箱」页面获取；公钥模式无需证书文件。
+# - 三项由项目负责人统一发放（团队共用同一个沙箱应用），填在下面；勿提交、勿外传。
+# - 网关 gateway / 回调 return-url 等已在 application.yml 配好默认值，本地无需再配。
+alipay:
+  app-id: 找负责人拿沙箱AppID填这里
+  app-private-key: 找负责人拿应用私钥填这里
+  alipay-public-key: 找负责人拿支付宝公钥填这里

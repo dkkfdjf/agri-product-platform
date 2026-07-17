@@ -1,7 +1,7 @@
 -- 角色申请表（农户/买家申请成为 专家/银行，管理员审核）
 -- 在 agri_platform 库中执行：
 --   USE agri_platform;
---   SOURCE database/role_application.sql;
+--   SOURCE src/main/resources/sql/role_application.sql;
 
 CREATE TABLE IF NOT EXISTS tb_role_application (
   id            INT          NOT NULL AUTO_INCREMENT COMMENT '申请ID',

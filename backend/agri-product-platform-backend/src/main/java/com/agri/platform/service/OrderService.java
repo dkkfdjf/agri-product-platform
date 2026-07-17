@@ -14,4 +14,6 @@ public interface OrderService {
     Purchase getOrderDetail(Integer purchaseId, String userName);
     void updateOrderStatus(Integer purchaseId, Integer status);
     void cancelOrder(Integer purchaseId, String userName);
+    /** 支付成功后把订单从待付款(1)推进到待发货(2)；幂等，非待付款状态不处理。 */
+    void markOrderPaid(Integer purchaseId);
 }

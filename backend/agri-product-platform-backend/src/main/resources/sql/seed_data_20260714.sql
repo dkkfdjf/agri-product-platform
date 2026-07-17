@@ -4,7 +4,7 @@
 --   * 与 agri_platform.sql 互相独立，只跑这一个文件即可。
 --   * 全部为「增量 + 幂等」：可重复执行，不会删除或覆盖你已创建的数据。
 --   * 商品仅在「同标题不存在」时插入；头像仅在「avatar 为空」时补；知识仅在「同标题不存在」时插入。
--- 执行：USE agri_platform; SOURCE database/seed_data_20260714.sql;
+-- 执行：USE agri_platform; SOURCE src/main/resources/sql/seed_data_20260714.sql;
 -- 图片需已存在于 frontend/public/images/（文件名含中文，浏览器会自动编码）。
 -- ============================================================
 USE agri_platform;
