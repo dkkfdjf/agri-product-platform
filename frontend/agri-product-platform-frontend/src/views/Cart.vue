@@ -1,6 +1,9 @@
 <template>
   <div class="cart-container">
-    <h2>购物车</h2>
+    <div class="page-header">
+      <el-button @click="goBack" :icon="ArrowLeft" class="back-btn">返回</el-button>
+      <h2>购物车</h2>
+    </div>
 
     <el-empty v-if="cartItems.length === 0" description="购物车为空" />
 
@@ -48,6 +51,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowLeft } from '@element-plus/icons-vue'
 import { getCartList, updateCartItem, deleteCartItem } from '@/api/cart'
 import { createOrder } from '@/api/order'
 
@@ -117,6 +121,10 @@ const checkout = async () => {
     ElMessage.error(error.message || '创建订单失败')
   }
 }
+
+const goBack = () => {
+  router.back()
+}
 </script>
 
 <style scoped>
@@ -124,6 +132,21 @@ const checkout = async () => {
   max-width: 1200px;
   margin: 20px auto;
   padding: 0 20px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.page-header h2 {
+  margin: 0;
+}
+
+.back-btn {
+  flex-shrink: 0;
 }
 
 .product-cell {

@@ -16,12 +16,12 @@ export function createOrder(data) {
 }
 
 /**
- * 获取订单列表（包含商品详情）
+ * 获取订单列表（包含商品详情，带分页信息）
  * @param {Object} params - { page, pageSize }
  */
 export function getOrders(params) {
   return request({
-    url: '/purchase/list/details',
+    url: '/purchase/list/paged',
     method: 'get',
     params
   })
