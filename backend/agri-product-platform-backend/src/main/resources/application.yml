@@ -54,3 +54,15 @@ server:
 turnstile:
   enabled: ${TURNSTILE_ENABLED:true}
   secret-key: ${TURNSTILE_SECRET_KEY:}
+
+# 支付宝（沙箱）配置；私钥/公钥走 application-local.yml / 环境变量注入，不写死在此
+alipay:
+  app-id: ${ALIPAY_APP_ID:}
+  app-private-key: ${ALIPAY_APP_PRIVATE_KEY:}
+  alipay-public-key: ${ALIPAY_PUBLIC_KEY:}
+  gateway: ${ALIPAY_GATEWAY:https://openapi-sandbox.dl.alipaydev.com/gateway.do}
+  charset: utf-8
+  sign-type: RSA2
+  format: json
+  return-url: ${ALIPAY_RETURN_URL:http://localhost:3000/alipay-result}
+  notify-url: ${ALIPAY_NOTIFY_URL:}

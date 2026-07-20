@@ -11,8 +11,13 @@ import java.util.List;
  */
 @Data
 public class OrderResponse {
-    @JsonProperty("id")
     private Integer purchaseId;
+
+    /** 兼容旧前端：同时以 id 暴露订单ID（如 farmer/Orders 用 order.orderId||order.id） */
+    @JsonProperty("id")
+    public Integer getId() {
+        return purchaseId;
+    }
 
     private String ownName;
     private BigDecimal totalPrice;

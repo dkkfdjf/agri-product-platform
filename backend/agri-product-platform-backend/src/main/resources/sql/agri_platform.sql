@@ -120,6 +120,24 @@ CREATE TABLE `tb_purchase_detail` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单详情表';
 
 -- ========================================
+-- 6.1 支付流水表 (tb_payment) —— 支付宝支付记录
+-- ========================================
+DROP TABLE IF EXISTS `tb_payment`;
+CREATE TABLE `tb_payment` (
+  `payment_id` int NOT NULL AUTO_INCREMENT COMMENT '支付流水ID',
+  `purchase_id` int NOT NULL COMMENT '订单ID',
+  `out_trade_no` varchar(64) NOT NULL COMMENT '商户订单号(=purchase_id)',
+  `alipay_trade_no` varchar(64) DEFAULT NULL COMMENT '支付宝交易号',
+  `total_amount` decimal(10,2) NOT NULL COMMENT '支付金额',
+  `trade_status` varchar(32) DEFAULT NULL COMMENT '交易状态',
+  `pay_time` datetime DEFAULT NULL COMMENT '支付完成时间',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`payment_id`),
+  UNIQUE KEY `uk_out_trade_no` (`out_trade_no`),
+  KEY `idx_purchase_id` (`purchase_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付宝支付流水表';
+
+-- ========================================
 -- 7. 融资产品表 (tb_finance_product)
 -- ========================================
 DROP TABLE IF EXISTS `tb_finance_product`;

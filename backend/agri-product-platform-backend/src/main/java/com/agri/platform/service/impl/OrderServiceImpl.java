@@ -50,6 +50,7 @@ public class OrderServiceImpl implements OrderService {
         purchase.setAddress(request.getAddress());
         purchase.setPurchaseType(request.getPurchaseType());
         purchase.setPurchaseStatus(1); // 待付款
+        purchase.setTotalPrice(BigDecimal.ZERO); // 占位：total_price 在 DB 里非空，先给 0，下面算完总价会 updateById 覆盖
         purchaseMapper.insert(purchase);
 
         BigDecimal totalPrice = BigDecimal.ZERO;
@@ -126,6 +127,19 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("无权限查看此订单");
         }
         return purchase;
+    }
+
+    @Override
+    public void markOrderPaid(Integer purchaseId) {
+        Purchase purchase = purchaseMapper.selectById(purchaseId);
+        if (purchase == null) {
+            return; // 订单不存在，忽略（幂等）
+        }
+        // 仅待付款订单推进，避免重复回调把已发货/已完成订单改回去
+        if (purchase.getPurchaseStatus() != null && purchase.getPurchaseStatus() == 1) {
+            purchase.setPurchaseStatus(2); // 待发货
+            purchaseMapper.updateById(purchase);
+        }
     }
 
     @Override
