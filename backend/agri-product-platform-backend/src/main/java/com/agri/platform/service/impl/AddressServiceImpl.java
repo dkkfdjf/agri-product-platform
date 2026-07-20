@@ -17,12 +17,21 @@ public class AddressServiceImpl implements AddressService {
 
     @Override
     public void addAddress(String userName, AddressRequest request) {
+        // 检查是否是第一个地址，如果是则自动设为默认
+        Long count = addressMapper.selectCount(
+            new LambdaQueryWrapper<Address>().eq(Address::getOwnName, userName)
+        );
+
         Address address = new Address();
         address.setOwnName(userName);
         address.setConsignee(request.getConsignee());
         address.setPhone(request.getPhone());
+        address.setProvince(request.getProvince());
+        address.setCity(request.getCity());
+        address.setArea(request.getArea());
         address.setAddressDetail(request.getAddressDetail());
-        address.setIsDefault(request.getIsDefault() != null ? request.getIsDefault() : 0);
+        // 如果是第一个地址或者用户明确设为默认，则设为默认地址
+        address.setIsDefault((count == 0 || (request.getIsDefault() != null && request.getIsDefault() == 1)) ? 1 : 0);
         addressMapper.insert(address);
     }
 
@@ -36,6 +45,16 @@ public class AddressServiceImpl implements AddressService {
     }
 
     @Override
+    public Address getDefaultAddress(String userName) {
+        return addressMapper.selectOne(
+            new LambdaQueryWrapper<Address>()
+                .eq(Address::getOwnName, userName)
+                .eq(Address::getIsDefault, 1)
+                .last("LIMIT 1")
+        );
+    }
+
+    @Override
     public void updateAddress(Integer id, String userName, AddressRequest request) {
         Address address = addressMapper.selectById(id);
         if (address == null || !address.getOwnName().equals(userName)) {
@@ -43,8 +62,20 @@ public class AddressServiceImpl implements AddressService {
         }
         if (request.getConsignee() != null) address.setConsignee(request.getConsignee());
         if (request.getPhone() != null) address.setPhone(request.getPhone());
+        if (request.getProvince() != null) address.setProvince(request.getProvince());
+        if (request.getCity() != null) address.setCity(request.getCity());
+        if (request.getArea() != null) address.setArea(request.getArea());
         if (request.getAddressDetail() != null) address.setAddressDetail(request.getAddressDetail());
-        if (request.getIsDefault() != null) address.setIsDefault(request.getIsDefault());
+        if (request.getIsDefault() != null) {
+            // 如果设为默认地址，需要先取消其他默认地址
+            if (request.getIsDefault() == 1) {
+                addressMapper.update(null,
+                    new LambdaUpdateWrapper<Address>()
+                        .eq(Address::getOwnName, userName)
+                        .set(Address::getIsDefault, 0));
+            }
+            address.setIsDefault(request.getIsDefault());
+        }
         addressMapper.updateById(address);
     }
 

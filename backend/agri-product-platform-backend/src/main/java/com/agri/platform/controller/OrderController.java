@@ -3,6 +3,7 @@ package com.agri.platform.controller;
 import com.agri.platform.common.Result;
 import com.agri.platform.dto.OrderRequest;
 import com.agri.platform.dto.OrderResponse;
+import com.agri.platform.dto.OrderPageResponse;
 import com.agri.platform.entity.Purchase;
 import com.agri.platform.service.OrderService;
 import com.agri.platform.util.JwtUtil;
@@ -47,11 +48,19 @@ public class OrderController {
         return Result.success(orderService.getOrderListWithDetails(userName, page, pageSize));
     }
 
+    @GetMapping("/list/paged")
+    public Result<OrderPageResponse> listWithDetailsPaged(@RequestHeader("Authorization") String token,
+                                                          @RequestParam(defaultValue = "1") int page,
+                                                          @RequestParam(defaultValue = "10") int pageSize) {
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        return Result.success(orderService.getOrderListWithDetailsPaged(userName, page, pageSize));
+    }
+
     @GetMapping("/{purchaseId}")
-    public Result<Purchase> detail(@PathVariable Integer purchaseId,
+    public Result<OrderResponse> detail(@PathVariable Integer purchaseId,
                                      @RequestHeader("Authorization") String token) {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
-        return Result.success(orderService.getOrderDetail(purchaseId, userName));
+        return Result.success(orderService.getOrderDetailWithDetails(purchaseId, userName));
     }
 
     @PutMapping("/{purchaseId}/status")

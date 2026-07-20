@@ -10,7 +10,7 @@ public interface ProductService {
     Product getProductById(Integer orderId);
     void updateProduct(Integer orderId, String userName, ProductRequest request);
     void deleteProduct(Integer orderId, String userName);
-    Page<Product> getUserProducts(String userName, int page, int pageSize);
+    Page<Product> getUserProducts(String userName, int page, int pageSize, String type);
 
     /**
      * 批量迁移已发布商品的发布方名称为真实姓名
