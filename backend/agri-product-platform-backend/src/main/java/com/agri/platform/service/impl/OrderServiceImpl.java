@@ -7,6 +7,7 @@ import com.agri.platform.entity.*;
 import com.agri.platform.mapper.*;
 import com.agri.platform.service.OrderService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private ProductMapper productMapper;
+
+    @Autowired
+    private UserMapper userMapper;
 
     // 订单状态文本映射
     private static final Map<Integer, String> STATUS_TEXT_MAP = Map.of(
@@ -404,12 +408,23 @@ public class OrderServiceImpl implements OrderService {
     public OrderPageResponse getReceivedOrdersPaged(String userName, int page, int pageSize) {
         log.info("获取农户订单列表 - 用户名: {}, 页码: {}, 每页: {}", userName, page, pageSize);
 
-        // 查找该农户发布的所有商品
+        // 获取用户信息（包括真实姓名）
+        User user = userMapper.selectById(userName);
+        if (user == null) {
+            log.warn("用户 {} 不存在", userName);
+            return new OrderPageResponse(new ArrayList<>(), 0L, page, pageSize);
+        }
+
+        // 查找该农户发布的所有商品（同时匹配用户名和真实姓名）
         LambdaQueryWrapper<Product> productWrapper = new LambdaQueryWrapper<>();
-        productWrapper.eq(Product::getOwnName, userName);
+        productWrapper.and(wrapper -> wrapper
+                .eq(Product::getOwnName, userName)
+                .or()
+                .eq(Product::getOwnName, user.getRealName())
+        );
         List<Product> farmerProducts = productMapper.selectList(productWrapper);
 
-        log.info("农户 {} 发布的商品数量: {}", userName, farmerProducts.size());
+        log.info("农户 {} (真实姓名: {}) 发布的商品数量: {}", userName, user.getRealName(), farmerProducts.size());
 
         if (farmerProducts.isEmpty()) {
             log.warn("农户 {} 没有发布任何商品", userName);
