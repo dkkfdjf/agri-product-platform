@@ -109,10 +109,10 @@ const loadKnowledge = async () => {
       knowledgeList.value = records.map(k => ({
         id: k.knowledgeId || k.id,
         title: k.title,
-        excerpt: k.content?.substring(0, 100) || '',
+        excerpt: stripHtml(k.content).substring(0, 100),
         category: '农业知识',
         image: k.picPath || null,
-        author: k.ownName || '专家',
+        author: k.ownRealName || k.ownName || '专家',
         time: formatDate(k.createTime),
         views: 0,
         status: k.status
@@ -132,6 +132,16 @@ const loadKnowledge = async () => {
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleDateString('zh-CN')
+}
+
+// 去除 HTML 标签，用于摘要纯文本展示（避免列表里出现 <p> 等标签）
+const stripHtml = (html) => {
+  if (!html) return ''
+  return html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 const filteredKnowledge = computed(() => {

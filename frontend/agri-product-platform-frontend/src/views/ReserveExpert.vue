@@ -341,7 +341,7 @@ const handleReserve = (expert) => {
   reserveForm.expertName = expert.userName
   reserveForm.plantName = ''
   reserveForm.area = ''
-  reserveForm.address = ''
+  reserveForm.address = userStore.userInfo?.address || '' // 默认带入个人中心地址（可改）
   reserveForm.phone = userStore.userInfo?.phone || ''
   reserveForm.preferredTime = ''
   reserveForm.soilCondition = ''

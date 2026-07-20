@@ -17,7 +17,7 @@
             <div class="article-meta">
               <span class="meta-item">
                 <el-icon><User /></el-icon>
-                {{ knowledge.ownName || '专家' }}
+                {{ knowledge.ownRealName || knowledge.ownName || '专家' }}
               </span>
               <span class="meta-item">
                 <el-icon><Calendar /></el-icon>
@@ -82,7 +82,7 @@
           <div v-if="comments.length > 0" class="comment-list">
             <div v-for="comment in comments" :key="comment.discussId" class="comment-item">
               <div class="comment-header">
-                <span class="comment-author">{{ comment.ownName }}</span>
+                <span class="comment-author">{{ comment.ownRealName || comment.ownName }}</span>
                 <span class="comment-time">{{ formatDate(comment.createTime) }}</span>
               </div>
               <div class="comment-content">{{ comment.content }}</div>

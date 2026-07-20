@@ -117,26 +117,92 @@
           </el-empty>
         </div>
       </el-tab-pane>
+
+      <el-tab-pane label="知识库" name="knowledge">
+        <div class="list-section">
+          <div class="section-header">
+            <h3>农业知识库</h3>
+            <el-button type="primary" size="small" @click="goToKnowledgeAll">
+              <el-icon><Reading /></el-icon>
+              查看全部知识库
+            </el-button>
+          </div>
+          <div class="filter-row">
+            <el-input
+              v-model="knowledgeKeyword"
+              placeholder="搜索知识文章标题或摘要"
+              clearable
+              size="small"
+              class="search-input"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+          </div>
+          <div class="list-container" v-if="filteredKnowledge.length > 0" v-loading="loading">
+            <div v-for="item in filteredKnowledge" :key="item.id" class="list-item knowledge-row" @click="goToKnowledge(item.id)">
+              <div class="knowledge-thumb" v-if="item.picPath">
+                <img :src="item.picPath" :alt="item.title">
+              </div>
+              <div class="knowledge-main">
+                <div class="item-header">
+                  <h4 class="item-title">{{ item.title }}</h4>
+                </div>
+                <p class="item-content">{{ item.excerpt }}</p>
+                <div class="item-meta">
+                  <span class="meta-item">
+                    <el-icon><User /></el-icon>
+                    作者：{{ item.author }}
+                  </span>
+                  <span class="meta-item" v-if="item.time">
+                    <el-icon><Calendar /></el-icon>
+                    {{ item.time }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <el-empty v-else-if="knowledgeList.length > 0" description="没有匹配的知识文章" />
+          <el-empty v-else description="暂无知识文章">
+            <el-button type="primary" @click="goToKnowledgeAll">浏览知识库</el-button>
+          </el-empty>
+        </div>
+      </el-tab-pane>
     </el-tabs>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Plus, Calendar, User, Search } from '@element-plus/icons-vue'
+import { Plus, Calendar, User, Search, Reading } from '@element-plus/icons-vue'
 import { getQuestionList } from '@/api/question'
 import { getMyReserveList } from '@/api/reserve'
+import { getKnowledgeList } from '@/api/knowledge'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
-const activeTab = ref('questions')
+const VALID_TABS = ['questions', 'reservations', 'knowledge']
+const activeTab = ref(VALID_TABS.includes(route.query.tab) ? route.query.tab : 'questions')
+
+// 把当前 tab 同步进 URL（?tab=）：从详情页 BackBar 带 from 返回时能回到原 tab，
+// 而不是总落到默认的“我的问题”
+watch(activeTab, (newVal) => {
+  if (route.query.tab !== newVal) {
+    router.replace({ query: { ...route.query, tab: newVal } })
+  }
+})
 const questionList = ref([])
 const reserveList = ref([])
+const knowledgeList = ref([])
 const loading = ref(false)
+
+// 知识库搜索关键词
+const knowledgeKeyword = ref('')
 
 // 我的问题筛选：状态 + 关键词
 const searchKeyword = ref('')
@@ -209,6 +275,50 @@ const loadMyReservations = async () => {
   }
 }
 
+// 知识库：仅展示已发布（status===1）+ 关键词客户端过滤
+const filteredKnowledge = computed(() => {
+  let list = knowledgeList.value.filter(k => k.status === 1)
+  const kw = knowledgeKeyword.value.trim().toLowerCase()
+  if (kw) {
+    list = list.filter(k =>
+      (k.title || '').toLowerCase().includes(kw) ||
+      (k.excerpt || '').toLowerCase().includes(kw)
+    )
+  }
+  return list
+})
+
+// 加载知识库
+const loadKnowledge = async () => {
+  loading.value = true
+  try {
+    const res = await getKnowledgeList({ page: 1, pageSize: 50 })
+    if (res.code === 200) {
+      knowledgeList.value = (res.data.records || []).map(k => ({
+        id: k.knowledgeId || k.id,
+        title: k.title,
+        excerpt: stripHtml(k.content).substring(0, 100),
+        picPath: k.picPath || null,
+        author: k.ownRealName || k.ownName || '专家',
+        time: formatDate(k.createTime),
+        status: k.status
+      }))
+    }
+  } catch (error) {
+    console.error('加载知识库失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const goToKnowledge = (id) => {
+  router.push({ path: `/knowledge/${id}`, query: { from: route.fullPath } })
+}
+
+const goToKnowledgeAll = () => {
+  router.push({ path: '/knowledge', query: { from: route.fullPath } })
+}
+
 const goToQuestion = (id) => {
   router.push({ path: `/question/${id}`, query: { from: route.fullPath } })
 }
@@ -227,6 +337,16 @@ const formatDate = (dateStr) => {
   return date.toLocaleDateString()
 }
 
+// 去除 HTML 标签，用于知识摘要纯文本展示（避免列表出现 <p> 等标签）
+const stripHtml = (html) => {
+  if (!html) return ''
+  return html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 const getStatusType = (status) => {
   const types = { 0: 'warning', 1: 'success', 2: 'danger' }
   return types[status] || 'info'
@@ -240,6 +360,7 @@ const getStatusText = (status) => {
 onMounted(() => {
   loadMyQuestions()
   loadMyReservations()
+  loadKnowledge()
 })
 </script>
 
@@ -323,6 +444,34 @@ onMounted(() => {
 .list-item:hover {
   border-color: var(--color-primary, #2d5a3d);
   box-shadow: var(--shadow-sm, 0 2px 8px rgba(45, 90, 61, 0.1));
+}
+
+/* ===== 知识库条目：缩略图 + 正文左右布局 ===== */
+.knowledge-row {
+  display: flex;
+  gap: var(--spacing-4, 16px);
+  align-items: flex-start;
+}
+
+.knowledge-thumb {
+  width: 120px;
+  height: 90px;
+  flex-shrink: 0;
+  border-radius: var(--radius-base, 8px);
+  overflow: hidden;
+  background: var(--color-bg-secondary, #f7f5f0);
+}
+
+.knowledge-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.knowledge-main {
+  flex: 1;
+  min-width: 0;
 }
 
 .reserve-item {

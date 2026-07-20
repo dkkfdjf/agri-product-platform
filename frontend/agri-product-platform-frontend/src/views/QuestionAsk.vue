@@ -196,6 +196,11 @@ onMounted(() => {
     router.push({ path: '/login', query: { redirect: '/question/ask' } })
     return
   }
+  // 联系电话默认带入个人资料手机号（用户可自行修改）
+  if (!formData.phone) {
+    formData.phone = userStore.userInfo?.phone || ''
+  }
+
   // 从路由参数预选专家
   if (route.query.expert) {
     formData.expertName = String(route.query.expert)
