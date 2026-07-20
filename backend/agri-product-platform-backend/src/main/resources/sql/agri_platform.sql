@@ -170,6 +170,8 @@ CREATE TABLE `tb_finance` (
   `repayment` int DEFAULT NULL COMMENT '还款期限(月)',
   `status` tinyint DEFAULT 0 COMMENT '状态：0申请中 1已通过 2已驳回',
   `remark` varchar(255) DEFAULT NULL COMMENT '审批备注',
+  `purpose` varchar(500) DEFAULT NULL COMMENT '申请原因/融资用途',
+  `repayment_source` varchar(500) DEFAULT NULL COMMENT '还款来源',
   `combination_name1` varchar(64) DEFAULT NULL COMMENT '联合人1姓名',
   `combination_phone1` varchar(20) DEFAULT NULL COMMENT '联合人1电话',
   `combination_idnum1` varchar(20) DEFAULT NULL COMMENT '联合人1身份证',
