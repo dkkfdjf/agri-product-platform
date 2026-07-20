@@ -515,8 +515,8 @@ public class OrderServiceImpl implements OrderService {
             List<OrderResponse.OrderItemResponse> items = new ArrayList<>();
             for (PurchaseDetail detail : orderDetails) {
                 Product product = productMap.get(detail.getOrderId());
-                // 只添加属于该农户的商品
-                if (product != null && product.getOwnName().equals(userName)) {
+                // 只添加属于该农户的商品（同时匹配用户名和真实姓名）
+                if (product != null && (product.getOwnName().equals(userName) || product.getOwnName().equals(user.getRealName()))) {
                     OrderResponse.OrderItemResponse item = new OrderResponse.OrderItemResponse();
                     item.setProductId(product.getOrderId());
                     item.setProductName(product.getTitle());
