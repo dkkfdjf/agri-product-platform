@@ -19,4 +19,6 @@ public class FinanceRequest {
     private String combinationPhone2;
     private String combinationIdnum2;
     private String fileInfo;
+    private String purpose;          // 申请原因/融资用途
+    private String repaymentSource;  // 还款来源
 }

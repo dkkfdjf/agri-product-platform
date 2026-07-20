@@ -1,6 +1,7 @@
 package com.agri.platform.controller;
 
 import com.agri.platform.common.Result;
+import com.agri.platform.dto.BankFinanceStats;
 import com.agri.platform.dto.FinanceApprovalRequest;
 import com.agri.platform.dto.FinanceProductRequest;
 import com.agri.platform.dto.FinanceRequest;
@@ -84,6 +85,60 @@ public class FinanceController {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
         financeService.updateFinance(financeId, userName, request);
         return Result.success("申请更新成功");
+    }
+
+    @DeleteMapping("/apply/{financeId}")
+    public Result<String> cancelApply(@RequestHeader("Authorization") String token,
+                                      @PathVariable Integer financeId) {
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        financeService.deleteFinance(financeId, userName);
+        return Result.success("申请已撤销");
+    }
+
+    // ==================== 银行工作台 ====================
+
+    /**
+     * 银行工作台 - 融资申请列表（全状态，支持筛选）
+     */
+    @GetMapping("/bank/applications")
+    public Result<Page<Finance>> bankApplications(@RequestParam(required = false) Integer status,
+                                                   @RequestParam(required = false) String keyword,
+                                                   @RequestParam(required = false) String startDate,
+                                                   @RequestParam(required = false) String endDate,
+                                                   @RequestParam(defaultValue = "1") int page,
+                                                   @RequestParam(defaultValue = "10") int pageSize) {
+        return Result.success(financeService.getBankApplications(status, keyword, startDate, endDate, page, pageSize));
+    }
+
+    /**
+     * 银行工作台 - 数据概览聚合统计
+     */
+    @GetMapping("/bank/stats")
+    public Result<BankFinanceStats> bankStats() {
+        return Result.success(financeService.getBankStats());
+    }
+
+    /**
+     * 银行工作台 - 更新融资产品（仅银行角色）
+     */
+    @PutMapping("/bank/product/{productId}")
+    public Result<String> updateProduct(@RequestHeader("Authorization") String token,
+                                         @PathVariable Integer productId,
+                                         @RequestBody FinanceProductRequest request) {
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        financeService.updateProduct(userName, productId, request);
+        return Result.success("产品更新成功");
+    }
+
+    /**
+     * 银行工作台 - 删除融资产品（仅银行角色）
+     */
+    @DeleteMapping("/bank/product/{productId}")
+    public Result<String> deleteProduct(@RequestHeader("Authorization") String token,
+                                         @PathVariable Integer productId) {
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        financeService.deleteProduct(userName, productId);
+        return Result.success("产品删除成功");
     }
 
     // 融资意向相关
