@@ -28,6 +28,18 @@ export function getOrders(params) {
 }
 
 /**
+ * 获取农户收到的订单列表（别人购买农户商品的订单）
+ * @param {Object} params - { page, pageSize }
+ */
+export function getReceivedOrders(params) {
+  return request({
+    url: '/purchase/received/paged',
+    method: 'get',
+    params
+  })
+}
+
+/**
  * 获取订单详情
  * @param {String|Number} id - 订单ID
  */
