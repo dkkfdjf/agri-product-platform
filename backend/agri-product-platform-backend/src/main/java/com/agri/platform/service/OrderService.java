@@ -19,4 +19,6 @@ public interface OrderService {
     void cancelOrder(Integer purchaseId, String userName);
     /** 支付成功后把订单从待付款(1)推进到待发货(2)；幂等，非待付款状态不处理。 */
     void markOrderPaid(Integer purchaseId);
+    /** 获取农户作为卖家收到的订单（别人购买农户商品的订单） */
+    OrderPageResponse getReceivedOrdersPaged(String userName, int page, int pageSize);
 }
