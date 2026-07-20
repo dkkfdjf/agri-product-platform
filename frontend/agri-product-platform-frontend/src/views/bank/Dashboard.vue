@@ -20,7 +20,7 @@
           <div class="stat-label">本月放款金额</div>
           <div class="stat-trend positive">
             <el-icon><Top /></el-icon>
-            <span>{{ stats.growthRate }}%</span>
+            <span>{{ stats.approvedCount }} 笔已放款</span>
           </div>
         </div>
       </div>
@@ -139,13 +139,13 @@
             </div>
             <span>产品管理</span>
           </router-link>
-          <router-link to="/bank/dashboard" class="quick-action">
+          <router-link to="/bank/matching" class="quick-action">
             <div class="action-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
               </svg>
             </div>
-            <span>客户咨询</span>
+            <span>意向客户</span>
           </router-link>
         </div>
       </div>
@@ -190,8 +190,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { ElMessage } from 'element-plus'
-import { getFinanceList } from '@/api/finance'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getBankStats, approveFinanceApplication } from '@/api/finance'
 
 const userStore = useUserStore()
 
@@ -263,114 +263,88 @@ const formatTime = (timestamp) => {
 }
 
 /**
- * 获取统计数据和列表数据
+ * 获取统计数据和列表数据（来自后端聚合接口，字段与 Finance 实体一致）
  */
+const farmerName = (f) => f.realName || f.ownName || '未知农户'
+
+const toPendingItem = (f) => ({
+  id: f.financeId,
+  farmer: farmerName(f),
+  farmerName: farmerName(f),
+  amount: f.money || 0,
+  product: f.productName || '融资产品',
+  productName: f.productName || '融资产品',
+  createdAt: f.createTime
+})
+
+const toHistoryItem = (f) => {
+  const approved = f.status === 1
+  return {
+    id: f.financeId,
+    farmer: farmerName(f),
+    farmerName: farmerName(f),
+    amount: f.money || 0,
+    product: f.productName || '融资产品',
+    productName: f.productName || '融资产品',
+    status: approved ? 'approved' : 'rejected',
+    statusClass: approved ? 'success' : 'error',
+    createdAt: f.createTime,
+    updatedAt: f.updateTime
+  }
+}
+
 const fetchDashboardData = async () => {
   loading.value = true
   try {
-    const { data } = await getFinanceList({ page: 1, pageSize: 100 })
-    const list = data?.list || data || []
+    const { data } = await getBankStats()
+    const s = data || {}
 
-    // 统计各状态的数量
-    let pendingCount = 0
-    let approvedCount = 0
-    let rejectedCount = 0
-    let monthlyAmount = 0
-
-    const thisMonth = new Date()
-    thisMonth.setDate(1)
-    thisMonth.setHours(0, 0, 0, 0)
-
-    const pendingList = []
-    const historyList = []
-
-    list.forEach(item => {
-      const status = item.status?.toLowerCase() || item.approvalStatus?.toLowerCase()
-
-      if (status === 'pending' || status === '待审批') {
-        pendingCount++
-        if (pendingList.length < 5) {
-          pendingList.push({
-            id: item.id,
-            farmer: item.farmerName || item.farmer || '未知农户',
-            farmerName: item.farmerName || item.farmer || '未知农户',
-            amount: item.amount || 0,
-            product: item.productName || item.product || '融资产品',
-            productName: item.productName || item.product || '融资产品',
-            createdAt: item.createdAt || item.applyTime
-          })
-        }
-      } else if (status === 'approved' || status === '已通过' || status === 'approved') {
-        approvedCount++
-        // 统计本月放款金额
-        const createdAt = new Date(item.createdAt || item.approvedAt || item.updatedAt)
-        if (createdAt >= thisMonth && status === 'approved') {
-          monthlyAmount += Number(item.amount || 0)
-        }
-        if (historyList.length < 5) {
-          historyList.push({
-            id: item.id,
-            farmer: item.farmerName || item.farmer || '未知农户',
-            farmerName: item.farmerName || item.farmer || '未知农户',
-            amount: item.amount || 0,
-            product: item.productName || item.product || '融资产品',
-            productName: item.productName || item.product || '融资产品',
-            time: item.updatedAt || item.approvedAt || item.createdAt,
-            status: 'approved',
-            statusClass: 'success',
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt
-          })
-        }
-      } else if (status === 'rejected' || status === '已拒绝' || status === 'rejected') {
-        rejectedCount++
-        if (historyList.length < 5) {
-          historyList.push({
-            id: item.id,
-            farmer: item.farmerName || item.farmer || '未知农户',
-            farmerName: item.farmerName || item.farmer || '未知农户',
-            amount: item.amount || 0,
-            product: item.productName || item.product || '融资产品',
-            productName: item.productName || item.product || '融资产品',
-            time: item.updatedAt || item.rejectedAt || item.createdAt,
-            status: 'rejected',
-            statusClass: 'error',
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt
-          })
-        }
-      }
-    })
-
-    // 计算审批通过率
-    const totalProcessed = approvedCount + rejectedCount
-    const approvalRate = totalProcessed > 0 ? Math.round((approvedCount / totalProcessed) * 100) : 0
-
-    // 更新统计数据
     stats.value = {
-      monthlyAmount,
-      growthRate: 15.3, // 可从后端获取实际增长率
-      pendingCount,
-      approvedCount,
-      approvalRate
+      monthlyAmount: s.monthlyAmount || 0,
+      growthRate: s.approvalRate || 0,
+      pendingCount: s.pendingCount || 0,
+      approvedCount: s.approvedCount || 0,
+      approvalRate: s.approvalRate || 0
     }
 
-    // 更新列表数据
-    pendingApprovals.value = pendingList
-    approvalHistory.value = historyList.sort((a, b) => new Date(b.time) - new Date(a.time))
+    pendingApprovals.value = (s.pendingList || []).map(toPendingItem)
+    approvalHistory.value = (s.recentList || []).map(toHistoryItem)
   } catch (error) {
     console.error('获取仪表盘数据失败:', error)
-    ElMessage.error('加载数据失败，请稍后重试')
+    ElMessage.error(error?.message || '加载数据失败，请稍后重试')
   } finally {
     loading.value = false
   }
 }
 
-const handleApproval = (id, action) => {
+const handleApproval = async (id, action) => {
+  const status = action === 'approve' ? 1 : 2
   const actionText = action === 'approve' ? '通过' : '拒绝'
-  ElMessage.success(`申请${actionText}成功`)
-  // 重新加载数据
-  fetchDashboardData()
+  try {
+    let remark = ''
+    if (action === 'reject') {
+      const res = await ElMessageBox.prompt('请输入拒绝原因（选填）', '拒绝申请', {
+        confirmButtonText: '确认拒绝',
+        cancelButtonText: '取消',
+        inputType: 'textarea',
+        inputPlaceholder: '例如：材料不全 / 信用评估未通过'
+      })
+      remark = res.value || ''
+    } else {
+      await ElMessageBox.confirm('确认通过该融资申请？', '审批确认', {
+        type: 'success',
+        confirmButtonText: '确认通过',
+        cancelButtonText: '取消'
+      })
+    }
+    await approveFinanceApplication(id, { status, remark })
+    ElMessage.success(`已${actionText}`)
+    fetchDashboardData()
+  } catch (e) {
+    if (e !== 'cancel' && e?.message !== 'cancel') {
+      ElMessage.error(e?.message || '操作失败')
+    }
+  }
 }
 
 onMounted(() => {

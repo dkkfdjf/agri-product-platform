@@ -15,8 +15,8 @@
       </template>
       <div class="products-grid">
         <div v-for="product in financeProducts" :key="product.productId" class="product-item">
-          <div class="product-name">{{ product.name }}</div>
-          <div class="product-desc">{{ product.description }}</div>
+          <div class="product-name">{{ product.bankName }}</div>
+          <div class="product-desc">{{ product.introduce }}</div>
           <div class="product-terms">
             <div class="term">
               <span class="label">年利率：</span>
@@ -24,11 +24,11 @@
             </div>
             <div class="term">
               <span class="label">期限：</span>
-              <span class="value">{{ product.term }}个月</span>
+              <span class="value">{{ product.repayment }}个月</span>
             </div>
             <div class="term">
               <span class="label">额度：</span>
-              <span class="value">¥{{ product.minLimit }}-{{ product.maxLimit }}万</span>
+              <span class="value">¥{{ product.money }}</span>
             </div>
           </div>
           <el-button type="primary" size="small" @click="applyForProduct(product)">
@@ -44,13 +44,15 @@
         <span>我的融资申请</span>
       </template>
       <el-table :data="applications" style="width: 100%">
-        <el-table-column prop="productName" label="融资产品" width="150" />
-        <el-table-column prop="amount" label="申请金额" width="100">
+        <el-table-column prop="realName" label="真实姓名" width="120" />
+        <el-table-column prop="money" label="申请金额(元)" width="140">
           <template #default="{ row }">
-            ¥{{ row.amount }}
+            ¥{{ row.money }}
           </template>
         </el-table-column>
-        <el-table-column prop="purpose" label="融资用途" show-overflow-tooltip />
+        <el-table-column prop="repayment" label="期限(月)" width="100" />
+        <el-table-column prop="phone" label="手机号" width="140" />
+        <el-table-column prop="purpose" label="申请原因" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">
@@ -66,7 +68,7 @@
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button
-              v-if="row.status === 'pending'"
+              v-if="row.status === 0"
               link
               type="primary"
               @click="editApplication(row)"
@@ -74,7 +76,7 @@
               修改
             </el-button>
             <el-button
-              v-if="row.status === 'pending'"
+              v-if="row.status === 0"
               link
               type="danger"
               @click="cancelApplication(row)"
@@ -116,10 +118,19 @@
             <el-option
               v-for="product in financeProducts"
               :key="product.productId"
-              :label="product.name"
+              :label="product.bankName"
               :value="product.productId"
             />
           </el-select>
+        </el-form-item>
+        <el-form-item label="真实姓名" prop="realName">
+          <el-input v-model="form.realName" placeholder="请输入真实姓名" />
+        </el-form-item>
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="form.phone" placeholder="请输入手机号" maxlength="11" />
+        </el-form-item>
+        <el-form-item label="身份证号" prop="idNum">
+          <el-input v-model="form.idNum" placeholder="请输入身份证号" maxlength="18" />
         </el-form-item>
         <el-form-item label="申请金额" prop="amount">
           <el-input-number
@@ -132,12 +143,14 @@
           />
           <span class="unit-text">万元</span>
         </el-form-item>
-        <el-form-item label="融资用途" prop="purpose">
+        <el-form-item label="申请原因" prop="purpose">
           <el-input
             v-model="form.purpose"
             type="textarea"
-            :rows="4"
-            placeholder="请详细说明融资用途，如：购买农机具、建设大棚、采购农资等"
+            :rows="3"
+            placeholder="请说明融资用途，如：购买农机具、建设大棚、采购农资等"
+            maxlength="500"
+            show-word-limit
           />
         </el-form-item>
         <el-form-item label="还款来源" prop="repaymentSource">
@@ -145,7 +158,9 @@
             v-model="form.repaymentSource"
             type="textarea"
             :rows="3"
-            placeholder="请说明还款来源，如：农产品销售收入、其他收入等"
+            placeholder="请说明还款来源，如：农产品销售收入、经营收入等"
+            maxlength="500"
+            show-word-limit
           />
         </el-form-item>
       </el-form>
@@ -163,7 +178,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { getFinanceProducts, applyFinance, getMyFinanceApplications } from '@/api/finance'
+import { getFinanceProducts, applyFinance, cancelFinance, getMyFinanceApplications } from '@/api/finance'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -177,8 +192,13 @@ const dialogVisible = ref(false)
 const formRef = ref(null)
 const editingApplicationId = ref(null)
 
+// 申请表单：字段与后端 FinanceRequest / tb_finance 对齐
+// amount 为页面输入(万元)，提交时换算为 money(元)
 const form = reactive({
   productId: null,
+  realName: '',
+  phone: '',
+  idNum: '',
   amount: 10,
   purpose: '',
   repaymentSource: ''
@@ -186,8 +206,14 @@ const form = reactive({
 
 const rules = {
   productId: [{ required: true, message: '请选择融资产品', trigger: 'change' }],
+  realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1\d{10}$/, message: '请输入正确的手机号', trigger: 'blur' }
+  ],
+  idNum: [{ required: true, message: '请输入身份证号', trigger: 'blur' }],
   amount: [{ required: true, message: '请输入申请金额', trigger: 'blur' }],
-  purpose: [{ required: true, message: '请输入融资用途', trigger: 'blur' }],
+  purpose: [{ required: true, message: '请输入申请原因', trigger: 'blur' }],
   repaymentSource: [{ required: true, message: '请输入还款来源', trigger: 'blur' }]
 }
 
@@ -238,9 +264,12 @@ const editApplication = (application) => {
   editingApplicationId.value = application.financeId || application.id
   Object.assign(form, {
     productId: application.productId,
-    amount: application.amount,
-    purpose: application.purpose,
-    repaymentSource: application.repaymentSource
+    realName: application.realName || '',
+    phone: application.phone || '',
+    idNum: application.idNum || '',
+    amount: application.money ? application.money / 10000 : 10, // 元换算回万元
+    purpose: application.purpose || '',
+    repaymentSource: application.repaymentSource || ''
   })
   dialogVisible.value = true
 }
@@ -254,9 +283,13 @@ const submitApplication = async () => {
 
     submitting.value = true
     try {
+      // 与后端 FinanceRequest 字段一致：money 为元(NOT NULL)
       const data = {
         productId: form.productId,
-        amount: form.amount * 10000, // 转换为元
+        realName: form.realName,
+        phone: form.phone,
+        idNum: form.idNum,
+        money: form.amount * 10000, // 万元转换为元
         purpose: form.purpose,
         repaymentSource: form.repaymentSource
       }
@@ -272,7 +305,9 @@ const submitApplication = async () => {
       dialogVisible.value = false
       await loadApplications()
     } catch (error) {
-      ElMessage.error('提交申请失败')
+      // 展示后端返回的真实失败原因，便于定位（业务错误/HTTP错误均覆盖）
+      const msg = error?.response?.data?.message || error?.message || '提交申请失败'
+      ElMessage.error(msg)
     } finally {
       submitting.value = false
     }
@@ -282,15 +317,16 @@ const submitApplication = async () => {
 // 撤销申请
 const cancelApplication = async (application) => {
   try {
-    await ElMessageBox.confirm('确定要撤销此融资申请吗？', '提示', {
+    await ElMessageBox.confirm('撤销后该申请将被永久删除，确定要撤销吗？', '撤销确认', {
       type: 'warning'
     })
-    // TODO: 撤销申请API
+    await cancelFinance(application.financeId)
     ElMessage.success('申请已撤销')
     await loadApplications()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('撤销申请失败')
+      const msg = error?.response?.data?.message || error?.message || '撤销申请失败'
+      ElMessage.error(msg)
     }
   }
 }
@@ -307,12 +343,12 @@ const formatTime = (time) => {
   return date.toLocaleDateString('zh-CN')
 }
 
-// 获取状态类型
+// 获取状态类型（后端 status 为整数：0申请中 1已通过 2已驳回）
 const getStatusType = (status) => {
   const typeMap = {
-    'pending': 'warning',
-    'approved': 'success',
-    'rejected': 'danger'
+    0: 'warning',
+    1: 'success',
+    2: 'danger'
   }
   return typeMap[status] || 'info'
 }
@@ -320,9 +356,9 @@ const getStatusType = (status) => {
 // 获取状态文本
 const getStatusText = (status) => {
   const textMap = {
-    'pending': '待审核',
-    'approved': '已批准',
-    'rejected': '已拒绝'
+    0: '待审核',
+    1: '已批准',
+    2: '已拒绝'
   }
   return textMap[status] || status
 }
@@ -334,6 +370,9 @@ const resetForm = () => {
   }
   Object.assign(form, {
     productId: null,
+    realName: '',
+    phone: '',
+    idNum: '',
     amount: 10,
     purpose: '',
     repaymentSource: ''

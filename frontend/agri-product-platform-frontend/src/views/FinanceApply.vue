@@ -262,7 +262,7 @@ const submit = async () => {
 
     await applyFinance(submitData)
     ElMessage.success('申请提交成功，请等待银行审核')
-    router.push('/finance/my')
+    router.push('/farmer/my-finance')
   } catch (error) {
     if (error !== false) {
       ElMessage.error(error.message || '提交失败，请重试')

@@ -75,7 +75,7 @@
 
     <el-row :gutter="20" class="menu-row" v-if="isFarmer">
       <el-col :span="12">
-        <el-card class="menu-card" @click="$router.push('/finance/my')">
+        <el-card class="menu-card" @click="$router.push('/farmer/my-finance')">
           <div class="menu-item">
             <el-icon :size="32" color="#409eff"><Money /></el-icon>
             <span>我的融资</span>
@@ -113,10 +113,18 @@
 
     <el-row :gutter="20" class="menu-row" v-if="isBank">
       <el-col :span="12">
-        <el-card class="menu-card" @click="$router.push('/finance/bank')">
+        <el-card class="menu-card" @click="$router.push('/bank/approvals')">
           <div class="menu-item">
             <el-icon :size="32" color="#409eff"><Briefcase /></el-icon>
-            <span>融资审核</span>
+            <span>融资审批</span>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="12">
+        <el-card class="menu-card" @click="$router.push('/bank/products')">
+          <div class="menu-item">
+            <el-icon :size="32" color="#67c23a"><Coin /></el-icon>
+            <span>融资产品</span>
           </div>
         </el-card>
       </el-col>

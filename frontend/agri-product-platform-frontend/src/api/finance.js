@@ -1,5 +1,21 @@
 /**
  * 融资 API 模块
+ *
+ * 端点契约（与后端 FinanceController 对齐）：
+ *  - GET  /finance/product/list            公开，分页融资产品
+ *  - GET  /finance/product/{productId}     公开，产品详情
+ *  - POST /finance/product/publish         银行发布产品（role=bank）
+ *  - GET  /finance/apply/list              我的申请（农户）
+ *  - GET  /finance/apply/bank              待审批列表（仅 status=0）
+ *  - POST /finance/apply                   提交申请（农户）
+ *  - PUT  /finance/apply/{financeId}       审批 {status, remark}
+ *  - DELETE /finance/apply/{financeId}     撤销申请（物理删除）
+ *  - GET  /finance/intention/match         融资意向匹配
+ *  银行工作台（需登录）：
+ *  - GET  /finance/bank/applications       全状态申请列表（筛选）
+ *  - GET  /finance/bank/stats              数据概览聚合统计
+ *  - PUT  /finance/bank/product/{id}       更新产品（role=bank）
+ *  - DELETE /finance/bank/product/{id}     删除产品（role=bank）
  */
 import request from '@/utils/request'
 
@@ -27,6 +43,18 @@ export function getFinanceProductDetail(productId) {
 }
 
 /**
+ * 发布融资产品（银行）
+ * @param {Object} data - { bankName, introduce, bankPhone, money, rate, repayment }
+ */
+export function publishFinanceProduct(data) {
+  return request({
+    url: '/finance/product/publish',
+    method: 'post',
+    data
+  })
+}
+
+/**
  * 申请融资
  * @param {Object} data - 申请数据
  */
@@ -35,6 +63,17 @@ export function applyFinance(data) {
     url: '/finance/apply',
     method: 'post',
     data
+  })
+}
+
+/**
+ * 撤销融资申请（物理删除）
+ * @param {String|Number} financeId - 申请ID
+ */
+export function cancelFinance(financeId) {
+  return request({
+    url: `/finance/apply/${financeId}`,
+    method: 'delete'
   })
 }
 
@@ -51,37 +90,86 @@ export function getMyFinanceApplications(params) {
 }
 
 /**
- * 获取融资申请列表（管理员/银行）
+ * 获取待审批列表（仅 status=0）
  * @param {Object} params - 查询参数
  */
-export function getFinanceList(params) {
+export function getBankApprovalList(params) {
   return request({
-    url: '/finance/list',
+    url: '/finance/apply/bank',
     method: 'get',
     params
   })
 }
 
 /**
- * 审核融资申请
- * @param {Object} data - 审核数据 { id, status, remark }
+ * 审核融资申请（通过/拒绝）
+ * @param {String|Number} financeId - 申请ID
+ * @param {Object} data - { status: 1已通过|2已拒绝, remark }
  */
-export function approveFinance(data) {
+export function approveFinanceApplication(financeId, data) {
   return request({
-    url: '/finance/approve',
-    method: 'post',
+    url: `/finance/apply/${financeId}`,
+    method: 'put',
     data
   })
 }
 
 /**
  * 获取融资意向匹配列表
- * @param {Object} params - 查询参数
+ * @param {Object} params - { minAmount, maxAmount, item, page, pageSize }
  */
 export function getFinanceIntentionMatch(params) {
   return request({
     url: '/finance/intention/match',
     method: 'get',
     params
+  })
+}
+
+// ==================== 银行工作台专用 ====================
+
+/**
+ * 银行工作台 - 融资申请列表（全状态，支持筛选）
+ * @param {Object} params - { status, keyword, startDate, endDate, page, pageSize }
+ */
+export function getBankApplications(params) {
+  return request({
+    url: '/finance/bank/applications',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 银行工作台 - 数据概览聚合统计
+ */
+export function getBankStats() {
+  return request({
+    url: '/finance/bank/stats',
+    method: 'get'
+  })
+}
+
+/**
+ * 银行工作台 - 更新融资产品
+ * @param {String|Number} productId - 产品ID
+ * @param {Object} data - { bankName, introduce, bankPhone, money, rate, repayment }
+ */
+export function updateBankProduct(productId, data) {
+  return request({
+    url: `/finance/bank/product/${productId}`,
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 银行工作台 - 删除融资产品
+ * @param {String|Number} productId - 产品ID
+ */
+export function deleteBankProduct(productId) {
+  return request({
+    url: `/finance/bank/product/${productId}`,
+    method: 'delete'
   })
 }
