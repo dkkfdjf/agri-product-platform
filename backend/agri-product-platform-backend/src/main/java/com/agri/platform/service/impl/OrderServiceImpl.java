@@ -8,6 +8,7 @@ import com.agri.platform.mapper.*;
 import com.agri.platform.service.OrderService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class OrderServiceImpl implements OrderService {
 
@@ -400,12 +402,17 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderPageResponse getReceivedOrdersPaged(String userName, int page, int pageSize) {
+        log.info("获取农户订单列表 - 用户名: {}, 页码: {}, 每页: {}", userName, page, pageSize);
+
         // 查找该农户发布的所有商品
         LambdaQueryWrapper<Product> productWrapper = new LambdaQueryWrapper<>();
         productWrapper.eq(Product::getOwnName, userName);
         List<Product> farmerProducts = productMapper.selectList(productWrapper);
 
+        log.info("农户 {} 发布的商品数量: {}", userName, farmerProducts.size());
+
         if (farmerProducts.isEmpty()) {
+            log.warn("农户 {} 没有发布任何商品", userName);
             return new OrderPageResponse(new ArrayList<>(), 0L, page, pageSize);
         }
 
@@ -419,7 +426,10 @@ public class OrderServiceImpl implements OrderService {
         detailWrapper.in(PurchaseDetail::getOrderId, productIds);
         List<PurchaseDetail> details = detailMapper.selectList(detailWrapper);
 
+        log.info("商品ID列表: {}, 找到的订单详情数量: {}", productIds, details.size());
+
         if (details.isEmpty()) {
+            log.warn("没有找到购买这些商品的订单详情");
             return new OrderPageResponse(new ArrayList<>(), 0L, page, pageSize);
         }
 
@@ -509,6 +519,7 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
+        log.info("最终返回的订单数量: {}, 总数: {}", responses.size(), purchasePage.getTotal());
         return new OrderPageResponse(responses, purchasePage.getTotal(), page, pageSize);
     }
 }
