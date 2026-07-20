@@ -86,7 +86,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getReceivedOrders, cancelOrder as cancelOrderApi } from '@/api/order'
+import { getReceivedOrders, cancelOrder as cancelOrderApi, updateOrderStatus } from '@/api/order'
 
 const loading = ref(false)
 const orders = ref([])
@@ -145,7 +145,8 @@ const shipOrder = async (order) => {
     await ElMessageBox.confirm(`确认订单"${order.id || order.purchaseId}"已发货？`, '提示', {
       type: 'info'
     })
-    // TODO: 调用发货API
+    // 调用发货API，将状态从 2(待发货) 改为 3(待收货)
+    await updateOrderStatus(order.id || order.purchaseId, { status: 3 })
     ElMessage.success('发货成功')
     await loadOrders()
   } catch (error) {
