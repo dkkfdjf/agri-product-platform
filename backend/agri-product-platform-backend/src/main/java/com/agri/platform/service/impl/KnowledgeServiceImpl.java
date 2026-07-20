@@ -3,14 +3,22 @@ package com.agri.platform.service.impl;
 import com.agri.platform.dto.KnowledgeRequest;
 import com.agri.platform.entity.Discuss;
 import com.agri.platform.entity.Knowledge;
+import com.agri.platform.entity.User;
 import com.agri.platform.mapper.DiscussMapper;
 import com.agri.platform.mapper.KnowledgeMapper;
+import com.agri.platform.mapper.UserMapper;
 import com.agri.platform.service.KnowledgeService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class KnowledgeServiceImpl implements KnowledgeService {
@@ -20,6 +28,9 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
     @Autowired
     private DiscussMapper discussMapper;
+
+    @Autowired
+    private UserMapper userMapper;
 
     @Override
     public void publishKnowledge(String userName, KnowledgeRequest request) {
@@ -53,12 +64,18 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             wrapper.eq(Knowledge::getOwnName, ownName);
         }
         wrapper.orderByDesc(Knowledge::getCreateTime);
-        return knowledgeMapper.selectPage(pageParam, wrapper);
+        Page<Knowledge> result = knowledgeMapper.selectPage(pageParam, wrapper);
+        fillOwnRealName(result.getRecords());
+        return result;
     }
 
     @Override
     public Knowledge getKnowledgeById(Integer knowledgeId) {
-        return knowledgeMapper.selectById(knowledgeId);
+        Knowledge knowledge = knowledgeMapper.selectById(knowledgeId);
+        if (knowledge != null) {
+            fillOwnRealName(knowledge);
+        }
+        return knowledge;
     }
 
     @Override
@@ -100,11 +117,13 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
     @Override
     public List<Discuss> getDiscussList(Integer knowledgeId) {
-        return discussMapper.selectList(
+        List<Discuss> list = discussMapper.selectList(
             new LambdaQueryWrapper<Discuss>()
                 .eq(Discuss::getKnowledgeId, knowledgeId)
                 .orderByAsc(Discuss::getCreateTime)
         );
+        fillDiscussRealName(list);
+        return list;
     }
 
     @Override
@@ -122,5 +141,57 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             }
         }
         discussMapper.deleteById(discussId);
+    }
+
+    // ===== realName 回填（ownRealName 为非数据库列，仅用于展示真实姓名） =====
+
+    /** 批量回填知识列表发布者真实姓名 */
+    private void fillOwnRealName(List<Knowledge> list) {
+        if (list == null || list.isEmpty()) return;
+        Map<String, String> nameMap = mapRealNames(
+            list.stream().map(Knowledge::getOwnName).collect(Collectors.toList())
+        );
+        for (Knowledge k : list) {
+            k.setOwnRealName(nameMap.getOrDefault(k.getOwnName(), k.getOwnName()));
+        }
+    }
+
+    /** 单条知识发布者真实姓名 */
+    private void fillOwnRealName(Knowledge k) {
+        if (k == null) return;
+        Map<String, String> nameMap = mapRealNames(Collections.singletonList(k.getOwnName()));
+        k.setOwnRealName(nameMap.getOrDefault(k.getOwnName(), k.getOwnName()));
+    }
+
+    /** 批量回填评论人真实姓名 */
+    private void fillDiscussRealName(List<Discuss> list) {
+        if (list == null || list.isEmpty()) return;
+        Map<String, String> nameMap = mapRealNames(
+            list.stream().map(Discuss::getOwnName).collect(Collectors.toList())
+        );
+        for (Discuss d : list) {
+            d.setOwnRealName(nameMap.getOrDefault(d.getOwnName(), d.getOwnName()));
+        }
+    }
+
+    /** 按 userName 集合批量查 tb_user.real_name，返回 userName→realName（realName 为空的不会进入，由调用方兜底 ownName） */
+    private Map<String, String> mapRealNames(Collection<String> userNames) {
+        if (userNames == null) return Collections.emptyMap();
+        List<String> names = userNames.stream()
+            .filter(Objects::nonNull)
+            .filter(n -> !n.isEmpty())
+            .distinct()
+            .collect(Collectors.toList());
+        if (names.isEmpty()) return Collections.emptyMap();
+        List<User> users = userMapper.selectList(
+            new LambdaQueryWrapper<User>().in(User::getUserName, names)
+        );
+        Map<String, String> result = new HashMap<>();
+        for (User u : users) {
+            if (u.getRealName() != null && !u.getRealName().isEmpty()) {
+                result.put(u.getUserName(), u.getRealName());
+            }
+        }
+        return result;
     }
 }
