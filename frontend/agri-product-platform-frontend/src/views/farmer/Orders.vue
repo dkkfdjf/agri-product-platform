@@ -57,6 +57,11 @@
                 发货
               </el-button>
             </div>
+            <div class="action-buttons" v-if="order.statusText === '待收货'">
+              <el-button type="success" size="small" @click="confirmReceipt(order)">
+                确认收货
+              </el-button>
+            </div>
             <div class="action-buttons" v-if="order.statusText === '待付款'">
               <el-button type="danger" size="small" plain @click="cancelOrder(order)">
                 取消订单
@@ -152,6 +157,23 @@ const shipOrder = async (order) => {
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('发货失败')
+    }
+  }
+}
+
+// 确认收货
+const confirmReceipt = async (order) => {
+  try {
+    await ElMessageBox.confirm(`确认订单"${order.id || order.purchaseId}"已收货？`, '提示', {
+      type: 'info'
+    })
+    // 调用收货API，将状态从 3(待收货) 改为 4(已完成)
+    await updateOrderStatus(order.id || order.purchaseId, { status: 4 })
+    ElMessage.success('确认收货成功')
+    await loadOrders()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('确认收货失败')
     }
   }
 }
