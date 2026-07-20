@@ -5,6 +5,29 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { getUserInfo } from '@/api/user'
+
+const router = useRouter()
+const userStore = useUserStore()
+
+// 应用启动时验证 token 有效性
+onMounted(async () => {
+  const token = localStorage.getItem('token')
+
+  if (token) {
+    try {
+      // 验证 token 是否有效
+      await getUserInfo()
+    } catch (error) {
+      // token 无效，清除登录状态
+      console.log('Token 已失效，清除登录状态')
+      userStore.logout()
+    }
+  }
+})
 </script>
 
 <style>

@@ -14,14 +14,34 @@ export function getAddressList() {
 }
 
 /**
+ * 获取默认地址
+ */
+export function getDefaultAddress() {
+  return request({
+    url: '/address/default',
+    method: 'get'
+  })
+}
+
+/**
  * 添加地址
  * @param {Object} data - 地址信息
  */
 export function addAddress(data) {
+  // 转换前端数据格式到后端格式
+  const backendData = {
+    consignee: data.realName,
+    phone: data.phone,
+    province: data.province,
+    city: data.city,
+    area: data.area,
+    addressDetail: data.detail,
+    isDefault: data.isDefault ? 1 : 0
+  }
   return request({
     url: '/address',
     method: 'post',
-    data
+    data: backendData
   })
 }
 
@@ -31,10 +51,20 @@ export function addAddress(data) {
  * @param {Object} data - 地址信息
  */
 export function updateAddress(id, data) {
+  // 转换前端数据格式到后端格式
+  const backendData = {
+    consignee: data.realName,
+    phone: data.phone,
+    province: data.province,
+    city: data.city,
+    area: data.area,
+    addressDetail: data.detail,
+    isDefault: data.isDefault ? 1 : 0
+  }
   return request({
     url: `/address/${id}`,
     method: 'put',
-    data
+    data: backendData
   })
 }
 

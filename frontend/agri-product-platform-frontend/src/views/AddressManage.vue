@@ -1,7 +1,9 @@
 <template>
   <div class="address-container">
-    <div class="header">
+    <div class="page-header">
+      <el-button @click="goBack" :icon="ArrowLeft" class="back-btn">返回</el-button>
       <h2>地址管理</h2>
+      <div class="header-spacer"></div>
       <el-button type="primary" @click="showAddDialog">
         <el-icon><Plus /></el-icon>
         添加新地址
@@ -9,23 +11,23 @@
     </div>
 
     <div class="address-list" v-if="addresses.length > 0">
-      <el-card v-for="address in addresses" :key="address.addressId" class="address-card">
+      <el-card v-for="address in addresses" :key="address.id" class="address-card">
         <div class="address-content">
           <div class="address-info">
             <div class="name-phone">
-              <span class="name">{{ address.realName }}</span>
+              <span class="name">{{ address.consignee }}</span>
               <span class="phone">{{ address.phone }}</span>
-              <el-tag v-if="address.isDefault" type="success" size="small">默认</el-tag>
+              <el-tag v-if="address.isDefault === 1" type="success" size="small">默认</el-tag>
             </div>
             <div class="detail">
-              {{ address.province }} {{ address.city }} {{ address.area }} {{ address.detail }}
+              {{ address.province }} {{ address.city }} {{ address.area }} {{ address.addressDetail }}
             </div>
           </div>
           <div class="address-actions">
             <el-button link type="primary" @click="editAddress(address)">编辑</el-button>
             <el-button link type="danger" @click="deleteAddress(address)">删除</el-button>
             <el-button
-              v-if="!address.isDefault"
+              v-if="address.isDefault !== 1"
               link
               type="warning"
               @click="setDefault(address)"
@@ -57,10 +59,11 @@
           <el-cascader
             v-model="region"
             :options="regionOptions"
-            :props="{ expandTrigger: 'hover' }"
+            :props="{ expandTrigger: 'hover', value: 'label', label: 'label' }"
             placeholder="请选择省/市/区"
             @change="handleRegionChange"
             style="width: 100%"
+            clearable
           />
         </el-form-item>
         <el-form-item label="详细地址" prop="detail">
@@ -87,7 +90,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, ArrowLeft } from '@element-plus/icons-vue'
 import {
   getAddressList,
   addAddress,
@@ -95,6 +98,7 @@ import {
   deleteAddress as deleteAddr,
   setDefaultAddress
 } from '@/api/address'
+import { regionData } from 'element-china-area-data'
 
 const addresses = ref([])
 const dialogVisible = ref(false)
@@ -139,148 +143,8 @@ const rules = {
   detail: [{ required: true, message: '请输入详细地址', trigger: 'blur' }]
 }
 
-// 中国省市区数据（简化版）
-const regionOptions = [
-  {
-    value: '北京市',
-    label: '北京市',
-    children: [
-      {
-        value: '北京市',
-        label: '北京市',
-        children: [
-          { value: '东城区', label: '东城区' },
-          { value: '西城区', label: '西城区' },
-          { value: '朝阳区', label: '朝阳区' },
-          { value: '海淀区', label: '海淀区' },
-          { value: '丰台区', label: '丰台区' },
-          { value: '石景山区', label: '石景山区' },
-          { value: '通州区', label: '通州区' },
-          { value: '顺义区', label: '顺义区' },
-          { value: '大兴区', label: '大兴区' },
-          { value: '昌平区', label: '昌平区' }
-        ]
-      }
-    ]
-  },
-  {
-    value: '上海市',
-    label: '上海市',
-    children: [
-      {
-        value: '上海市',
-        label: '上海市',
-        children: [
-          { value: '黄浦区', label: '黄浦区' },
-          { value: '徐汇区', label: '徐汇区' },
-          { value: '长宁区', label: '长宁区' },
-          { value: '静安区', label: '静安区' },
-          { value: '浦东新区', label: '浦东新区' },
-          { value: '普陀区', label: '普陀区' },
-          { value: '虹口区', label: '虹口区' },
-          { value: '杨浦区', label: '杨浦区' },
-          { value: '闵行区', label: '闵行区' },
-          { value: '宝山区', label: '宝山区' }
-        ]
-      }
-    ]
-  },
-  {
-    value: '广东省',
-    label: '广东省',
-    children: [
-      {
-        value: '广州市',
-        label: '广州市',
-        children: [
-          { value: '荔湾区', label: '荔湾区' },
-          { value: '越秀区', label: '越秀区' },
-          { value: '海珠区', label: '海珠区' },
-          { value: '天河区', label: '天河区' },
-          { value: '白云区', label: '白云区' },
-          { value: '番禺区', label: '番禺区' }
-        ]
-      },
-      {
-        value: '深圳市',
-        label: '深圳市',
-        children: [
-          { value: '罗湖区', label: '罗湖区' },
-          { value: '福田区', label: '福田区' },
-          { value: '南山区', label: '南山区' },
-          { value: '宝安区', label: '宝安区' },
-          { value: '龙岗区', label: '龙岗区' },
-          { value: '龙华区', label: '龙华区' }
-        ]
-      }
-    ]
-  },
-  {
-    value: '浙江省',
-    label: '浙江省',
-    children: [
-      {
-        value: '杭州市',
-        label: '杭州市',
-        children: [
-          { value: '上城区', label: '上城区' },
-          { value: '拱墅区', label: '拱墅区' },
-          { value: '西湖区', label: '西湖区' },
-          { value: '滨江区', label: '滨江区' },
-          { value: '萧山区', label: '萧山区' },
-          { value: '余杭区', label: '余杭区' }
-        ]
-      }
-    ]
-  },
-  {
-    value: '江苏省',
-    label: '江苏省',
-    children: [
-      {
-        value: '南京市',
-        label: '南京市',
-        children: [
-          { value: '玄武区', label: '玄武区' },
-          { value: '秦淮区', label: '秦淮区' },
-          { value: '建邺区', label: '建邺区' },
-          { value: '鼓楼区', label: '鼓楼区' },
-          { value: '浦口区', label: '浦口区' },
-          { value: '栖霞区', label: '栖霞区' }
-        ]
-      },
-      {
-        value: '苏州市',
-        label: '苏州市',
-        children: [
-          { value: '虎丘区', label: '虎丘区' },
-          { value: '吴中区', label: '吴中区' },
-          { value: '相城区', label: '相城区' },
-          { value: '姑苏区', label: '姑苏区' },
-          { value: '吴江区', label: '吴江区' }
-        ]
-      }
-    ]
-  },
-  {
-    value: '四川省',
-    label: '四川省',
-    children: [
-      {
-        value: '成都市',
-        label: '成都市',
-        children: [
-          { value: '锦江区', label: '锦江区' },
-          { value: '青羊区', label: '青羊区' },
-          { value: '金牛区', label: '金牛区' },
-          { value: '武侯区', label: '武侯区' },
-          { value: '成华区', label: '成华区' },
-          { value: '龙泉驿区', label: '龙泉驿区' }
-        ]
-      }
-    ]
-  }
-]
+// 中国省市区数据（完整版）
+const regionOptions = regionData
 
 onMounted(() => {
   loadAddresses()
@@ -313,13 +177,13 @@ const showAddDialog = () => {
 const editAddress = (address) => {
   editingAddress.value = address
   Object.assign(form, {
-    realName: address.realName,
+    realName: address.consignee,
     phone: address.phone,
     province: address.province,
     city: address.city,
     area: address.area,
-    detail: address.detail,
-    isDefault: address.isDefault
+    detail: address.addressDetail,
+    isDefault: address.isDefault === 1
   })
   region.value = [address.province, address.city, address.area]
   dialogVisible.value = true
@@ -338,7 +202,7 @@ const save = async () => {
     await formRef.value.validate()
     saving.value = true
     if (editingAddress.value) {
-      await updateAddress(editingAddress.value.addressId, form)
+      await updateAddress(editingAddress.value.id, form)
       ElMessage.success('更新成功')
     } else {
       await addAddress(form)
@@ -362,7 +226,7 @@ const deleteAddress = async (address) => {
       confirmButtonText: '确定',
       cancelButtonText: '取消'
     })
-    await deleteAddr(address.addressId)
+    await deleteAddr(address.id)
     ElMessage.success('删除成功')
     await loadAddresses()
   } catch (error) {
@@ -374,12 +238,16 @@ const deleteAddress = async (address) => {
 
 const setDefault = async (address) => {
   try {
-    await setDefaultAddress(address.addressId)
+    await setDefaultAddress(address.id)
     ElMessage.success('设置成功')
     await loadAddresses()
   } catch (error) {
     ElMessage.error('设置失败')
   }
+}
+
+const goBack = () => {
+  router.back()
 }
 </script>
 
@@ -388,6 +256,26 @@ const setDefault = async (address) => {
   max-width: 800px;
   margin: 20px auto;
   padding: 0 20px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.page-header h2 {
+  margin: 0;
+  color: #303133;
+}
+
+.header-spacer {
+  flex: 1;
+}
+
+.back-btn {
+  flex-shrink: 0;
 }
 
 .header {

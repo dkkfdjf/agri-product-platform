@@ -3,6 +3,8 @@
  */
 
 import axios from 'axios'
+import { useUserStore } from '@/stores/user'
+import router from '@/router'
 
 // 创建axios实例
 const request = axios.create({
@@ -40,6 +42,22 @@ request.interceptors.response.use(
   },
   error => {
     console.error('响应错误:', error)
+
+    // 处理 401 未授权错误
+    if (error.response && error.response.status === 401) {
+      // 清除登录状态
+      const userStore = useUserStore()
+      userStore.logout()
+
+      // 如果当前不在登录页，跳转到登录页
+      if (router.currentRoute.value.path !== '/login') {
+        router.push({
+          path: '/login',
+          query: { redirect: router.currentRoute.value.fullPath }
+        })
+      }
+    }
+
     return Promise.reject(error)
   }
 )

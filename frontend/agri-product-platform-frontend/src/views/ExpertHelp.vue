@@ -2,8 +2,11 @@
   <div class="expert-help-page">
     <!-- 页面标题区 -->
     <div class="page-header">
-      <h1 class="page-title">专家助力</h1>
-      <p class="page-subtitle">农业专家在线，为您答疑解惑</p>
+      <el-button @click="goBack" :icon="ArrowLeft" class="back-btn">返回</el-button>
+      <div class="title-section">
+        <h1 class="page-title">专家助力</h1>
+        <p class="page-subtitle">农业专家在线，为您答疑解惑</p>
+      </div>
     </div>
 
     <!-- 内容区 -->

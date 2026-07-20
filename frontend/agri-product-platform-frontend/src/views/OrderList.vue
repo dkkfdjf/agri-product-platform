@@ -1,23 +1,26 @@
 <template>
   <div class="order-list-container">
-    <h2>我的订单</h2>
+    <div class="page-header">
+      <el-button @click="goBack" :icon="ArrowLeft" class="back-btn">返回</el-button>
+      <h2>我的订单</h2>
+    </div>
 
     <el-tabs v-model="activeTab" @tab-change="loadData">
-      <el-tab-pane label="求购中" name="demand">
-        <template #label>
-          <span class="tab-label">
-            <el-icon><ShoppingCart /></el-icon>
-            求购中
-            <el-badge v-if="demandCount > 0" :value="demandCount" type="primary" />
-          </span>
-        </template>
-      </el-tab-pane>
       <el-tab-pane label="订单中" name="order">
         <template #label>
           <span class="tab-label">
             <el-icon><Box /></el-icon>
             订单中
             <el-badge v-if="orderCount > 0" :value="orderCount" type="success" />
+          </span>
+        </template>
+      </el-tab-pane>
+      <el-tab-pane label="求购中" name="demand">
+        <template #label>
+          <span class="tab-label">
+            <el-icon><ShoppingCart /></el-icon>
+            求购中
+            <el-badge v-if="demandCount > 0" :value="demandCount" type="primary" />
           </span>
         </template>
       </el-tab-pane>
@@ -94,7 +97,12 @@
             </div>
           </div>
           <div class="card-footer">
-            <el-button size="small" @click="viewOrderDetail(order.purchaseId)">查看详细</el-button>
+            <!-- 只有已付款订单才能查看详情 -->
+            <el-button
+              v-if="order.purchaseStatus > 1"
+              size="small"
+              @click="viewOrderDetail(order.purchaseId)"
+            >查看详细</el-button>
             <el-button
               v-if="order.purchaseStatus === 1"
               size="small"
@@ -223,7 +231,7 @@ import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ShoppingCart, Box, Loading } from '@element-plus/icons-vue'
+import { ShoppingCart, Box, Loading, ArrowLeft } from '@element-plus/icons-vue'
 import { getOrders, cancelOrder as cancelOrderApi } from '@/api/order'
 import { payOrder, queryPay } from '@/api/alipay'
 import QRCode from 'qrcode'
@@ -237,7 +245,8 @@ const userStore = useUserStore()
 // 本地图片列表
 const localImages = LOCAL_PRODUCT_IMAGES
 
-const activeTab = ref('demand')
+// 默认显示订单中（已付款的订单）
+const activeTab = ref('order')
 const demands = ref([])
 const orders = ref([])
 const demandCount = ref(0)
@@ -279,6 +288,10 @@ const pagination = reactive({
 })
 
 onMounted(() => {
+  // 同时加载两个标签页的数量数据（用于徽章显示）
+  loadDemandCount()
+  loadOrderCount()
+  // 加载当前激活标签页的详细数据
   loadData()
 })
 
@@ -300,30 +313,53 @@ const loadData = async () => {
   }
 }
 
+// 仅加载求购数量（用于徽章显示）
+const loadDemandCount = async () => {
+  try {
+    const res = await getMyProducts({
+      page: 1,
+      pageSize: 1,  // 只需要获取总数
+      type: 'demand'
+    })
+    demandCount.value = res.data?.total || 0
+  } catch (error) {
+    console.error('加载求购数量失败:', error)
+  }
+}
+
+// 仅加载订单数量（用于徽章显示）
+const loadOrderCount = async () => {
+  try {
+    const res = await getOrders({
+      page: 1,
+      pageSize: 1  // 只需要获取总数
+    })
+    orderCount.value = res.data?.total || 0
+  } catch (error) {
+    console.error('加载订单数量失败:', error)
+  }
+}
+
 const loadDemands = async () => {
   loading.demand = true
   try {
     console.log('开始加载求购列表...')
     const res = await getMyProducts({
       page: pagination.page,
-      pageSize: pagination.pageSize
+      pageSize: pagination.pageSize,
+      type: 'demand'  // 只获取求购类型
     })
     console.log('求购API响应:', res)
 
-    // 过滤出求购类型
-    const allProducts = res.data?.records || []
-    console.log('所有产品:', allProducts)
-    console.log('筛选前数量:', allProducts.length)
-    console.log('第一个产品数据:', allProducts[0])
-
-    demands.value = allProducts.filter(p => p.type === 'demand')
-    console.log('筛选后的求购:', demands.value)
-    if (demands.value.length > 0) {
-      console.log('第一个求购数据:', JSON.stringify(demands.value[0], null, 2))
-    }
-
-    demandCount.value = demands.value.length
+    // 后端已按类型过滤，直接使用返回的数据
+    demands.value = res.data?.records || []
     pagination.total = res.data?.total || 0
+
+    // 使用后端返回的总数（仅求购类型的总数）
+    demandCount.value = pagination.total
+
+    console.log('求购数据:', demands.value)
+    console.log('求购总数:', demandCount.value)
   } catch (error) {
     console.error('加载求购列表失败:', error)
     ElMessage.error('加载求购列表失败')
@@ -342,11 +378,14 @@ const loadOrders = async () => {
     })
     console.log('订单API响应:', res)
 
-    orders.value = res.data || []
-    console.log('订单数据:', orders.value)
+    // 后端返回 OrderPageResponse { records, total, page, pageSize }
+    orders.value = res.data?.records || []
+    pagination.total = res.data?.total || 0
 
-    orderCount.value = orders.value.length
-    pagination.total = orders.value.length
+    // 订单数量显示总数量（所有订单，不限状态）
+    orderCount.value = pagination.total
+    console.log('订单数据:', orders.value)
+    console.log('订单总数:', orderCount.value)
   } catch (error) {
     console.error('加载订单列表失败:', error)
     ElMessage.error('加载订单列表失败')
@@ -476,8 +515,18 @@ const goToPublish = () => {
   }
 }
 
-// 订单操作
+// 订单操作 - 只有已付款订单才能查看详情
 const viewOrderDetail = (purchaseId) => {
+  // 先在当前列表中找到该订单检查状态
+  const order = orders.value.find(o => o.purchaseId === purchaseId)
+  if (!order) return
+
+  // 只有已付款的订单才能查看详情（状态>1：待发货、待收货、已完成）
+  if (order.purchaseStatus <= 1) {
+    ElMessage.warning('请先完成支付后再查看订单详情')
+    return
+  }
+
   router.push(`/order/${purchaseId}`)
 }
 
@@ -577,6 +626,10 @@ const handleQrDialogClose = () => {
 const goToMarket = () => {
   router.push('/market')
 }
+
+const goBack = () => {
+  router.back()
+}
 </script>
 
 <style scoped>
@@ -584,6 +637,21 @@ const goToMarket = () => {
   max-width: 1000px;
   margin: 20px auto;
   padding: 0 20px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.page-header h2 {
+  margin: 0;
+}
+
+.back-btn {
+  flex-shrink: 0;
 }
 
 .order-list-container h2 {
