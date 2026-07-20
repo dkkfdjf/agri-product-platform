@@ -51,7 +51,7 @@ const routes = [
       {
         path: 'orders',
         name: 'FarmerOrders',
-        component: () => import('@/views/OrderList.vue')
+        component: () => import('@/views/farmer/Orders.vue')
       },
       {
         path: 'finance',
