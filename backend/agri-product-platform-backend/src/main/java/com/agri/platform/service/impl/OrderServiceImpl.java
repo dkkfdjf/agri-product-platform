@@ -2,21 +2,27 @@ package com.agri.platform.service.impl;
 
 import com.agri.platform.dto.OrderRequest;
 import com.agri.platform.dto.OrderResponse;
+import com.agri.platform.dto.OrderPageResponse;
 import com.agri.platform.entity.*;
 import com.agri.platform.mapper.*;
 import com.agri.platform.service.OrderService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class OrderServiceImpl implements OrderService {
 
@@ -31,6 +37,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private ProductMapper productMapper;
+
+    @Autowired
+    private UserMapper userMapper;
 
     // 订单状态文本映射
     private static final Map<Integer, String> STATUS_TEXT_MAP = Map.of(
@@ -127,6 +136,74 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("无权限查看此订单");
         }
         return purchase;
+    }
+
+    @Override
+    public OrderResponse getOrderDetailWithDetails(Integer purchaseId, String userName) {
+        Purchase purchase = purchaseMapper.selectById(purchaseId);
+        if (purchase == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        if (!purchase.getOwnName().equals(userName)) {
+            throw new RuntimeException("无权限查看此订单");
+        }
+
+        // 获取订单详情
+        LambdaQueryWrapper<PurchaseDetail> detailWrapper = new LambdaQueryWrapper<>();
+        detailWrapper.eq(PurchaseDetail::getPurchaseId, purchaseId);
+        List<PurchaseDetail> details = detailMapper.selectList(detailWrapper);
+
+        // 获取商品信息
+        List<Integer> productIds = details.stream()
+                .map(PurchaseDetail::getOrderId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<Integer, Product> productMap = new HashMap<>();
+        if (!productIds.isEmpty()) {
+            LambdaQueryWrapper<Product> productWrapper = new LambdaQueryWrapper<>();
+            productWrapper.in(Product::getOrderId, productIds);
+            List<Product> products = productMapper.selectList(productWrapper);
+            productMap = products.stream()
+                    .collect(Collectors.toMap(Product::getOrderId, p -> p));
+        }
+
+        // 构建响应
+        OrderResponse response = new OrderResponse();
+        response.setPurchaseId(purchase.getPurchaseId());
+        response.setOwnName(purchase.getOwnName());
+        response.setTotalPrice(purchase.getTotalPrice());
+        response.setAddress(purchase.getAddress());
+        response.setPurchaseStatus(purchase.getPurchaseStatus());
+        response.setStatusText(STATUS_TEXT_MAP.getOrDefault(purchase.getPurchaseStatus(), "未知"));
+        response.setPurchaseType(purchase.getPurchaseType());
+        response.setCreateTime(purchase.getCreateTime());
+        response.setUpdateTime(purchase.getUpdateTime());
+
+        // 添加商品详情
+        List<OrderResponse.OrderItemResponse> items = new ArrayList<>();
+        for (PurchaseDetail detail : details) {
+            OrderResponse.OrderItemResponse item = new OrderResponse.OrderItemResponse();
+            Product product = productMap.get(detail.getOrderId());
+            if (product != null) {
+                item.setProductId(product.getOrderId());
+                item.setProductName(product.getTitle());
+                item.setProductPic(product.getPicPath());
+                item.setPrice(detail.getUninPrice());
+                item.setCount(detail.getCount());
+                item.setTotalPrice(detail.getSumPrice());
+            } else {
+                // 即使商品不存在，也添加基本详情
+                item.setPrice(detail.getUninPrice());
+                item.setCount(detail.getCount());
+                item.setTotalPrice(detail.getSumPrice());
+                item.setProductName("商品已下架");
+            }
+            items.add(item);
+        }
+        response.setItems(items);
+
+        return response;
     }
 
     @Override
@@ -243,5 +320,221 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return responses;
+    }
+
+    @Override
+    public OrderPageResponse getOrderListWithDetailsPaged(String userName, int page, int pageSize) {
+        // 获取订单列表
+        Page<Purchase> pageParam = new Page<>(page, pageSize);
+        LambdaQueryWrapper<Purchase> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Purchase::getOwnName, userName);
+
+        // 排序：按状态优先级（订单中优先：2待发货、3待收货 > 1待付款 > 4已完成 > 5已取消）
+        // 然后按创建时间倒序
+        wrapper.orderByAsc(Purchase::getPurchaseStatus)
+               .orderByDesc(Purchase::getCreateTime);
+
+        Page<Purchase> purchasePage = purchaseMapper.selectPage(pageParam, wrapper);
+
+        // 获取所有订单ID
+        List<Integer> purchaseIds = purchasePage.getRecords().stream()
+                .map(Purchase::getPurchaseId)
+                .collect(Collectors.toList());
+
+        if (purchaseIds.isEmpty()) {
+            return new OrderPageResponse(new ArrayList<>(), 0L, page, pageSize);
+        }
+
+        // 获取订单详情
+        LambdaQueryWrapper<PurchaseDetail> detailWrapper = new LambdaQueryWrapper<>();
+        detailWrapper.in(PurchaseDetail::getPurchaseId, purchaseIds);
+        List<PurchaseDetail> details = detailMapper.selectList(detailWrapper);
+
+        // 获取商品信息
+        List<Integer> productIds = details.stream()
+                .map(PurchaseDetail::getOrderId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        LambdaQueryWrapper<Product> productWrapper = new LambdaQueryWrapper<>();
+        productWrapper.in(Product::getOrderId, productIds);
+        List<Product> products = productMapper.selectList(productWrapper);
+
+        Map<Integer, Product> productMap = products.stream()
+                .collect(Collectors.toMap(Product::getOrderId, p -> p));
+
+        // 按订单ID分组详情
+        Map<Integer, List<PurchaseDetail>> detailMap = details.stream()
+                .collect(Collectors.groupingBy(PurchaseDetail::getPurchaseId));
+
+        // 构建响应
+        List<OrderResponse> responses = new ArrayList<>();
+        for (Purchase purchase : purchasePage.getRecords()) {
+            OrderResponse response = new OrderResponse();
+            response.setPurchaseId(purchase.getPurchaseId());
+            response.setOwnName(purchase.getOwnName());
+            response.setTotalPrice(purchase.getTotalPrice());
+            response.setAddress(purchase.getAddress());
+            response.setPurchaseStatus(purchase.getPurchaseStatus());
+            response.setStatusText(STATUS_TEXT_MAP.getOrDefault(purchase.getPurchaseStatus(), "未知"));
+            response.setPurchaseType(purchase.getPurchaseType());
+            response.setCreateTime(purchase.getCreateTime());
+            response.setUpdateTime(purchase.getUpdateTime());
+
+            // 添加商品详情
+            List<PurchaseDetail> orderDetails = detailMap.getOrDefault(purchase.getPurchaseId(), new ArrayList<>());
+            List<OrderResponse.OrderItemResponse> items = new ArrayList<>();
+            for (PurchaseDetail detail : orderDetails) {
+                OrderResponse.OrderItemResponse item = new OrderResponse.OrderItemResponse();
+                Product product = productMap.get(detail.getOrderId());
+                if (product != null) {
+                    item.setProductId(product.getOrderId());
+                    item.setProductName(product.getTitle());
+                    item.setProductPic(product.getPicPath());
+                    item.setPrice(detail.getUninPrice());
+                    item.setCount(detail.getCount());
+                    item.setTotalPrice(detail.getSumPrice());
+                }
+                items.add(item);
+            }
+            response.setItems(items);
+            responses.add(response);
+        }
+
+        return new OrderPageResponse(responses, purchasePage.getTotal(), page, pageSize);
+    }
+
+    @Override
+    public OrderPageResponse getReceivedOrdersPaged(String userName, int page, int pageSize) {
+        log.info("获取农户订单列表 - 用户名: {}, 页码: {}, 每页: {}", userName, page, pageSize);
+
+        // 获取用户信息（包括真实姓名）
+        User user = userMapper.selectById(userName);
+        if (user == null) {
+            log.warn("用户 {} 不存在", userName);
+            return new OrderPageResponse(new ArrayList<>(), 0L, page, pageSize);
+        }
+
+        // 查找该农户发布的所有商品（同时匹配用户名和真实姓名）
+        LambdaQueryWrapper<Product> productWrapper = new LambdaQueryWrapper<>();
+        productWrapper.and(wrapper -> wrapper
+                .eq(Product::getOwnName, userName)
+                .or()
+                .eq(Product::getOwnName, user.getRealName())
+        );
+        List<Product> farmerProducts = productMapper.selectList(productWrapper);
+
+        log.info("农户 {} (真实姓名: {}) 发布的商品数量: {}", userName, user.getRealName(), farmerProducts.size());
+
+        if (farmerProducts.isEmpty()) {
+            log.warn("农户 {} 没有发布任何商品", userName);
+            return new OrderPageResponse(new ArrayList<>(), 0L, page, pageSize);
+        }
+
+        // 获取商品ID列表
+        List<Integer> productIds = farmerProducts.stream()
+                .map(Product::getOrderId)
+                .collect(Collectors.toList());
+
+        // 找到购买这些商品的订单详情
+        LambdaQueryWrapper<PurchaseDetail> detailWrapper = new LambdaQueryWrapper<>();
+        detailWrapper.in(PurchaseDetail::getOrderId, productIds);
+        List<PurchaseDetail> details = detailMapper.selectList(detailWrapper);
+
+        log.info("商品ID列表: {}, 找到的订单详情数量: {}", productIds, details.size());
+
+        if (details.isEmpty()) {
+            log.warn("没有找到购买这些商品的订单详情");
+            return new OrderPageResponse(new ArrayList<>(), 0L, page, pageSize);
+        }
+
+        // 获取唯一的订单ID
+        List<Integer> purchaseIds = details.stream()
+                .map(PurchaseDetail::getPurchaseId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 分页查询订单
+        Page<Purchase> pageParam = new Page<>(page, pageSize);
+        LambdaQueryWrapper<Purchase> purchaseWrapper = new LambdaQueryWrapper<>();
+        purchaseWrapper.in(Purchase::getPurchaseId, purchaseIds);
+
+        // 排序：按状态优先级（订单中优先：2待发货、3待收货 > 1待付款 > 4已完成 > 5已取消）
+        // 然后按创建时间倒序
+        purchaseWrapper.orderByAsc(Purchase::getPurchaseStatus)
+                      .orderByDesc(Purchase::getCreateTime);
+
+        Page<Purchase> purchasePage = purchaseMapper.selectPage(pageParam, purchaseWrapper);
+
+        if (purchasePage.getRecords().isEmpty()) {
+            return new OrderPageResponse(new ArrayList<>(), purchasePage.getTotal(), page, pageSize);
+        }
+
+        // 获取当前页订单的详情
+        List<Integer> currentPagePurchaseIds = purchasePage.getRecords().stream()
+                .map(Purchase::getPurchaseId)
+                .collect(Collectors.toList());
+
+        LambdaQueryWrapper<PurchaseDetail> currentPageDetailWrapper = new LambdaQueryWrapper<>();
+        currentPageDetailWrapper.in(PurchaseDetail::getPurchaseId, currentPagePurchaseIds);
+        List<PurchaseDetail> currentPageDetails = detailMapper.selectList(currentPageDetailWrapper);
+
+        // 获取商品信息
+        List<Integer> currentPageProductIds = currentPageDetails.stream()
+                .map(PurchaseDetail::getOrderId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        LambdaQueryWrapper<Product> currentPageProductWrapper = new LambdaQueryWrapper<>();
+        currentPageProductWrapper.in(Product::getOrderId, currentPageProductIds);
+        List<Product> currentPageProducts = productMapper.selectList(currentPageProductWrapper);
+
+        Map<Integer, Product> productMap = currentPageProducts.stream()
+                .collect(Collectors.toMap(Product::getOrderId, p -> p));
+
+        // 按订单ID分组详情
+        Map<Integer, List<PurchaseDetail>> detailMap = currentPageDetails.stream()
+                .collect(Collectors.groupingBy(PurchaseDetail::getPurchaseId));
+
+        // 构建响应 - 只包含该农户的商品
+        List<OrderResponse> responses = new ArrayList<>();
+        for (Purchase purchase : purchasePage.getRecords()) {
+            OrderResponse response = new OrderResponse();
+            response.setPurchaseId(purchase.getPurchaseId());
+            response.setOwnName(purchase.getOwnName());
+            response.setTotalPrice(purchase.getTotalPrice());
+            response.setAddress(purchase.getAddress());
+            response.setPurchaseStatus(purchase.getPurchaseStatus());
+            response.setStatusText(STATUS_TEXT_MAP.getOrDefault(purchase.getPurchaseStatus(), "未知"));
+            response.setPurchaseType(purchase.getPurchaseType());
+            response.setCreateTime(purchase.getCreateTime());
+            response.setUpdateTime(purchase.getUpdateTime());
+
+            // 只添加该农户的商品详情
+            List<PurchaseDetail> orderDetails = detailMap.getOrDefault(purchase.getPurchaseId(), new ArrayList<>());
+            List<OrderResponse.OrderItemResponse> items = new ArrayList<>();
+            for (PurchaseDetail detail : orderDetails) {
+                Product product = productMap.get(detail.getOrderId());
+                // 只添加属于该农户的商品（同时匹配用户名和真实姓名）
+                if (product != null && (product.getOwnName().equals(userName) || product.getOwnName().equals(user.getRealName()))) {
+                    OrderResponse.OrderItemResponse item = new OrderResponse.OrderItemResponse();
+                    item.setProductId(product.getOrderId());
+                    item.setProductName(product.getTitle());
+                    item.setProductPic(product.getPicPath());
+                    item.setPrice(detail.getUninPrice());
+                    item.setCount(detail.getCount());
+                    item.setTotalPrice(detail.getSumPrice());
+                    items.add(item);
+                }
+            }
+            // 只有当订单中包含该农户的商品时才添加到响应
+            if (!items.isEmpty()) {
+                response.setItems(items);
+                responses.add(response);
+            }
+        }
+
+        log.info("最终返回的订单数量: {}, 总数: {}", responses.size(), purchasePage.getTotal());
+        return new OrderPageResponse(responses, purchasePage.getTotal(), page, pageSize);
     }
 }

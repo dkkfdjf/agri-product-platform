@@ -101,7 +101,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Page<Product> getUserProducts(String userName, int page, int pageSize) {
+    public Page<Product> getUserProducts(String userName, int page, int pageSize, String type) {
         // 获取用户真实姓名进行查询
         User user = userMapper.selectById(userName);
         String userRealName = user != null && user.getRealName() != null ? user.getRealName() : userName;
@@ -109,6 +109,10 @@ public class ProductServiceImpl implements ProductService {
         Page<Product> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Product::getOwnName, userRealName);
+        // 按类型过滤
+        if (type != null && !type.isEmpty()) {
+            wrapper.eq(Product::getType, type);
+        }
         wrapper.orderByDesc(Product::getCreateTime);
         return productMapper.selectPage(pageParam, wrapper);
     }

@@ -34,6 +34,13 @@ public class AddressController {
         return Result.success(addressService.getAddressList(userName));
     }
 
+    @GetMapping("/default")
+    public Result<Address> getDefault(@RequestHeader("Authorization") String token) {
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        Address defaultAddress = addressService.getDefaultAddress(userName);
+        return Result.success(defaultAddress);
+    }
+
     @PutMapping("/{id}")
     public Result<String> update(@PathVariable Integer id,
                                   @RequestHeader("Authorization") String token,
@@ -49,5 +56,13 @@ public class AddressController {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
         addressService.deleteAddress(id, userName);
         return Result.success("删除成功");
+    }
+
+    @PutMapping("/{id}/default")
+    public Result<String> setDefault(@PathVariable Integer id,
+                                      @RequestHeader("Authorization") String token) {
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        addressService.setDefaultAddress(id, userName);
+        return Result.success("设置成功");
     }
 }

@@ -64,9 +64,10 @@ public class ProductController {
     @GetMapping("/user")
     public Result<Page<Product>> myProducts(@RequestHeader("Authorization") String token,
                                             @RequestParam(defaultValue = "1") int page,
-                                            @RequestParam(defaultValue = "10") int pageSize) {
+                                            @RequestParam(defaultValue = "10") int pageSize,
+                                            @RequestParam(required = false) String type) {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
-        return Result.success(productService.getUserProducts(userName, page, pageSize));
+        return Result.success(productService.getUserProducts(userName, page, pageSize, type));
     }
 
     /**
