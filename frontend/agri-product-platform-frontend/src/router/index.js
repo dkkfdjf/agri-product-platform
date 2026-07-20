@@ -59,6 +59,11 @@ const routes = [
         component: () => import('@/views/farmer/Finance.vue')
       },
       {
+        path: 'my-finance',
+        name: 'FarmerMyFinance',
+        component: () => import('@/views/MyFinance.vue')
+      },
+      {
         path: 'expert',
         name: 'FarmerExpert',
         component: () => import('@/views/common/ExpertWorkspace.vue')
@@ -269,15 +274,7 @@ const routes = [
   },
   {
     path: '/finance/my',
-    name: 'MyFinance',
-    component: () => import('@/views/MyFinance.vue'),
-    meta: { requiresAuth: true, roles: ['farmer'] }
-  },
-  {
-    path: '/finance/bank',
-    name: 'BankFinance',
-    component: () => import('@/views/BankFinance.vue'),
-    meta: { requiresAuth: true, roles: ['bank'] }
+    redirect: '/farmer/my-finance'
   },
   {
     path: '/expert-help',

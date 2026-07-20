@@ -20,19 +20,14 @@ const bankMenuItems = [
     icon: 'DocumentChecked'
   },
   {
-    path: '/bank/matching',
-    title: '智能匹配',
-    icon: 'Connection'
-  },
-  {
-    path: '/finance/bank',
-    title: '融资管理',
-    icon: 'Money'
-  },
-  {
     path: '/bank/products',
     title: '融资产品',
     icon: 'Coin'
+  },
+  {
+    path: '/bank/matching',
+    title: '智能匹配',
+    icon: 'Connection'
   }
 ]
 </script>

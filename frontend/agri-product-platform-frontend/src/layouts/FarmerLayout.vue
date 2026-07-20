@@ -30,7 +30,7 @@ const farmerMenuItems = [
     icon: 'Coin'
   },
   {
-    path: '/finance/my',
+    path: '/farmer/my-finance',
     title: '我的融资',
     icon: 'Wallet'
   },
