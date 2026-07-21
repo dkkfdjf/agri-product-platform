@@ -23,7 +23,12 @@
           <div v-for="product in products" :key="product.productId" class="product-card">
             <div class="product-top">
               <div class="product-bank">{{ product.bankName }}</div>
-              <el-tag type="success" effect="plain" size="small">年利率 {{ product.rate }}%</el-tag>
+              <div class="product-top-tags">
+                <el-tag :type="product.status === 1 ? 'info' : 'success'" effect="plain" size="small">
+                  {{ product.status === 1 ? '已暂停' : '在售' }}
+                </el-tag>
+                <el-tag type="warning" effect="plain" size="small">年利率 {{ product.rate }}%</el-tag>
+              </div>
             </div>
             <div class="product-introduce">{{ product.introduce }}</div>
             <div class="product-terms">
@@ -42,7 +47,20 @@
             </div>
             <div class="product-actions">
               <el-button type="primary" link size="small" @click="openEdit(product)">编辑</el-button>
-              <el-button type="danger" link size="small" @click="removeProduct(product)">删除</el-button>
+              <el-button
+                v-if="product.status !== 1"
+                type="warning"
+                link
+                size="small"
+                @click="toggleStatus(product, 1)"
+              >暂停供应</el-button>
+              <el-button
+                v-else
+                type="success"
+                link
+                size="small"
+                @click="toggleStatus(product, 0)"
+              >恢复供应</el-button>
             </div>
           </div>
         </div>
@@ -67,9 +85,17 @@
 
     <!-- 发布 / 编辑 对话框 -->
     <el-dialog v-model="dialogVisible" :title="editingId ? '编辑融资产品' : '发布融资产品'" width="560px" @close="resetForm">
+      <el-alert
+        v-if="editingId"
+        type="warning"
+        :closable="false"
+        show-icon
+        title="核心条款（名称 / 额度 / 利率 / 期限）发布后不可修改，仅可调整产品介绍与联系电话。如需调整条款，请暂停后重新发布。"
+        style="margin-bottom: 16px"
+      />
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="银行名称" prop="bankName">
-          <el-input v-model="form.bankName" placeholder="如：青岛银行 / 惠农贷" maxlength="100" show-word-limit />
+          <el-input v-model="form.bankName" placeholder="如：青岛银行 / 惠农贷" maxlength="100" show-word-limit :disabled="!!editingId" />
         </el-form-item>
         <el-form-item label="产品介绍" prop="introduce">
           <el-input
@@ -85,15 +111,15 @@
           <el-input v-model="form.bankPhone" placeholder="客服电话，如 95599" maxlength="20" />
         </el-form-item>
         <el-form-item label="可贷额度" prop="money">
-          <el-input-number v-model="form.money" :min="1" :step="10000" :precision="2" style="width: 100%" />
+          <el-input-number v-model="form.money" :min="1" :step="10000" :precision="2" style="width: 100%" :disabled="!!editingId" />
           <span class="unit-text">元</span>
         </el-form-item>
         <el-form-item label="年利率" prop="rate">
-          <el-input-number v-model="form.rate" :min="0" :max="36" :step="0.1" :precision="2" style="width: 100%" />
+          <el-input-number v-model="form.rate" :min="0" :max="36" :step="0.1" :precision="2" style="width: 100%" :disabled="!!editingId" />
           <span class="unit-text">%</span>
         </el-form-item>
         <el-form-item label="还款期限" prop="repayment">
-          <el-input-number v-model="form.repayment" :min="1" :max="120" :step="1" style="width: 100%" />
+          <el-input-number v-model="form.repayment" :min="1" :max="120" :step="1" style="width: 100%" :disabled="!!editingId" />
           <span class="unit-text">个月</span>
         </el-form-item>
       </el-form>
@@ -111,7 +137,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { getFinanceProducts, publishFinanceProduct, updateBankProduct, deleteBankProduct } from '@/api/finance'
+import { getBankProducts, publishFinanceProduct, updateBankProduct, setBankProductStatus } from '@/api/finance'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -153,7 +179,7 @@ onMounted(() => {
 const loadProducts = async () => {
   loading.value = true
   try {
-    const res = await getFinanceProducts({ page: pagination.page, pageSize: pagination.pageSize })
+    const res = await getBankProducts({ page: pagination.page, pageSize: pagination.pageSize })
     products.value = res.data?.records || []
     pagination.total = res.data?.total || 0
   } catch (error) {
@@ -200,18 +226,22 @@ const submitForm = async () => {
     if (!valid) return
     submitting.value = true
     try {
-      const payload = {
-        bankName: form.bankName,
-        introduce: form.introduce,
-        bankPhone: form.bankPhone,
-        money: form.money,
-        rate: form.rate,
-        repayment: form.repayment
-      }
       if (editingId.value) {
-        await updateBankProduct(editingId.value, payload)
+        // 编辑模式：核心条款已锁定，仅提交可修改的介绍与联系电话
+        await updateBankProduct(editingId.value, {
+          introduce: form.introduce,
+          bankPhone: form.bankPhone
+        })
         ElMessage.success('产品已更新')
       } else {
+        const payload = {
+          bankName: form.bankName,
+          introduce: form.introduce,
+          bankPhone: form.bankPhone,
+          money: form.money,
+          rate: form.rate,
+          repayment: form.repayment
+        }
         await publishFinanceProduct(payload)
         ElMessage.success('产品发布成功')
       }
@@ -225,23 +255,22 @@ const submitForm = async () => {
   })
 }
 
-const removeProduct = async (product) => {
+const toggleStatus = async (product, status) => {
+  const action = status === 1 ? '暂停供应' : '恢复供应'
   try {
     await ElMessageBox.confirm(
-      `确认删除产品「${product.bankName}」？删除后农户将无法再申请该产品。`,
-      '删除确认',
-      { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' }
+      `确认${action}产品「${product.bankName}」？` + (status === 1
+        ? '暂停后农户将无法再申请该产品，但已有申请仍保留在审批列表中。'
+        : '恢复后农户可重新申请该产品。'),
+      `${action}确认`,
+      { type: 'warning', confirmButtonText: `确认${action}`, cancelButtonText: '取消' }
     )
-    await deleteBankProduct(product.productId)
-    ElMessage.success('产品已删除')
-    // 删除后若当前页空了，回到上一页
-    if (products.value.length === 1 && pagination.page > 1) {
-      pagination.page--
-    }
+    await setBankProductStatus(product.productId, status)
+    ElMessage.success(`已${action}`)
     await loadProducts()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error(error?.message || '删除失败')
+      ElMessage.error(error?.message || '操作失败')
     }
   }
 }
@@ -327,6 +356,12 @@ const formatNumber = (num) => {
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-2, 8px);
+}
+.product-top-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 .product-bank {
   font-size: var(--font-size-lg, 20px);

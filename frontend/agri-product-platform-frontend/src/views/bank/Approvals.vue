@@ -62,6 +62,21 @@
             <el-option label="已通过" :value="1" />
             <el-option label="已拒绝" :value="2" />
           </el-select>
+          <el-select
+            v-model="filter.productId"
+            placeholder="全部融资产品"
+            clearable
+            filterable
+            style="width: 200px"
+            @change="onFilterChange"
+          >
+            <el-option
+              v-for="p in financeProducts"
+              :key="p.productId"
+              :label="`${p.bankName}${p.status === 1 ? '（已暂停）' : ''}`"
+              :value="p.productId"
+            />
+          </el-select>
           <el-input
             v-model="filter.keyword"
             placeholder="搜索姓名 / 手机号"
@@ -231,11 +246,12 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Clock, Select, Close, Money } from '@element-plus/icons-vue'
-import { getBankApplications, getBankStats, approveFinanceApplication } from '@/api/finance'
+import { getBankApplications, getBankStats, approveFinanceApplication, getBankProducts } from '@/api/finance'
 
 const loading = ref(false)
 const approving = ref(false)
 const applications = ref([])
+const financeProducts = ref([])
 const current = ref(null)
 
 const approveDialogVisible = ref(false)
@@ -243,6 +259,7 @@ const detailVisible = ref(false)
 
 const filter = reactive({
   status: undefined,
+  productId: undefined,
   keyword: '',
   dateRange: null
 })
@@ -268,7 +285,18 @@ const approveForm = reactive({
 onMounted(() => {
   loadApplications()
   loadStats()
+  loadFinanceProducts()
 })
+
+const loadFinanceProducts = async () => {
+  try {
+    // 拉取本行全部融资产品（含已暂停），供审批按产品筛选（含已暂停产品的历史申请）
+    const res = await getBankProducts({ page: 1, pageSize: 200 })
+    financeProducts.value = res.data?.records || []
+  } catch (error) {
+    console.error('加载融资产品失败:', error)
+  }
+}
 
 const loadApplications = async () => {
   loading.value = true
@@ -279,6 +307,9 @@ const loadApplications = async () => {
     }
     if (filter.status !== undefined && filter.status !== null && filter.status !== '') {
       params.status = filter.status
+    }
+    if (filter.productId !== undefined && filter.productId !== null && filter.productId !== '') {
+      params.productId = filter.productId
     }
     if (filter.keyword && filter.keyword.trim()) {
       params.keyword = filter.keyword.trim()
@@ -318,6 +349,7 @@ const onFilterChange = () => {
 
 const resetFilter = () => {
   filter.status = undefined
+  filter.productId = undefined
   filter.keyword = ''
   filter.dateRange = null
   pagination.page = 1

@@ -77,11 +77,13 @@ export function getMyApplications() {
 
 /**
  * 联系人列表（供联合贷款人等场景选择，已排除自己；仅农户/买家/专家）
+ * @param {Object} params - 可选 { role: 'farmer' } 限定角色
  */
-export function getContacts() {
+export function getContacts(params) {
   return request({
     url: '/user/contacts',
-    method: 'get'
+    method: 'get',
+    params
   })
 }
 

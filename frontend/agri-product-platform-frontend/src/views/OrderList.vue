@@ -271,6 +271,9 @@ const qrImgSrc = ref('')
 const payOrderInfo = ref(null)
 const payPolling = ref(false)
 let payTimer = null
+// 单次查询在途标记：防止轮询 tick 叠加；成功已通知标记：防止重复弹「支付成功」
+let payQuerying = false
+let payDone = false
 
 const loading = reactive({
   demand: false,
@@ -592,21 +595,30 @@ const payOrderNow = async (order) => {
   }
 }
 
-// 轮询支付结果，每 2.5s 查一次，查到已支付即关闭弹窗并刷新订单
+// 轮询支付结果，每 2.5s 查一次，查到已支付即关闭弹窗并刷新订单。
+// 加单次查询在途(payQuerying)与成功已通知(payDone)两道闸，避免网络抖动时多 tick 叠加、
+// 或手动按钮与轮询并发，导致「支付成功」弹窗多次。
 const startPayPolling = (purchaseId) => {
   stopPayPolling()
   payPolling.value = true
+  payDone = false
+  payQuerying = false
   const tick = async () => {
+    if (payDone || payQuerying) return
+    payQuerying = true
     try {
       const res = await queryPay(purchaseId)
-      if (res?.data?.paid) {
+      if (res?.data?.paid && !payDone) {
+        payDone = true
         ElMessage.success('支付成功')
         stopPayPolling()
         payQrVisible.value = false
         await loadOrders()
       }
     } catch (e) {
-      // 单次查询失败先忽略，下一轮继续
+      // 单次查询失败先忽略，下一轮继续（订单归属/网络等瞬时异常）
+    } finally {
+      payQuerying = false
     }
   }
   payTimer = setInterval(tick, 2500)
@@ -614,18 +626,25 @@ const startPayPolling = (purchaseId) => {
 
 const stopPayPolling = () => {
   payPolling.value = false
+  payQuerying = false
   if (payTimer) {
     clearInterval(payTimer)
     payTimer = null
   }
 }
 
-// 手动触发查询（弹窗里「我已支付」按钮）
+// 手动触发查询（弹窗里「我已支付」按钮）；已成功则不再重复弹窗
 const refreshPayStatus = async (purchaseId) => {
-  if (!purchaseId) return
+  if (!purchaseId || payDone) return
+  if (payQuerying) {
+    ElMessage.info('正在查询，请稍候')
+    return
+  }
+  payQuerying = true
   try {
     const res = await queryPay(purchaseId)
     if (res?.data?.paid) {
+      payDone = true
       ElMessage.success('支付成功')
       stopPayPolling()
       payQrVisible.value = false
@@ -634,7 +653,9 @@ const refreshPayStatus = async (purchaseId) => {
       ElMessage.warning('暂未检测到支付，请完成扫码后重试')
     }
   } catch (e) {
-    ElMessage.error(e.message || '查询失败')
+    ElMessage.error(e?.response?.data?.message || e?.message || '查询失败，请稍后重试')
+  } finally {
+    payQuerying = false
   }
 }
 

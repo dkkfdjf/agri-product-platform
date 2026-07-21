@@ -12,6 +12,7 @@
         <el-radio-button :value="0">待处理</el-radio-button>
         <el-radio-button :value="1">已完成</el-radio-button>
         <el-radio-button :value="2">已拒绝</el-radio-button>
+        <el-radio-button :value="3">已过期</el-radio-button>
       </el-radio-group>
     </div>
 
@@ -315,13 +316,13 @@ const loadReservations = async () => {
 
 // 获取状态类型
 const getStatusType = (status) => {
-  const types = { 0: 'warning', 1: 'success', 2: 'danger' }
+  const types = { 0: 'warning', 1: 'success', 2: 'danger', 3: 'info' }
   return types[status] || 'info'
 }
 
 // 获取状态文本
 const getStatusText = (status) => {
-  const texts = { 0: '待处理', 1: '已完成', 2: '已拒绝' }
+  const texts = { 0: '待处理', 1: '已完成', 2: '已拒绝', 3: '已过期' }
   return texts[status] || '未知'
 }
 

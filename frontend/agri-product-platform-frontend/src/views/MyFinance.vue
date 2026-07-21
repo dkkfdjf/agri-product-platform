@@ -12,6 +12,32 @@
       </el-button>
     </div>
 
+    <!-- 我收到的联合贷款邀请：作为被邀请人同意/拒绝 -->
+    <div v-if="receivedInvitations.length" class="content-card invitation-card">
+      <div class="card-header">
+        <h3 class="card-title">我收到的联合贷款邀请</h3>
+      </div>
+      <div class="invitation-list">
+        <div v-for="inv in receivedInvitations" :key="inv.id" class="invitation-item">
+          <div class="invitation-main">
+            <div class="invitation-top">
+              <span class="cp-name">{{ inv.applicantRealName || inv.applicantUserName }}</span>
+              <el-tag :type="inviteStatusType(inv.status)" size="small">{{ inviteStatusText(inv.status) }}</el-tag>
+            </div>
+            <div class="invitation-meta">
+              <span>产品：{{ inv.productName || '—' }}</span>
+              <span>金额：¥ {{ formatNumber(inv.amount) }}</span>
+              <span>时间：{{ formatTime(inv.createTime) }}</span>
+            </div>
+          </div>
+          <div v-if="inv.status === 0" class="invitation-actions">
+            <el-button type="primary" size="small" :loading="inviting" @click="onAcceptInvitation(inv)">同意</el-button>
+            <el-button type="danger" plain size="small" :loading="inviting" @click="onDeclineInvitation(inv)">拒绝</el-button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 统计卡片 -->
     <div class="stats-grid">
       <div class="stat-card warning">
@@ -147,8 +173,91 @@
         <el-descriptions-item label="申请时间" :span="2">{{ formatTime(currentDetail.createTime) }}</el-descriptions-item>
         <el-descriptions-item v-if="currentDetail.remark" label="审批备注" :span="2">{{ currentDetail.remark }}</el-descriptions-item>
       </el-descriptions>
+
+      <!-- 还款计划：仅已通过融资展示，逐期可还款 -->
+      <div v-if="currentDetail.status === 1" class="repayment-section">
+        <h4 class="repayment-title">还款计划（等额本息）</h4>
+        <el-table :data="currentRepayments" stripe size="small" style="width: 100%">
+          <el-table-column label="期数" width="70" align="center">
+            <template #default="{ row }">第 {{ row.periodIndex }} 期</template>
+          </el-table-column>
+          <el-table-column label="到期日" width="120">
+            <template #default="{ row }">{{ row.dueDate || '—' }}</template>
+          </el-table-column>
+          <el-table-column label="本金" width="110" align="right">
+            <template #default="{ row }">¥ {{ formatNumber(row.principal) }}</template>
+          </el-table-column>
+          <el-table-column label="利息" width="100" align="right">
+            <template #default="{ row }">¥ {{ formatNumber(row.interest) }}</template>
+          </el-table-column>
+          <el-table-column label="本期合计" width="120" align="right">
+            <template #default="{ row }">¥ {{ formatNumber(row.totalAmount) }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag :type="repayStatusType(row)" size="small">{{ repayStatusText(row) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="140" align="center">
+            <template #default="{ row }">
+              <template v-if="row.status === 0 || row.status === 3">
+                <el-button type="primary" link size="small" @click="openRepayDialog(row)">
+                  {{ row.status === 3 ? '重新还款' : '还款' }}
+                </el-button>
+                <div v-if="row.status === 3 && row.rejectReason" class="repay-reject" :title="row.rejectReason">
+                  驳回：{{ row.rejectReason }}
+                </div>
+              </template>
+              <span v-else-if="row.status === 2" class="repay-pending">审核中</span>
+              <span v-else class="repay-done">{{ formatTime(row.paidTime) }}</span>
+            </template>
+          </el-table-column>
+          <template #empty>
+            <el-empty description="暂无还款计划" :image-size="60" />
+          </template>
+        </el-table>
+      </div>
       <template #footer>
         <el-button @click="detailVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 还款提交对话框：填流水号 + 上传凭证 → 提交后进入「待确认」，等银行核验 -->
+    <el-dialog v-model="repayDialogVisible" :title="`还款 · 第 ${repayForm.periodIndex} 期`" width="460px">
+      <el-form label-width="84px">
+        <el-form-item label="应还金额">
+          <span class="repay-amount">¥ {{ formatNumber(repayForm.totalAmount) }}</span>
+        </el-form-item>
+        <el-form-item label="流水号/备注">
+          <el-input
+            v-model="repayForm.transactionNo"
+            placeholder="如银行转账流水号 / 支付单号"
+            maxlength="64"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="还款凭证">
+          <el-upload
+            action="/api/upload"
+            :on-success="onProofUploaded"
+            :on-remove="onProofRemoved"
+            :before-upload="beforeProofUpload"
+            :file-list="repayFileList"
+            list-type="picture"
+            accept="image/*"
+            :limit="1"
+            :on-exceed="onProofExceed"
+          >
+            <el-button type="primary" link>上传凭证图片</el-button>
+            <template #tip>
+              <div class="repay-tip">转账截图 / 回单，供银行核验（可选）</div>
+            </template>
+          </el-upload>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="repayDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="repaying" @click="doSubmitRepayment">提交还款</el-button>
       </template>
     </el-dialog>
   </div>
@@ -156,15 +265,42 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Clock, Select, Close, Document } from '@element-plus/icons-vue'
-import { getMyFinanceApplications, getFinanceProducts, getFinanceJointInvitations } from '@/api/finance'
+import {
+  getMyFinanceApplications,
+  getFinanceProducts,
+  getFinanceJointInvitations,
+  getFinanceRepayments,
+  submitRepayment,
+  getMyJointInvitations,
+  acceptJointInvitation,
+  declineJointInvitation
+} from '@/api/finance'
 
 const loading = ref(false)
 const detailVisible = ref(false)
 const currentDetail = ref(null)
 // 当前详情对应的联合贷款人邀请（按 slot 排序），用于展示各联合人确认状态
 const currentInvitations = ref([])
+// 当前详情对应的还款计划（仅 status==1 已通过融资有），含动态逾期判定
+const currentRepayments = ref([])
+const repaying = ref(false)
+
+// 还款提交对话框：填流水号 + 上传凭证（status 0未还/3已驳回 可提交）
+const repayDialogVisible = ref(false)
+const repayForm = reactive({
+  id: null,
+  periodIndex: null,
+  totalAmount: 0,
+  transactionNo: '',
+  payProof: ''
+})
+const repayFileList = ref([])
+
+// 我收到的联合贷款邀请（作为被邀请人，本页为农户，需同意/拒绝）
+const receivedInvitations = ref([])
+const inviting = ref(false)
 
 // 个人申请数量通常较少，一次性拉取后在前端做统计/筛选/分页
 const allList = ref([])
@@ -197,7 +333,50 @@ const pagedList = computed(() => {
 onMounted(() => {
   loadApplications()
   loadProducts()
+  loadReceivedInvitations()
 })
+
+// 拉取我收到的联合贷款邀请（同意/拒绝后刷新）
+const loadReceivedInvitations = async () => {
+  try {
+    const res = await getMyJointInvitations()
+    receivedInvitations.value = res.data || []
+  } catch (e) {
+    // 忽略
+  }
+}
+
+const onAcceptInvitation = async (inv) => {
+  try {
+    await ElMessageBox.confirm(
+      `确认作为 ${inv.applicantRealName || inv.applicantUserName} 的联合贷款人？同意后您的姓名/电话/身份证号将绑定到该融资申请。`,
+      '同意邀请',
+      { type: 'warning' }
+    )
+    inviting.value = true
+    await acceptJointInvitation(inv.id)
+    ElMessage.success('已同意')
+    await loadReceivedInvitations()
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error(e?.response?.data?.message || e?.message || '操作失败')
+  } finally {
+    inviting.value = false
+  }
+}
+
+const onDeclineInvitation = async (inv) => {
+  try {
+    await ElMessageBox.confirm('确定要拒绝该联合贷款邀请吗？', '拒绝邀请', { type: 'warning' })
+    inviting.value = true
+    await declineJointInvitation(inv.id)
+    ElMessage.success('已拒绝')
+    await loadReceivedInvitations()
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error(e?.response?.data?.message || e?.message || '操作失败')
+  } finally {
+    inviting.value = false
+  }
+}
 
 // 拉取融资产品列表，建立 productId -> 产品 映射，便于前端补全产品名称
 const loadProducts = async () => {
@@ -258,6 +437,7 @@ const resetFilter = () => {
 const viewDetail = async (row) => {
   currentDetail.value = row
   currentInvitations.value = []
+  currentRepayments.value = []
   detailVisible.value = true
   // 拉取该申请下的联合贷款人邀请，展示各联合人确认状态（待确认/已同意/已拒绝）
   try {
@@ -266,6 +446,88 @@ const viewDetail = async (row) => {
   } catch (e) {
     // 忽略：老申请可能没有邀请记录
   }
+  // 已通过融资：拉取等额本息还款计划，展示各期到期日/本金/利息/总额/状态
+  if (row.status === 1) {
+    try {
+      const res = await getFinanceRepayments(row.financeId)
+      currentRepayments.value = res.data || []
+    } catch (e) {
+      // 忽略：早期通过但未生成计划的记录
+    }
+  }
+}
+
+// 打开还款对话框（status 0未还 / 3已驳回 可提交）
+const openRepayDialog = (rp) => {
+  repayForm.id = rp.id
+  repayForm.periodIndex = rp.periodIndex
+  repayForm.totalAmount = rp.totalAmount
+  // 重新提交(3)时清空上次凭证；首次还款(0)自然为空
+  repayForm.transactionNo = ''
+  repayForm.payProof = ''
+  repayFileList.value = []
+  repayDialogVisible.value = true
+}
+
+// 凭证上传成功：/upload 返回 { url, filename }
+const onProofUploaded = (res, file) => {
+  if (res && res.data && res.data.url) {
+    repayForm.payProof = res.data.url
+    repayFileList.value = [{ name: file.name, url: res.data.url }]
+  }
+}
+const onProofRemoved = () => {
+  repayForm.payProof = ''
+  repayFileList.value = []
+}
+const onProofExceed = () => {
+  ElMessage.warning('凭证最多上传 1 张，请先删除再重新上传')
+}
+const beforeProofUpload = (file) => {
+  const isImg = file.type.startsWith('image/')
+  const under5M = file.size / 1024 / 1024 < 5
+  if (!isImg) {
+    ElMessage.error('凭证仅支持图片')
+    return false
+  }
+  if (!under5M) {
+    ElMessage.error('图片不能超过 5MB')
+    return false
+  }
+  return true
+}
+
+// 提交还款：填流水号 + 凭证 → 进入「待确认」，等待银行核验
+const doSubmitRepayment = async () => {
+  repaying.value = true
+  try {
+    await submitRepayment(repayForm.id, {
+      transactionNo: repayForm.transactionNo.trim(),
+      payProof: repayForm.payProof
+    })
+    ElMessage.success('还款已提交，等待银行确认')
+    repayDialogVisible.value = false
+    const res = await getFinanceRepayments(currentDetail.value.financeId)
+    currentRepayments.value = res.data || []
+  } catch (e) {
+    ElMessage.error(e?.message || '提交还款失败')
+  } finally {
+    repaying.value = false
+  }
+}
+
+// 还款状态文案/类型：0未还(逾期则危险)、1已还(成功)、2待确认(主色)、3已驳回(危险)
+const repayStatusType = (rp) => {
+  if (rp.status === 1) return 'success'
+  if (rp.status === 2) return 'primary'
+  if (rp.status === 3) return 'danger'
+  return rp.overdue ? 'danger' : 'warning'
+}
+const repayStatusText = (rp) => {
+  if (rp.status === 1) return '已还款'
+  if (rp.status === 2) return '待确认'
+  if (rp.status === 3) return '已驳回'
+  return rp.overdue ? '已逾期' : '待还款'
 }
 
 // 是否含联合贷款人信息（任一字段非空即认为填写了）
@@ -414,6 +676,84 @@ const formatTime = (t) => {
 .cp-label {
   color: var(--color-text-tertiary, #6b7280);
   margin-right: 4px;
+}
+.repayment-section {
+  margin-top: var(--spacing-5, 20px);
+}
+.repayment-title {
+  font-size: var(--font-size-base, 16px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary, #1f2923);
+  margin: 0 0 var(--spacing-3, 12px);
+}
+.repay-done {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-tertiary, #6b7280);
+}
+.repay-pending {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-primary, #2d5a3d);
+}
+.repay-reject {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--color-error, #b85c38);
+  line-height: 1.3;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.repay-amount {
+  font-size: var(--font-size-lg, 20px);
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-bank, #2d5a3d);
+}
+.repay-tip {
+  font-size: 12px;
+  color: var(--color-text-tertiary, #6b7280);
+  line-height: 1.4;
+}
+
+/* 我收到的联合贷款邀请 */
+.invitation-card .invitation-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3, 12px);
+  padding: var(--spacing-4, 16px);
+}
+.invitation-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3, 12px);
+  padding: var(--spacing-3, 12px) var(--spacing-4, 16px);
+  border: 1px solid var(--color-border, #e5e0d8);
+  border-radius: var(--radius-base, 8px);
+  background: var(--color-bg-secondary, #faf8f4);
+  flex-wrap: wrap;
+}
+.invitation-top {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2, 8px);
+  margin-bottom: 6px;
+}
+.cp-name {
+  font-size: var(--font-size-base, 16px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary, #1f2923);
+}
+.invitation-meta {
+  display: flex;
+  gap: var(--spacing-4, 16px);
+  flex-wrap: wrap;
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #4a5249);
+}
+.invitation-actions {
+  display: flex;
+  gap: var(--spacing-2, 8px);
 }
 .table-wrapper {
   padding: var(--spacing-4, 16px);

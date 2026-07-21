@@ -14,6 +14,7 @@
  *  银行工作台（需登录）：
  *  - GET  /finance/bank/applications       全状态申请列表（筛选）
  *  - GET  /finance/bank/stats              数据概览聚合统计
+ *  - GET  /finance/bank/match              智能匹配（真实申请，按金额/期限/作物）
  *  - PUT  /finance/bank/product/{id}       更新产品（role=bank）
  *  - DELETE /finance/bank/product/{id}     删除产品（role=bank）
  */
@@ -151,9 +152,34 @@ export function getBankStats() {
 }
 
 /**
- * 银行工作台 - 更新融资产品
+ * 银行工作台 - 智能匹配（基于真实融资申请 tb_finance，status=申请中）
+ * 与 getFinanceIntentionMatch（融资意向表，无数据来源）不同，此处返回真实申请。
+ * @param {Object} params - { minMoney, maxMoney, repayment, keyword, page, pageSize }（金额单位：元）
+ */
+export function getBankMatch(params) {
+  return request({
+    url: '/finance/bank/match',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 银行工作台 - 本行全部融资产品（含已暂停），供产品管理页展示
+ * @param {Object} params - { page, pageSize }
+ */
+export function getBankProducts(params) {
+  return request({
+    url: '/finance/bank/product/list',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 银行工作台 - 更新融资产品（核心条款发布后锁定，仅可改介绍与电话）
  * @param {String|Number} productId - 产品ID
- * @param {Object} data - { bankName, introduce, bankPhone, money, rate, repayment }
+ * @param {Object} data - { introduce, bankPhone }
  */
 export function updateBankProduct(productId, data) {
   return request({
@@ -164,13 +190,15 @@ export function updateBankProduct(productId, data) {
 }
 
 /**
- * 银行工作台 - 删除融资产品
+ * 银行工作台 - 切换融资产品上下架状态（0在售 / 1暂停供应）。产品不支持删除。
  * @param {String|Number} productId - 产品ID
+ * @param {Number} status - 0在售 1暂停供应
  */
-export function deleteBankProduct(productId) {
+export function setBankProductStatus(productId, status) {
   return request({
-    url: `/finance/bank/product/${productId}`,
-    method: 'delete'
+    url: `/finance/bank/product/${productId}/status`,
+    method: 'put',
+    params: { status }
   })
 }
 
@@ -216,5 +244,67 @@ export function declineJointInvitation(id) {
   return request({
     url: `/joint-invitation/${id}/decline`,
     method: 'post'
+  })
+}
+
+// ==================== 还款计划 ====================
+
+/**
+ * 某笔融资的还款计划（按期数升序，含逾期动态判定）
+ * @param {String|Number} financeId - 融资申请ID
+ */
+export function getFinanceRepayments(financeId) {
+  return request({
+    url: `/repayment/finance/${financeId}`,
+    method: 'get'
+  })
+}
+
+/**
+ * 农户提交某期还款（填流水号 + 凭证）→ 进入「待确认」
+ * @param {String|Number} repaymentId - 还款记录ID
+ * @param {Object} data - { transactionNo, payProof }
+ */
+export function submitRepayment(repaymentId, data) {
+  return request({
+    url: `/repayment/${repaymentId}/pay`,
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 银行还款审核列表（默认「待确认」队列）
+ * @param {Object} params - { status, page, pageSize }
+ */
+export function getBankRepayments(params) {
+  return request({
+    url: '/repayment/bank/list',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 银行确认还款（置已还，农户信用 +1）
+ * @param {String|Number} repaymentId - 还款记录ID
+ */
+export function confirmRepayment(repaymentId) {
+  return request({
+    url: `/repayment/bank/${repaymentId}/confirm`,
+    method: 'post'
+  })
+}
+
+/**
+ * 银行驳回还款（置已驳回，通知农户重交）
+ * @param {String|Number} repaymentId - 还款记录ID
+ * @param {Object} data - { reason }
+ */
+export function rejectRepayment(repaymentId, data) {
+  return request({
+    url: `/repayment/bank/${repaymentId}/reject`,
+    method: 'post',
+    data
   })
 }

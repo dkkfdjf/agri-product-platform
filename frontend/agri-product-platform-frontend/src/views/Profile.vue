@@ -77,12 +77,12 @@
       </el-col>
     </el-row>
 
-    <el-row :gutter="20" class="menu-row" v-if="isFarmer || isBuyer || isExpert">
+    <el-row :gutter="20" class="menu-row" v-if="isFarmer">
       <el-col :span="12">
-        <el-card class="menu-card" @click="$router.push('/joint-invitations')">
+        <el-card class="menu-card" @click="$router.push('/farmer/my-finance')">
           <div class="menu-item">
             <el-icon :size="32" color="#9c27b0"><Connection /></el-icon>
-            <span>我的联合贷款邀请</span>
+            <span>联合贷款邀请</span>
           </div>
         </el-card>
       </el-col>

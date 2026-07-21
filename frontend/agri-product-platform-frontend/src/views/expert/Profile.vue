@@ -13,6 +13,25 @@
         <div class="card-header"><span>基本信息</span></div>
       </template>
 
+      <div class="avatar-row">
+        <el-avatar :size="84" :src="avatarUrl" class="expert-avatar">
+          {{ avatarFallback }}
+        </el-avatar>
+        <div class="avatar-meta">
+          <el-upload
+            action="/api/upload"
+            :show-file-list="false"
+            accept="image/*"
+            :before-upload="beforeAvatarUpload"
+            :on-success="onAvatarSuccess"
+            :on-error="onAvatarError"
+          >
+            <el-button :loading="uploading" :icon="Camera">修改头像</el-button>
+          </el-upload>
+          <div class="avatar-tip">支持 JPG / PNG，建议正方形，≤5MB</div>
+        </div>
+      </div>
+
       <el-descriptions :column="2" border>
         <el-descriptions-item label="专家用户名">
           {{ expertInfo.userName || '—' }}
@@ -64,6 +83,7 @@
         <el-radio-button :value="0">待处理</el-radio-button>
         <el-radio-button :value="1">已完成</el-radio-button>
         <el-radio-button :value="2">已拒绝</el-radio-button>
+        <el-radio-button :value="3">已过期</el-radio-button>
       </el-radio-group>
 
       <el-table :data="reservations" v-loading="loading" style="margin-top: 16px">
@@ -121,16 +141,28 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Edit, Close } from '@element-plus/icons-vue'
+import { Edit, Close, Camera } from '@element-plus/icons-vue'
 import { getExpertInfo, updateExpertInfo, getExpertReserveList, updateReserveStatus } from '@/api/expert'
+import { updateUserInfo } from '@/api/user'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
 
 const editMode = ref(false)
 const saving = ref(false)
 const loading = ref(false)
+const uploading = ref(false)
 const detailDialogVisible = ref(false)
 const currentReservation = ref(null)
+
+// 头像：来源 tb_user.avatar（由 /user/info 返回）。专家头像复用用户表头像字段，无需新表。
+const avatarUrl = ref(userStore.userInfo?.avatar || '')
+const avatarFallback = computed(() => {
+  const name = expertInfo.value?.realName || userStore.userInfo?.realName || userStore.userInfo?.userName || '专'
+  return name.charAt(0)
+})
 
 const filterStatus = ref(-1)
 const page = ref(1)
@@ -191,6 +223,46 @@ const saveProfile = async () => {
   }
 }
 
+// 头像上传前校验：仅图片、≤5MB
+const beforeAvatarUpload = (file) => {
+  if (!file.type.startsWith('image/')) {
+    ElMessage.error('仅支持上传图片')
+    return false
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.error('图片大小不能超过 5MB')
+    return false
+  }
+  uploading.value = true
+  return true
+}
+
+// 上传成功：把 url 写回 tb_user.avatar，并同步本地与全局 userInfo
+const onAvatarSuccess = async (res) => {
+  uploading.value = false
+  const url = res?.data?.url
+  if (!url) {
+    ElMessage.error('上传失败，未获取到图片地址')
+    return
+  }
+  try {
+    await updateUserInfo({ avatar: url })
+    avatarUrl.value = url
+    // 同步到全局用户信息，使侧边栏/首页头像即时刷新
+    if (userStore.userInfo) {
+      userStore.setUserInfo({ ...userStore.userInfo, avatar: url })
+    }
+    ElMessage.success('头像更新成功')
+  } catch (error) {
+    ElMessage.error(error?.message || '保存头像失败')
+  }
+}
+
+const onAvatarError = () => {
+  uploading.value = false
+  ElMessage.error('头像上传失败，请重试')
+}
+
 const loadReservations = async () => {
   try {
     loading.value = true
@@ -232,12 +304,12 @@ const viewDetail = (row) => {
 }
 
 const getStatusType = (status) => {
-  const map = { 0: 'warning', 1: 'success', 2: 'danger' }
+  const map = { 0: 'warning', 1: 'success', 2: 'danger', 3: 'info' }
   return map[status] || 'info'
 }
 
 const getStatusText = (status) => {
-  const map = { 0: '待处理', 1: '已完成', 2: '已拒绝' }
+  const map = { 0: '待处理', 1: '已完成', 2: '已拒绝', 3: '已过期' }
   return map[status] || '未知'
 }
 </script>
@@ -263,6 +335,33 @@ const getStatusText = (status) => {
 
 .profile-card {
   margin-bottom: 20px;
+}
+
+.avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding: 8px 0;
+}
+
+.expert-avatar {
+  flex-shrink: 0;
+  background: #2d5a3d;
+  color: #fff;
+  font-size: 30px;
+  font-weight: 600;
+}
+
+.avatar-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.avatar-tip {
+  font-size: 12px;
+  color: #909399;
 }
 
 .card-header {

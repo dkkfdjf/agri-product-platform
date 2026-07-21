@@ -65,12 +65,23 @@
               />
             </el-form-item>
 
-            <el-form-item label="地址">
+            <el-form-item label="所在地区">
+              <el-cascader
+                v-model="region"
+                :options="regionOptions"
+                :props="{ expandTrigger: 'hover', value: 'label', label: 'label' }"
+                placeholder="请选择省/市/区"
+                style="width: 100%"
+                clearable
+              />
+            </el-form-item>
+
+            <el-form-item label="详细地址">
               <el-input
-                v-model="userForm.address"
+                v-model="addressDetail"
                 type="textarea"
-                :rows="3"
-                placeholder="请输入地址"
+                :rows="2"
+                placeholder="请输入详细地址（街道、门牌号等）"
               />
             </el-form-item>
 
@@ -136,6 +147,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
+import { regionData } from 'element-china-area-data'
 import { getUserInfo, updateUserInfo, updatePassword } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 
@@ -147,6 +159,13 @@ const saving = ref(false)
 const changingPassword = ref(false)
 const userFormRef = ref()
 const passwordFormRef = ref()
+
+// 省市区三级下拉数据
+const regionOptions = regionData
+// 选中的省/市/区（label 数组）
+const region = ref([])
+// 详细地址（街道门牌等）
+const addressDetail = ref('')
 
 const userForm = reactive({
   userName: '',
@@ -230,16 +249,46 @@ const loadUserInfo = async () => {
     const res = await getUserInfo()
     if (res.data) {
       Object.assign(userForm, res.data)
+      // 把已存的整段地址尽量拆回 省/市/区 + 详细地址，便于三级下拉回显
+      const parsed = parseAddress(userForm.address)
+      region.value = parsed.region
+      addressDetail.value = parsed.detail
     }
   } catch (error) {
     ElMessage.error('加载用户信息失败')
   }
 }
 
+/**
+ * 把整段地址尽量拆成 [省,市,区] + 详细地址。
+ * 匹配不上时 region 为空、detail 取整段，保证旧数据不丢。
+ */
+const parseAddress = (full) => {
+  if (!full || !full.trim()) return { region: [], detail: '' }
+  let rest = full.trim()
+  const picked = []
+  let level = regionOptions
+  for (let depth = 0; depth < 3; depth++) {
+    const hit = level.find(o => rest.startsWith(o.label))
+    if (!hit) break
+    picked.push(hit.label)
+    rest = rest.slice(hit.label.length).trim()
+    level = hit.children || []
+  }
+  return { region: picked, detail: rest }
+}
+
+/** 把 省/市/区 + 详细地址 合成一段存入 userForm.address */
+const composeAddress = () => {
+  const head = (region.value || []).join('')
+  userForm.address = (head + (addressDetail.value || '').trim()).trim()
+}
+
 const saveUserInfo = async () => {
   try {
     await userFormRef.value.validate()
     saving.value = true
+    composeAddress()
     await updateUserInfo(userForm)
     ElMessage.success('保存成功')
     // 更新store中的用户信息

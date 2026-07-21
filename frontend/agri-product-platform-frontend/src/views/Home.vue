@@ -49,17 +49,10 @@
       </div>
     </header>
 
-    <!-- Banner Carousel -->
-    <section v-if="banners.length > 0" class="banner-section">
-      <el-carousel height="400px" :interval="5000" arrow="hover">
-        <el-carousel-item v-for="banner in banners" :key="banner.bannerId">
-          <img :src="banner.picPath" class="banner-image" :alt="banner.title || 'Banner'" />
-        </el-carousel-item>
-      </el-carousel>
-    </section>
-
-    <!-- Hero Section (shown when no banners) -->
-    <section v-else class="hero-section">
+    <!-- Hero Section：首页永久标题/导语区，始终显示。
+         此前 hero 与轮播图用 v-if/v-else 互斥，刷新时 banners 初始为空会先渲染 hero、
+         banners 回来后又被轮播图替换 → 闪现。现改为 hero 常驻，轮播图作为其下方独立区块。 -->
+    <section class="hero-section">
       <div class="hero-bg">
         <div class="hero-pattern"></div>
       </div>
@@ -119,28 +112,15 @@
         </div>
       </div>
 
-      <!-- Trust Indicators -->
-      <div class="trust-bar">
-        <div class="trust-item">
-          <div class="trust-value">10,000+</div>
-          <div class="trust-label">注册农户</div>
-        </div>
-        <div class="trust-divider"></div>
-        <div class="trust-item">
-          <div class="trust-value">¥5亿+</div>
-          <div class="trust-label">融资总额</div>
-        </div>
-        <div class="trust-divider"></div>
-        <div class="trust-item">
-          <div class="trust-value">500+</div>
-          <div class="trust-label">合作专家</div>
-        </div>
-        <div class="trust-divider"></div>
-        <div class="trust-item">
-          <div class="trust-value">98%</div>
-          <div class="trust-label">用户满意度</div>
-        </div>
-      </div>
+    </section>
+
+    <!-- Banner Carousel：有轮播图时作为 hero 下方独立区块显示（与 hero 非互斥） -->
+    <section v-if="banners.length > 0" class="banner-section">
+      <el-carousel height="400px" :interval="5000" arrow="hover">
+        <el-carousel-item v-for="banner in banners" :key="banner.bannerId">
+          <img :src="banner.picPath" class="banner-image" :alt="banner.title || 'Banner'" />
+        </el-carousel-item>
+      </el-carousel>
     </section>
 
     <!-- Products Section -->
@@ -172,7 +152,10 @@
               <p class="product-desc">{{ product.content }}</p>
               <div class="product-footer">
                 <div class="product-price">¥{{ product.price }}</div>
-                <div class="product-seller">{{ product.ownName || '农户' }}</div>
+                <div class="product-seller">
+                  {{ product.ownName || '农户' }}
+                  <span v-if="product.ownPhone" class="home-seller-phone">· {{ product.ownPhone }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -449,7 +432,8 @@ const scrollToSection = (id) => {
   }
 }
 
-// 轮播图数据（来自 API）
+// 轮播图数据（来自 API）；hero 已常驻首页标题区，轮播图仅作为其下方独立区块，
+// 二者不再互斥 → 刷新时无 banners 也不会闪现/替换 hero
 const banners = ref([])
 
 // 精选产品（来自 API）
@@ -538,17 +522,22 @@ const formatDate = (dateStr) => {
 
 // Load data from API
 const loadHomeData = async () => {
+  // hero 已常驻首页标题区，不再有降级页/加载占位；各区块独立 try，互不影响。
+  // 轮播图拉取失败（如后端未启动）仅意味着该区块不显示，hero 标题与页面骨架照常在。
   try {
-    // Load banners
     const bannerRes = await getBanners()
-    console.log('首页轮播图响应:', bannerRes)
     if (bannerRes.code === 200 && bannerRes.data && bannerRes.data.length > 0) {
       banners.value = bannerRes.data
-      console.log('轮播图加载成功，数量:', banners.value.length)
     } else {
-      console.warn('轮播图数据为空或格式不正确')
+      banners.value = []
     }
+  } catch (e) {
+    banners.value = []
+    console.error('轮播图加载失败:', e)
+  }
 
+  // 继续加载其余区块（各自独立 try，互不影响）
+  try {
     // Load products (8 items as per brief)
     const productRes = await getProducts({ page: 1, pageSize: 8, type: 'goods' })
     if (productRes.code === 200 && productRes.data) {
@@ -610,7 +599,7 @@ const loadHomeData = async () => {
       }))
     }
   } catch (error) {
-    console.error('加载首页数据失败:', error)
+    console.error('加载首页部分数据失败:', error)
   }
 }
 
@@ -650,6 +639,7 @@ onMounted(() => {
   image-rendering: crisp-edges;
   image-rendering: high-quality;
 }
+
 
 /* ===== Header ===== */
 .home-header {

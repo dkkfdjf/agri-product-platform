@@ -166,7 +166,7 @@
 
         <el-divider content-position="left">联合贷款人（选填）</el-divider>
         <div class="combination-tip">
-          选择联系人作为联合贷款人，提交后对方会收到邀请通知，<b>对方同意后</b>其姓名/电话/身份证号将自动绑定到本申请。最多 2 人，有助于提升审批通过率。
+          选择<b>农户</b>联系人作为联合贷款人，提交后对方会收到邀请通知，<b>对方同意后</b>其姓名/电话/身份证号将自动绑定到本申请。最多 2 人，有助于提升审批通过率。
         </div>
         <el-form-item label="联合人1">
           <el-select
@@ -297,10 +297,10 @@ const loadApplications = async () => {
   }
 }
 
-// 加载联系人列表（供联合贷款人选择）
+// 加载联系人列表（供联合贷款人选择；联合贷款人只能选农户）
 const loadContacts = async () => {
   try {
-    const res = await getContacts()
+    const res = await getContacts({ role: 'farmer' })
     contactOptions.value = res.data || []
   } catch (e) {
     // 忽略：加载失败只是没有联系人可选

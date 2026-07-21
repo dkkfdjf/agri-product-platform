@@ -85,3 +85,16 @@ export function deleteProduct(id) {
     method: 'delete'
   })
 }
+
+/**
+ * 联系发布方：把当前用户姓名/电话通过站内通知发给商品/求购的发布方
+ * @param {String|Number} id - 商品ID
+ * @param {String} message - 可选留言
+ */
+export function contactSeller(id, message) {
+  return request({
+    url: `/product/${id}/contact`,
+    method: 'post',
+    data: { message: message || '' }
+  })
+}
