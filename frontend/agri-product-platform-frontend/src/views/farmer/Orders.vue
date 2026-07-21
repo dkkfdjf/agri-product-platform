@@ -13,46 +13,56 @@
 
     <!-- 订单列表 -->
     <el-card class="orders-card" v-loading="loading">
-      <div v-for="order in orders" :key="order.orderId || order.id" class="order-item">
+      <div v-for="order in orders" :key="order.id || order.purchaseId" class="order-item">
         <div class="order-header">
-          <span class="order-id">订单号：{{ order.orderId || order.id }}</span>
+          <span class="order-id">订单号：{{ order.id || order.purchaseId }}</span>
           <span class="order-time">{{ formatTime(order.createTime) }}</span>
         </div>
 
-        <div class="order-content">
-          <div class="product-info">
-            <img :src="order.picPath || '/images/default-product.jpg'" class="product-image" />
-            <div class="product-details">
-              <div class="product-name">{{ order.productName || order.name }}</div>
-              <div class="product-meta">
-                <span>数量：{{ order.quantity || 1 }}</span>
-                <span>单价：¥{{ order.price }}</span>
+        <!-- 商品列表（可能包含多个商品） -->
+        <div class="products-section">
+          <div v-for="item in (order.items || [])" :key="item.productId" class="product-item">
+            <div class="product-info">
+              <img :src="item.productPic || '/images/default-product.jpg'" class="product-image" />
+              <div class="product-details">
+                <div class="product-name">{{ item.productName }}</div>
+                <div class="product-meta">
+                  <span>数量：{{ item.count }}</span>
+                  <span>单价：¥{{ item.price }}</span>
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
+        <div class="order-content">
           <div class="order-info">
             <div class="order-total">
               <span class="label">订单总额：</span>
-              <span class="amount">¥{{ order.totalAmount || order.total }}</span>
+              <span class="amount">¥{{ order.totalPrice }}</span>
             </div>
             <div class="order-buyer">
               <span class="label">买家：</span>
-              <span>{{ order.buyerName || order.userName }}</span>
+              <span>{{ order.ownName }}</span>
             </div>
           </div>
 
           <div class="order-actions">
-            <el-tag :type="getStatusType(order.status)" class="status-tag">
-              {{ order.status || order.statusText }}
+            <el-tag :type="getStatusType(order.statusText)" class="status-tag">
+              {{ order.statusText }}
             </el-tag>
 
-            <div class="action-buttons" v-if="order.status === '待发货'">
+            <div class="action-buttons" v-if="order.statusText === '待发货'">
               <el-button type="primary" size="small" @click="shipOrder(order)">
                 发货
               </el-button>
             </div>
-            <div class="action-buttons" v-if="order.status === '待付款'">
+            <div class="action-buttons" v-if="order.statusText === '待收货'">
+              <el-button type="success" size="small" @click="confirmReceipt(order)">
+                确认收货
+              </el-button>
+            </div>
+            <div class="action-buttons" v-if="order.statusText === '待付款'">
               <el-button type="danger" size="small" plain @click="cancelOrder(order)">
                 取消订单
               </el-button>
@@ -81,7 +91,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getOrders, cancelOrder as cancelOrderApi } from '@/api/order'
+import { getReceivedOrders, cancelOrder as cancelOrderApi, updateOrderStatus } from '@/api/order'
 
 const loading = ref(false)
 const orders = ref([])
@@ -94,7 +104,7 @@ const statusFilter = ref('')
 const loadOrders = async () => {
   loading.value = true
   try {
-    const res = await getOrders({
+    const res = await getReceivedOrders({
       page: currentPage.value,
       pageSize: pageSize.value,
       status: statusFilter.value
@@ -137,10 +147,11 @@ const getStatusType = (status) => {
 // 发货
 const shipOrder = async (order) => {
   try {
-    await ElMessageBox.confirm(`确认订单"${order.orderId || order.id}"已发货？`, '提示', {
+    await ElMessageBox.confirm(`确认订单"${order.id || order.purchaseId}"已发货？`, '提示', {
       type: 'info'
     })
-    // TODO: 调用发货API
+    // 调用发货API，将状态从 2(待发货) 改为 3(待收货)
+    await updateOrderStatus(order.id || order.purchaseId, { status: 3 })
     ElMessage.success('发货成功')
     await loadOrders()
   } catch (error) {
@@ -150,13 +161,30 @@ const shipOrder = async (order) => {
   }
 }
 
+// 确认收货
+const confirmReceipt = async (order) => {
+  try {
+    await ElMessageBox.confirm(`确认订单"${order.id || order.purchaseId}"已收货？`, '提示', {
+      type: 'info'
+    })
+    // 调用收货API，将状态从 3(待收货) 改为 4(已完成)
+    await updateOrderStatus(order.id || order.purchaseId, { status: 4 })
+    ElMessage.success('确认收货成功')
+    await loadOrders()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('确认收货失败')
+    }
+  }
+}
+
 // 取消订单
 const cancelOrder = async (order) => {
   try {
-    await ElMessageBox.confirm(`确定要取消订单"${order.orderId || order.id}"吗？`, '提示', {
+    await ElMessageBox.confirm(`确定要取消订单"${order.id || order.purchaseId}"吗？`, '提示', {
       type: 'warning'
     })
-    await cancelOrderApi(order.orderId || order.id)
+    await cancelOrderApi(order.id || order.purchaseId)
     ElMessage.success('订单已取消')
     await loadOrders()
   } catch (error) {
@@ -213,6 +241,18 @@ onMounted(() => {
 
 .order-id {
   font-weight: 500;
+}
+
+.products-section {
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.product-item {
+  display: flex;
+  gap: 15px;
 }
 
 .order-content {
