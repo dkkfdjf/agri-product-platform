@@ -146,23 +146,7 @@
           </el-tab-pane>
           <el-tab-pane label="商品评价" name="reviews">
             <div class="reviews-content">
-              <div class="review-summary">
-                <div class="rating-score">4.8</div>
-                <div class="rating-info">
-                  <div class="rating-stars">★★★★★</div>
-                  <div class="rating-count">共 128 条评价</div>
-                </div>
-              </div>
-              <div class="review-list">
-                <div v-for="i in 3" :key="i" class="review-item">
-                  <div class="review-header">
-                    <span class="reviewer">买家{{ i }}</span>
-                    <span class="review-date">2024-01-{{ 10 + i }}</span>
-                  </div>
-                  <div class="review-rating">★★★★★</div>
-                  <p class="review-text">商品质量很好，包装也很仔细，下次还会再来购买！</p>
-                </div>
-              </div>
+              <el-empty description="暂无评价" />
             </div>
           </el-tab-pane>
         </el-tabs>
@@ -230,11 +214,13 @@ const loadProductDetail = async () => {
 }
 
 const goBack = () => {
-  // 返回市场页面
-  if (userStore.role === 'buyer') {
-    router.push('/buyer/market')
+  // 返回来源页。此前用 router.push 固定跳「市场页」，会与市场页自身的 router.back()
+  // 互相追加历史记录，造成「市场 ↔ 商品详情」来回跳转的死循环。
+  // 改为回退到来源页（pop 当前详情页）；仅当无历史（直接打开/刷新进入）时才兜底跳到角色对应市场。
+  if (window.history.length > 1) {
+    router.back()
   } else {
-    router.push('/market')
+    router.push(userStore.role === 'buyer' ? '/buyer/market' : '/market')
   }
 }
 
@@ -308,18 +294,21 @@ const buyNow = async () => {
     return
   }
 
-  // 先加入购物车
-  try {
-    await addCartItem({
-      orderId: product.value.productId,
-      count: quantity.value
-    })
-    // 跳转到购物车页面
-    router.push('/buyer/cart')
-  } catch (error) {
-    console.error('操作失败:', error)
-    ElMessage.error(error.message || '操作失败')
+  // 立即购买：直接进入结算页走「直接购买」(purchaseType=2)，不再先加入购物车
+  // Checkout.vue 从 route.query.items(JSON) 读取待结算商品，提交时 createOrder({purchaseType:2,...})
+  const item = {
+    orderId: product.value.productId,
+    productId: product.value.productId,
+    title: product.value.title,
+    content: product.value.content,
+    price: product.value.price,
+    count: quantity.value,
+    picPath: product.value.picPath
   }
+  router.push({
+    path: '/buyer/checkout',
+    query: { items: JSON.stringify([item]) }
+  })
 }
 
 const contactSeller = () => {

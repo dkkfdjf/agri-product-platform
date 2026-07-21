@@ -163,6 +163,45 @@
             show-word-limit
           />
         </el-form-item>
+
+        <el-divider content-position="left">联合贷款人（选填）</el-divider>
+        <div class="combination-tip">
+          选择联系人作为联合贷款人，提交后对方会收到邀请通知，<b>对方同意后</b>其姓名/电话/身份证号将自动绑定到本申请。最多 2 人，有助于提升审批通过率。
+        </div>
+        <el-form-item label="联合人1">
+          <el-select
+            v-model="form.jointUserName1"
+            filterable
+            clearable
+            placeholder="选择联系人（姓名 + 电话）"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="c in contactOptions"
+              :key="c.userName"
+              :label="`${c.realName || c.userName}（${c.phone || '无电话'}）`"
+              :value="c.userName"
+              :disabled="c.userName === form.jointUserName2"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="联合人2">
+          <el-select
+            v-model="form.jointUserName2"
+            filterable
+            clearable
+            placeholder="选择联系人（姓名 + 电话）"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="c in contactOptions"
+              :key="c.userName"
+              :label="`${c.realName || c.userName}（${c.phone || '无电话'}）`"
+              :value="c.userName"
+              :disabled="c.userName === form.jointUserName1"
+            />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -179,6 +218,10 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getFinanceProducts, applyFinance, cancelFinance, getMyFinanceApplications } from '@/api/finance'
+import { getContacts } from '@/api/user'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -192,6 +235,9 @@ const dialogVisible = ref(false)
 const formRef = ref(null)
 const editingApplicationId = ref(null)
 
+// 联系人列表（农户/买家/专家，排除自己），用于选择联合贷款人
+const contactOptions = ref([])
+
 // 申请表单：字段与后端 FinanceRequest / tb_finance 对齐
 // amount 为页面输入(万元)，提交时换算为 money(元)
 const form = reactive({
@@ -201,7 +247,10 @@ const form = reactive({
   idNum: '',
   amount: 10,
   purpose: '',
-  repaymentSource: ''
+  repaymentSource: '',
+  // 联合贷款人（选填，最多 2 人）—— 选择联系人(userName)，提交后由后端创建邀请，对方同意后回填资料
+  jointUserName1: '',
+  jointUserName2: ''
 })
 
 const rules = {
@@ -248,14 +297,35 @@ const loadApplications = async () => {
   }
 }
 
+// 加载联系人列表（供联合贷款人选择）
+const loadContacts = async () => {
+  try {
+    const res = await getContacts()
+    contactOptions.value = res.data || []
+  } catch (e) {
+    // 忽略：加载失败只是没有联系人可选
+  }
+}
+
+// 打开表单时用个人资料预填 申请人 姓名/电话/身份证号（仅空值时填，不覆盖已输入）
+const ensureApplicantDefaults = () => {
+  const info = userStore.userInfo
+  if (!info) return
+  if (!form.realName && info.realName) form.realName = info.realName
+  if (!form.phone && info.phone) form.phone = info.phone
+  if (!form.idNum && info.identityNum) form.idNum = info.identityNum
+}
+
 // 显示申请对话框
 const showApplyDialog = () => {
+  ensureApplicantDefaults()
   dialogVisible.value = true
 }
 
 // 针对产品申请
 const applyForProduct = (product) => {
   form.productId = product.productId
+  ensureApplicantDefaults()
   dialogVisible.value = true
 }
 
@@ -269,7 +339,10 @@ const editApplication = (application) => {
     idNum: application.idNum || '',
     amount: application.money ? application.money / 10000 : 10, // 元换算回万元
     purpose: application.purpose || '',
-    repaymentSource: application.repaymentSource || ''
+    repaymentSource: application.repaymentSource || '',
+    // 编辑时不回填联合人（联合人由邀请流程管理，不在表单里直接改）
+    jointUserName1: '',
+    jointUserName2: ''
   })
   dialogVisible.value = true
 }
@@ -291,7 +364,10 @@ const submitApplication = async () => {
         idNum: form.idNum,
         money: form.amount * 10000, // 万元转换为元
         purpose: form.purpose,
-        repaymentSource: form.repaymentSource
+        repaymentSource: form.repaymentSource,
+        // 联合贷款人：传所选联系人 userName，后端创建邀请；combination 资料由对方同意后回填
+        jointUserName1: form.jointUserName1 || null,
+        jointUserName2: form.jointUserName2 || null
       }
 
       if (editingApplicationId.value) {
@@ -375,7 +451,9 @@ const resetForm = () => {
     idNum: '',
     amount: 10,
     purpose: '',
-    repaymentSource: ''
+    repaymentSource: '',
+    jointUserName1: '',
+    jointUserName2: ''
   })
   editingApplicationId.value = null
 }
@@ -383,6 +461,7 @@ const resetForm = () => {
 onMounted(() => {
   loadFinanceProducts()
   loadApplications()
+  loadContacts()
 })
 </script>
 
@@ -450,6 +529,17 @@ onMounted(() => {
   margin-left: 8px;
   color: #666;
   font-size: 14px;
+}
+
+.combination-tip {
+  margin: 0 0 16px 120px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #8c6d2f;
+  background: #fdf6e3;
+  border-left: 3px solid #e6a23c;
+  border-radius: 4px;
+  line-height: 1.5;
 }
 
 .pagination {

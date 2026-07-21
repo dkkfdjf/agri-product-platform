@@ -64,6 +64,18 @@
 
     <!-- 订单列表 -->
     <div v-if="activeTab === 'order'" v-loading="loading.order">
+      <!-- 状态筛选：订单存在 待付款/待发货/待收货/已完成/已取消 等流转状态，提供按状态筛选 -->
+      <div class="status-filter">
+        <el-radio-group v-model="orderStatus" @change="onStatusChange">
+          <el-radio-button value="all">全部</el-radio-button>
+          <el-radio-button :value="1">待付款</el-radio-button>
+          <el-radio-button :value="2">待发货</el-radio-button>
+          <el-radio-button :value="3">待收货</el-radio-button>
+          <el-radio-button :value="4">已完成</el-radio-button>
+          <el-radio-button :value="5">已取消</el-radio-button>
+        </el-radio-group>
+      </div>
+
       <el-empty v-if="orders.length === 0 && !loading.order" description="暂无订单，去市场逛逛？">
         <el-button type="primary" @click="goToMarket">去市场</el-button>
       </el-empty>
@@ -247,6 +259,8 @@ const localImages = LOCAL_PRODUCT_IMAGES
 
 // 默认显示订单中（已付款的订单）
 const activeTab = ref('order')
+// 订单状态筛选：'all' 全部，或具体状态值 1待付款 2待发货 3待收货 4已完成 5已取消
+const orderStatus = ref('all')
 const demands = ref([])
 const orders = ref([])
 const demandCount = ref(0)
@@ -313,6 +327,12 @@ const loadData = async () => {
   }
 }
 
+// 切换状态筛选：回到第一页并重新拉取
+const onStatusChange = () => {
+  pagination.page = 1
+  loadOrders()
+}
+
 // 仅加载求购数量（用于徽章显示）
 const loadDemandCount = async () => {
   try {
@@ -374,7 +394,8 @@ const loadOrders = async () => {
     console.log('开始加载订单列表...')
     const res = await getOrders({
       page: pagination.page,
-      pageSize: pagination.pageSize
+      pageSize: pagination.pageSize,
+      status: orderStatus.value === 'all' ? undefined : orderStatus.value
     })
     console.log('订单API响应:', res)
 
@@ -662,6 +683,10 @@ const goBack = () => {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.status-filter {
+  margin-bottom: 16px;
 }
 
 .card-list {

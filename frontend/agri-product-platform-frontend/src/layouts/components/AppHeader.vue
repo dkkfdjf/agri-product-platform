@@ -88,21 +88,77 @@
         <router-link to="/register" class="btn-register">注册</router-link>
       </div>
     </div>
+
+    <!-- 通知抽屉：Teleport 到 body，脱离顶部 header。
+         header 设了 backdrop-filter，会成为 fixed 后代的包含块，
+         否则抽屉会被裁在 64px 的顶栏内（标题「站内通知」下半截被切、只盖住顶部）。 -->
+    <Teleport to="body">
+    <el-drawer
+      v-model="notifDrawerVisible"
+      title="站内通知"
+      direction="rtl"
+      size="380px"
+      @open="onDrawerOpen"
+    >
+      <div class="notif-toolbar">
+        <span class="notif-summary">{{ notificationCount }} 条未读</span>
+        <div class="notif-toolbar-actions">
+          <el-button text type="primary" size="small" @click="refreshMessages">刷新</el-button>
+          <el-button text type="primary" size="small" :disabled="notificationCount === 0" @click="handleMarkAllRead">全部已读</el-button>
+        </div>
+      </div>
+
+      <div v-loading="notifLoading" class="notif-list">
+        <el-empty v-if="!notifLoading && messages.length === 0" description="暂无通知" :image-size="80" />
+        <div
+          v-for="msg in messages"
+          :key="msg.id"
+          class="notif-item"
+          :class="{ unread: msg.isRead === 0 }"
+          @click="handleMsgClick(msg)"
+        >
+          <div class="notif-item-header">
+            <el-tag size="small" :type="categoryTagType(msg.category)" effect="light">{{ categoryLabel(msg.category) }}</el-tag>
+            <span class="notif-time">{{ formatTime(msg.createTime) }}</span>
+          </div>
+          <div class="notif-title">{{ msg.title }}</div>
+          <div v-if="msg.content" class="notif-content">{{ msg.content }}</div>
+          <div class="notif-item-footer">
+            <span v-if="msg.isRead === 0" class="unread-dot">未读</span>
+            <el-button text type="danger" size="small" @click.stop="handleDeleteMsg(msg)">删除</el-button>
+          </div>
+        </div>
+      </div>
+    </el-drawer>
+    </Teleport>
   </header>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { HomeFilled } from '@element-plus/icons-vue'
+import {
+  getMessages,
+  getUnreadCount,
+  markMessageRead,
+  markAllMessagesRead,
+  deleteMessage
+} from '@/api/message'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
 const notificationCount = ref(0)
+
+// 通知抽屉
+const notifDrawerVisible = ref(false)
+const messages = ref([])
+const notifLoading = ref(false)
+let notifPollTimer = null
 
 const roleLabels = {
   farmer: '农户',
@@ -117,8 +173,98 @@ const goToHome = () => {
 }
 
 const showNotifications = () => {
-  ElMessage.info('暂无新通知')
+  notifDrawerVisible.value = true
 }
+
+// ===== 站内通知 =====
+const categoryLabel = (cat) => {
+  const map = { order: '订单', reserve: '预约', finance: '融资', question: '问答', system: '系统' }
+  return map[cat] || '通知'
+}
+const categoryTagType = (cat) => {
+  const map = { order: 'warning', reserve: 'success', finance: 'primary', question: 'info', system: '' }
+  return map[cat] || ''
+}
+
+const formatTime = (time) => {
+  if (!time) return ''
+  const d = new Date(time)
+  const now = new Date()
+  const diff = now - d
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+  return d.toLocaleDateString('zh-CN')
+}
+
+const loadUnreadCount = async () => {
+  if (!userStore.isLoggedIn()) return
+  try {
+    const res = await getUnreadCount()
+    if (res.code === 200) notificationCount.value = res.data?.count || 0
+  } catch (e) { /* 轮询失败忽略 */ }
+}
+
+const refreshMessages = async () => {
+  notifLoading.value = true
+  try {
+    const res = await getMessages({ page: 1, pageSize: 30 })
+    if (res.code === 200) messages.value = res.data?.records || []
+  } catch (e) {
+    ElMessage.error('加载通知失败')
+  } finally {
+    notifLoading.value = false
+  }
+}
+
+const onDrawerOpen = () => {
+  refreshMessages()
+}
+
+const handleMsgClick = async (msg) => {
+  if (msg.isRead === 0) {
+    try {
+      await markMessageRead(msg.id)
+      msg.isRead = 1
+      notificationCount.value = Math.max(0, notificationCount.value - 1)
+    } catch (e) { /* ignore */ }
+  }
+  if (msg.linkUrl) {
+    notifDrawerVisible.value = false
+    router.push(msg.linkUrl)
+  }
+}
+
+const handleMarkAllRead = async () => {
+  try {
+    await markAllMessagesRead()
+    messages.value.forEach(m => { m.isRead = 1 })
+    notificationCount.value = 0
+    ElMessage.success('已全部标为已读')
+  } catch (e) {
+    ElMessage.error('操作失败')
+  }
+}
+
+const handleDeleteMsg = async (msg) => {
+  try {
+    await deleteMessage(msg.id)
+    messages.value = messages.value.filter(m => m.id !== msg.id)
+    if (msg.isRead === 0) notificationCount.value = Math.max(0, notificationCount.value - 1)
+  } catch (e) {
+    ElMessage.error('删除失败')
+  }
+}
+
+onMounted(() => {
+  loadUnreadCount()
+  // 每 30 秒刷新未读数（轻量轮询，仅登录后）
+  notifPollTimer = setInterval(loadUnreadCount, 30000)
+})
+
+onBeforeUnmount(() => {
+  if (notifPollTimer) clearInterval(notifPollTimer)
+})
 
 const handleUserCommand = (command) => {
   switch (command) {
@@ -369,5 +515,89 @@ const handleUserCommand = (command) => {
   .logo-text {
     display: none;
   }
+}
+
+/* ===== 通知抽屉 ===== */
+.notif-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 12px;
+  border-bottom: 1px solid var(--color-border, #e5e0d8);
+  margin-bottom: 12px;
+}
+
+.notif-summary {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #4a5249);
+}
+
+.notif-toolbar-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.notif-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 120px;
+}
+
+.notif-item {
+  padding: 12px;
+  border-radius: var(--radius-base, 8px);
+  border: 1px solid var(--color-border, #e5e0d8);
+  background: var(--color-bg-primary, #ffffff);
+  cursor: pointer;
+  transition: all var(--transition-fast, 150ms ease);
+}
+
+.notif-item:hover {
+  border-color: var(--color-primary-light, #4a7c59);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.notif-item.unread {
+  background: rgba(45, 90, 61, 0.04);
+  border-color: rgba(45, 90, 61, 0.2);
+}
+
+.notif-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.notif-time {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-tertiary, #6b7280);
+}
+
+.notif-title {
+  font-size: var(--font-size-sm, 14px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary, #1f2923);
+  margin-bottom: 4px;
+}
+
+.notif-content {
+  font-size: var(--font-size-xs, 13px);
+  color: var(--color-text-secondary, #4a5249);
+  line-height: 1.5;
+}
+
+.notif-item-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.unread-dot {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-error, #b85c38);
+  font-weight: var(--font-weight-medium, 500);
 }
 </style>

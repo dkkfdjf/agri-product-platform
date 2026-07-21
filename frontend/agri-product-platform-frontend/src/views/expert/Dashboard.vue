@@ -60,12 +60,13 @@
       <div class="stat-card info">
         <div class="stat-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-value">{{ stats.satisfaction }}%</div>
-          <div class="stat-label">用户满意度</div>
+          <div class="stat-value">{{ stats.unreadCount }}</div>
+          <div class="stat-label">未读消息</div>
         </div>
       </div>
     </div>
@@ -161,7 +162,6 @@
           <div class="knowledge-content">
             <div class="knowledge-title">{{ knowledge.title }}</div>
             <div class="knowledge-meta">
-              <span class="knowledge-views">{{ knowledge.views }} 阅读</span>
               <span class="knowledge-comments">{{ knowledge.comments }} 评论</span>
               <span class="knowledge-time">{{ knowledge.time }}</span>
             </div>
@@ -169,6 +169,8 @@
         </div>
       </div>
     </div>
+    <!-- 最新动态（真实站内通知，来自 tb_message） -->
+    <RecentNotifications title="最新动态" />
   </div>
 </template>
 
@@ -181,6 +183,8 @@ import { Top } from '@element-plus/icons-vue'
 import { getKnowledgeList } from '@/api/knowledge'
 import { getQuestionList } from '@/api/question'
 import { getExpertReserveList } from '@/api/expert'
+import { getUnreadCount } from '@/api/message'
+import RecentNotifications from '@/components/RecentNotifications.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -201,7 +205,7 @@ const stats = ref({
   knowledgeCount: 0,
   answeredCount: 0,
   pendingReservations: 0,
-  satisfaction: 98
+  unreadCount: 0
 })
 
 // 待回答问题
@@ -228,8 +232,7 @@ const loadDashboardData = async () => {
       recentKnowledge.value = knowledge.map(k => ({
         id: k.knowledgeId,
         title: k.title,
-        views: 0,
-        comments: 0,
+        comments: k.commentCount || 0,
         time: formatTime(k.createTime)
       }))
     }
@@ -256,6 +259,12 @@ const loadDashboardData = async () => {
     const reserveRes = await getExpertReserveList({ page: 1, pageSize: 1, status: 0 })
     if (reserveRes.code === 200) {
       stats.value.pendingReservations = reserveRes.data.total || 0
+    }
+
+    // 未读消息数（站内通知：新提问 / 新预约 / 回复等）
+    const unreadRes = await getUnreadCount()
+    if (unreadRes.code === 200) {
+      stats.value.unreadCount = unreadRes.data?.count || 0
     }
   } catch (error) {
     console.error('加载Dashboard数据失败:', error)

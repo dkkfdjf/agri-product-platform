@@ -123,6 +123,27 @@
         </el-descriptions-item>
         <el-descriptions-item label="融资用途" :span="2">{{ currentDetail.purpose || '—' }}</el-descriptions-item>
         <el-descriptions-item label="还款来源" :span="2">{{ currentDetail.repaymentSource || '—' }}</el-descriptions-item>
+        <el-descriptions-item v-if="currentInvitations.length" label="联合贷款人" :span="2">
+          <div class="combination-block">
+            <div v-for="inv in currentInvitations" :key="inv.id" class="combination-person">
+              <span class="cp-label">联合人{{ inv.slot }}：</span>
+              {{ inv.jointRealName || inv.jointUserName }} · {{ inv.jointPhone || '—' }}
+              <el-tag size="small" :type="inviteStatusType(inv.status)" style="margin-left: 8px">
+                {{ inviteStatusText(inv.status) }}
+              </el-tag>
+            </div>
+          </div>
+        </el-descriptions-item>
+        <el-descriptions-item v-else-if="hasCombination(currentDetail)" label="联合贷款人" :span="2">
+          <div class="combination-block">
+            <div v-if="currentDetail.combinationName1 || currentDetail.combinationPhone1 || currentDetail.combinationIdnum1" class="combination-person">
+              <span class="cp-label">联合人1：</span>{{ currentDetail.combinationName1 || '—' }} · {{ currentDetail.combinationPhone1 || '—' }} · {{ currentDetail.combinationIdnum1 || '—' }}
+            </div>
+            <div v-if="currentDetail.combinationName2 || currentDetail.combinationPhone2 || currentDetail.combinationIdnum2" class="combination-person">
+              <span class="cp-label">联合人2：</span>{{ currentDetail.combinationName2 || '—' }} · {{ currentDetail.combinationPhone2 || '—' }} · {{ currentDetail.combinationIdnum2 || '—' }}
+            </div>
+          </div>
+        </el-descriptions-item>
         <el-descriptions-item label="申请时间" :span="2">{{ formatTime(currentDetail.createTime) }}</el-descriptions-item>
         <el-descriptions-item v-if="currentDetail.remark" label="审批备注" :span="2">{{ currentDetail.remark }}</el-descriptions-item>
       </el-descriptions>
@@ -137,11 +158,13 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Clock, Select, Close, Document } from '@element-plus/icons-vue'
-import { getMyFinanceApplications, getFinanceProducts } from '@/api/finance'
+import { getMyFinanceApplications, getFinanceProducts, getFinanceJointInvitations } from '@/api/finance'
 
 const loading = ref(false)
 const detailVisible = ref(false)
 const currentDetail = ref(null)
+// 当前详情对应的联合贷款人邀请（按 slot 排序），用于展示各联合人确认状态
+const currentInvitations = ref([])
 
 // 个人申请数量通常较少，一次性拉取后在前端做统计/筛选/分页
 const allList = ref([])
@@ -232,13 +255,28 @@ const resetFilter = () => {
   page.value = 1
 }
 
-const viewDetail = (row) => {
+const viewDetail = async (row) => {
   currentDetail.value = row
+  currentInvitations.value = []
   detailVisible.value = true
+  // 拉取该申请下的联合贷款人邀请，展示各联合人确认状态（待确认/已同意/已拒绝）
+  try {
+    const res = await getFinanceJointInvitations(row.financeId)
+    currentInvitations.value = res.data || []
+  } catch (e) {
+    // 忽略：老申请可能没有邀请记录
+  }
 }
+
+// 是否含联合贷款人信息（任一字段非空即认为填写了）
+const hasCombination = (d) => !!(d && (d.combinationName1 || d.combinationPhone1 || d.combinationIdnum1 || d.combinationName2 || d.combinationPhone2 || d.combinationIdnum2))
 
 const statusType = (s) => ({ 0: 'warning', 1: 'success', 2: 'danger' }[s] || 'info')
 const statusText = (s) => ({ 0: '待审核', 1: '已通过', 2: '已拒绝' }[s] || '未知')
+
+// 联合贷款人邀请状态
+const inviteStatusType = (s) => ({ 0: 'warning', 1: 'success', 2: 'danger' }[s] || 'info')
+const inviteStatusText = (s) => ({ 0: '待确认', 1: '已同意', 2: '已拒绝' }[s] || '未知')
 
 const formatNumber = (num) => {
   if (num === null || num === undefined || num === '') return '0'
@@ -362,6 +400,20 @@ const formatTime = (t) => {
   font-size: var(--font-size-sm, 14px);
   color: var(--color-text-tertiary, #6b7280);
   line-height: 1.5;
+}
+.combination-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.combination-person {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #4a5249);
+  line-height: 1.5;
+}
+.cp-label {
+  color: var(--color-text-tertiary, #6b7280);
+  margin-right: 4px;
 }
 .table-wrapper {
   padding: var(--spacing-4, 16px);

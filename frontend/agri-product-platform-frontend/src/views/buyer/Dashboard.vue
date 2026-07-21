@@ -175,6 +175,9 @@
         </div>
       </div>
     </div>
+
+    <!-- 最新动态（真实站内通知，来自 tb_message） -->
+    <RecentNotifications title="最新动态" />
     </template>
   </div>
 </template>
@@ -187,6 +190,7 @@ import { Top } from '@element-plus/icons-vue'
 import { getProducts } from '@/api/product'
 import { getOrders } from '@/api/order'
 import { getCartList } from '@/api/cart'
+import RecentNotifications from '@/components/RecentNotifications.vue'
 
 const router = useRouter()
 const userStore = useUserStore()

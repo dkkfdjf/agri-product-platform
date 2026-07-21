@@ -7,19 +7,8 @@
       <p class="page-subtitle">专业农业知识分享，助您科学种植</p>
     </div>
 
-    <!-- 筛选区 -->
+    <!-- 筛选区（仅保留搜索；原分类筛选无数据库支撑，已移除） -->
     <div class="filter-section">
-      <div class="filter-tabs">
-        <button
-          v-for="category in categories"
-          :key="category.id"
-          class="filter-tab"
-          :class="{ active: selectedCategory === category.id }"
-          @click="selectedCategory = category.id"
-        >
-          {{ category.name }}
-        </button>
-      </div>
       <div class="filter-search">
         <el-input
           v-model="searchKeyword"
@@ -42,7 +31,6 @@
               <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
             </svg>
           </div>
-          <div class="knowledge-category">{{ knowledge.category }}</div>
         </div>
         <div class="knowledge-content">
           <h3 class="knowledge-title">{{ knowledge.title }}</h3>
@@ -50,7 +38,6 @@
           <div class="knowledge-meta">
             <span class="meta-author">{{ knowledge.author }}</span>
             <span class="meta-time">{{ knowledge.time }}</span>
-            <span class="meta-views">{{ knowledge.views }} 阅读</span>
           </div>
         </div>
       </div>
@@ -75,21 +62,11 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
-const selectedCategory = ref('all')
 const searchKeyword = ref('')
 const loading = ref(false)
 const hasMore = ref(true)
 const currentPage = ref(1)
 const pageSize = ref(9)
-
-const categories = [
-  { id: 'all', name: '全部' },
-  { id: 'grain', name: '粮食作物' },
-  { id: 'vegetable', name: '蔬菜种植' },
-  { id: 'fruit', name: '果树栽培' },
-  { id: 'soil', name: '土壤肥料' },
-  { id: 'pest', name: '病虫害防治' }
-]
 
 const knowledgeList = ref([])
 const total = ref(0)
@@ -110,11 +87,9 @@ const loadKnowledge = async () => {
         id: k.knowledgeId || k.id,
         title: k.title,
         excerpt: stripHtml(k.content).substring(0, 100),
-        category: '农业知识',
         image: k.picPath || null,
         author: k.ownRealName || k.ownName || '专家',
         time: formatDate(k.createTime),
-        views: 0,
         status: k.status
       }))
       total.value = res.data.total || 0
@@ -170,12 +145,6 @@ const loadMore = () => {
   currentPage.value++
   loadKnowledge()
 }
-
-// 监听分类变化
-watch(selectedCategory, () => {
-  currentPage.value = 1
-  loadKnowledge()
-})
 
 // 监听搜索变化
 watch(searchKeyword, () => {

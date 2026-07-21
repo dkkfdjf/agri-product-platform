@@ -197,9 +197,11 @@ import {
   setDefaultAddress as setDefaultAddr
 } from '@/api/address'
 import { regionData } from 'element-china-area-data'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -312,9 +314,11 @@ const selectAddressFromDrawer = (address) => {
 
 const showAddAddressDialog = () => {
   editingAddressData.value = null
+  // 预填充收货人姓名/电话（来自个人信息），用户仍可手动修改；省市区与详细地址留空待填
+  const ui = userStore.userInfo || {}
   Object.assign(addressForm, {
-    realName: '',
-    phone: '',
+    realName: ui.realName || '',
+    phone: ui.phone || '',
     province: '',
     city: '',
     area: '',

@@ -23,10 +23,6 @@
                 <el-icon><Calendar /></el-icon>
                 {{ formatDate(knowledge.createTime) }}
               </span>
-              <span class="meta-item" v-if="knowledge.viewCount">
-                <el-icon><View /></el-icon>
-                {{ knowledge.viewCount }} 阅读
-              </span>
             </div>
           </header>
 

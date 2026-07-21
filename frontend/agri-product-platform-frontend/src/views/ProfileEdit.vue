@@ -57,6 +57,14 @@
               <el-input v-model="userForm.phone" placeholder="请输入电话号码" />
             </el-form-item>
 
+            <el-form-item label="身份证号" prop="identityNum">
+              <el-input
+                v-model="userForm.identityNum"
+                placeholder="办理融资/作为联合贷款人时使用"
+                maxlength="18"
+              />
+            </el-form-item>
+
             <el-form-item label="地址">
               <el-input
                 v-model="userForm.address"
@@ -145,6 +153,7 @@ const userForm = reactive({
   realName: '',
   email: '',
   phone: '',
+  identityNum: '',
   address: '',
   avatar: ''
 })
@@ -175,6 +184,16 @@ const validateEmail = (rule, value, callback) => {
   }
 }
 
+const validateIdNum = (rule, value, callback) => {
+  if (!value) {
+    callback()
+  } else if (!/^\d{17}[\dXx]$/.test(value)) {
+    callback(new Error('请输入正确的18位身份证号'))
+  } else {
+    callback()
+  }
+}
+
 const validateConfirmPassword = (rule, value, callback) => {
   if (value !== passwordForm.newPassword) {
     callback(new Error('两次输入的密码不一致'))
@@ -186,7 +205,8 @@ const validateConfirmPassword = (rule, value, callback) => {
 const userRules = {
   realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
   phone: [{ validator: validatePhone, trigger: 'blur' }],
-  email: [{ validator: validateEmail, trigger: 'blur' }]
+  email: [{ validator: validateEmail, trigger: 'blur' }],
+  identityNum: [{ validator: validateIdNum, trigger: 'blur' }]
 }
 
 const passwordRules = {
