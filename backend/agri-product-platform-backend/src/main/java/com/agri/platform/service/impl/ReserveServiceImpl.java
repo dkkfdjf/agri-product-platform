@@ -7,6 +7,7 @@ import com.agri.platform.entity.User;
 import com.agri.platform.mapper.ExpertMapper;
 import com.agri.platform.mapper.ReserveMapper;
 import com.agri.platform.mapper.UserMapper;
+import com.agri.platform.service.MessageService;
 import com.agri.platform.service.ReserveService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,6 +25,9 @@ public class ReserveServiceImpl implements ReserveService {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private MessageService messageService;
 
     @Override
     public void makeReservation(String userName, ReserveRequest request) {
@@ -74,6 +78,14 @@ public class ReserveServiceImpl implements ReserveService {
             reserve.setExpertRealName(expertUser.getRealName());
         }
         reserveMapper.insert(reserve);
+
+        // 通知被预约的专家：收到新预约申请
+        String askerDisplay = asker != null && asker.getRealName() != null ? asker.getRealName() : userName;
+        String plant = request.getPlantName();
+        messageService.send(expertName, "reserve",
+                "您有新的预约申请",
+                askerDisplay + " 预约了您" + (plant != null && !plant.isEmpty() ? "（" + plant + "）" : ""),
+                "/expert/reservations");
     }
 
     @Override
@@ -132,5 +144,21 @@ public class ReserveServiceImpl implements ReserveService {
             }
         }
         reserveMapper.updateById(reserve);
+
+        // 通知预约人处理结果（1已确认 2已拒绝）
+        String expertDisplay = reserve.getExpertRealName() != null ? reserve.getExpertRealName() : expertName;
+        String title;
+        String content;
+        if (status != null && status == 1) {
+            title = "预约已确认";
+            content = "专家 " + expertDisplay + " 已确认您的预约。";
+        } else if (status != null && status == 2) {
+            title = "预约未通过";
+            content = "专家 " + expertDisplay + " 暂时无法接受您的预约。";
+        } else {
+            title = "预约状态更新";
+            content = "您的预约状态已更新。";
+        }
+        messageService.send(reserve.getQuestioner(), "reserve", title, content, null);
     }
 }

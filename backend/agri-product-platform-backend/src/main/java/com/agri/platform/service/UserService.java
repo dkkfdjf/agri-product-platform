@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -112,6 +113,7 @@ public class UserService {
         userInfo.put("userName", user.getUserName());
         userInfo.put("realName", user.getRealName());
         userInfo.put("phone", user.getPhone());
+        userInfo.put("identityNum", user.getIdentityNum());
         userInfo.put("address", user.getAddress());
         userInfo.put("role", user.getRole());
         userInfo.put("avatar", user.getAvatar());
@@ -145,6 +147,19 @@ public class UserService {
     public void updateUser(User user) {
         user.setUpdateTime(LocalDateTime.now());
         userMapper.updateById(user);
+    }
+
+    /**
+     * 联系人列表：供「联合贷款人」等场景选择联系人。
+     * 返回除自己外、正常状态的 农户/买家/专家（银行、管理员不作为共借人），仅取 姓名/电话/用户名，不含密码。
+     */
+    public List<User> listContacts(String excludeUserName) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(User::getRole, "farmer", "buyer", "expert")
+                .eq(User::getStatus, 1)
+                .ne(User::getUserName, excludeUserName)
+                .select(User::getUserName, User::getRealName, User::getPhone);
+        return userMapper.selectList(wrapper);
     }
 
     /**

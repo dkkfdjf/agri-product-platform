@@ -7,6 +7,7 @@ import com.agri.platform.entity.User;
 import com.agri.platform.mapper.QuestionMapper;
 import com.agri.platform.mapper.QuestionReplyMapper;
 import com.agri.platform.mapper.UserMapper;
+import com.agri.platform.service.MessageService;
 import com.agri.platform.service.QuestionService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -26,6 +27,9 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Autowired
     private QuestionReplyMapper replyMapper;
+
+    @Autowired
+    private MessageService messageService;
 
     @Override
     public void askQuestion(String userName, QuestionRequest request) {
@@ -54,6 +58,13 @@ public class QuestionServiceImpl implements QuestionService {
             question.setExpertRealName(expertUser.getRealName());
         }
         questionMapper.insert(question);
+
+        // 通知被提问的专家：收到新提问（专家此前无任何通知，只能主动翻查，体验差）
+        String askerDisplay = asker != null && asker.getRealName() != null ? asker.getRealName() : userName;
+        messageService.send(request.getExpertName(), "question",
+                "您有新的提问",
+                askerDisplay + " 向您发起了提问「" + (request.getTitle() != null ? request.getTitle() : "") + "」",
+                "/question/" + question.getId());
     }
 
     @Override
@@ -185,6 +196,13 @@ public class QuestionServiceImpl implements QuestionService {
                 question.setExpertRealName(realName);
             }
             questionMapper.updateById(question);
+            // 通知提问者：专家回复了你的提问
+            String expertDisplay = realName != null ? realName : userName;
+            String title = question.getTitle() != null ? question.getTitle() : "";
+            messageService.send(question.getQuestioner(), "question",
+                    "专家回复了你的提问",
+                    expertDisplay + " 回复了你的提问「" + title + "」",
+                    "/question/" + question.getId());
         }
     }
 }

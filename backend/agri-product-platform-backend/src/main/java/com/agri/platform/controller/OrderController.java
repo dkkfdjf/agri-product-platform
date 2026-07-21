@@ -51,17 +51,19 @@ public class OrderController {
     @GetMapping("/list/paged")
     public Result<OrderPageResponse> listWithDetailsPaged(@RequestHeader("Authorization") String token,
                                                           @RequestParam(defaultValue = "1") int page,
-                                                          @RequestParam(defaultValue = "10") int pageSize) {
+                                                          @RequestParam(defaultValue = "10") int pageSize,
+                                                          @RequestParam(required = false) Integer status) {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
-        return Result.success(orderService.getOrderListWithDetailsPaged(userName, page, pageSize));
+        return Result.success(orderService.getOrderListWithDetailsPaged(userName, page, pageSize, status));
     }
 
     @GetMapping("/received/paged")
     public Result<OrderPageResponse> getReceivedOrders(@RequestHeader("Authorization") String token,
                                                        @RequestParam(defaultValue = "1") int page,
-                                                       @RequestParam(defaultValue = "10") int pageSize) {
+                                                       @RequestParam(defaultValue = "10") int pageSize,
+                                                       @RequestParam(required = false) Integer status) {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
-        return Result.success(orderService.getReceivedOrdersPaged(userName, page, pageSize));
+        return Result.success(orderService.getReceivedOrdersPaged(userName, page, pageSize, status));
     }
 
     @GetMapping("/{purchaseId}")

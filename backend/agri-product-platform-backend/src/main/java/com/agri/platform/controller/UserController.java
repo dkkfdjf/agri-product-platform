@@ -124,6 +124,9 @@ public class UserController {
             if (userInfo.getPhone() != null) {
                 user.setPhone(userInfo.getPhone());
             }
+            if (userInfo.getIdentityNum() != null) {
+                user.setIdentityNum(userInfo.getIdentityNum());
+            }
             if (userInfo.getAddress() != null) {
                 user.setAddress(userInfo.getAddress());
             }
@@ -136,6 +139,15 @@ public class UserController {
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }
+    }
+
+    /**
+     * 联系人列表（供联合贷款人等场景选择，排除自己；仅农户/买家/专家）
+     */
+    @GetMapping("/contacts")
+    public Result<List<User>> contacts(@RequestHeader("Authorization") String token) {
+        String userName = userService.getUserByUserNameFromToken(token);
+        return Result.success(userService.listContacts(userName));
     }
 
     /**

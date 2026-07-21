@@ -43,16 +43,24 @@ public class TurnstileService {
         if (token == null || token.trim().isEmpty()) {
             return false;
         }
-        try {
-            MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-            form.add("secret", properties.getSecretKey());
-            form.add("response", token);
-            Map<?, ?> resp = restTemplate.postForObject(SITEVERIFY_URL, form, Map.class);
-            return resp != null && Boolean.TRUE.equals(resp.get("success"));
-        } catch (Exception e) {
-            // 连不上 Cloudflare 等：fail-closed，拒绝
-            log.warn("Turnstile siteverify 调用失败（fail-closed 拒绝）: {}", e.getMessage());
-            return false;
+        // 国内访问 challenges.cloudflare.com 偶发抖动：仅在网络异常时重试一次以渡过瞬时故障，
+        // 仍失败则 fail-closed 拒绝。（Cloudflare 正常返回 success=false 时不会抛异常，故不会重试。）
+        Exception lastError = null;
+        for (int attempt = 0; attempt < 2; attempt++) {
+            try {
+                MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+                form.add("secret", properties.getSecretKey());
+                form.add("response", token);
+                Map<?, ?> resp = restTemplate.postForObject(SITEVERIFY_URL, form, Map.class);
+                return resp != null && Boolean.TRUE.equals(resp.get("success"));
+            } catch (Exception e) {
+                lastError = e;
+                if (attempt == 0) {
+                    try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                }
+            }
         }
+        log.warn("Turnstile siteverify 连续失败（fail-closed 拒绝）: {}", lastError == null ? "" : lastError.getMessage());
+        return false;
     }
 }

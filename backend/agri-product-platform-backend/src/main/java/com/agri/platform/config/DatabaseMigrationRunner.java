@@ -41,6 +41,62 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
         addColumnIfNotExists("tb_finance", "repayment_source",
                 "VARCHAR(500) DEFAULT NULL COMMENT '还款来源'");
 
+        // 2026-07-20：地址表增加省/市/区（原 migration_add_address_region_7.20.sql 是非幂等裸 ALTER，
+        // 收口到此处幂等执行；所有机器重启后端即自动具备三级地址列）
+        addColumnIfNotExists("tb_address", "province",
+                "VARCHAR(50) DEFAULT NULL COMMENT '省'");
+        addColumnIfNotExists("tb_address", "city",
+                "VARCHAR(50) DEFAULT NULL COMMENT '市'");
+        addColumnIfNotExists("tb_address", "area",
+                "VARCHAR(50) DEFAULT NULL COMMENT '区'");
+
+        // 2026-07-21：站内消息表（铃铛通知）。幂等建表，团队成员重启后端即自动具备。
+        createTableIfNotExists("tb_message",
+                "CREATE TABLE IF NOT EXISTS tb_message ("
+                        + "id INT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',"
+                        + "user_name VARCHAR(50) NOT NULL COMMENT '接收人 userName',"
+                        + "category VARCHAR(32) DEFAULT NULL COMMENT '分类: order/reserve/finance/question/system',"
+                        + "title VARCHAR(200) NOT NULL COMMENT '标题',"
+                        + "content VARCHAR(500) DEFAULT NULL COMMENT '正文',"
+                        + "link_url VARCHAR(255) DEFAULT NULL COMMENT '点击跳转路径(可选)',"
+                        + "is_read TINYINT DEFAULT 0 COMMENT '0未读 1已读',"
+                        + "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',"
+                        + "INDEX idx_message_user_read (user_name, is_read)"
+                        + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '站内消息'");
+
+        // 2026-07-21：联合贷款人邀请表。农户选联系人发起邀请 → 对方同意后回填其资料到 tb_finance。
+        // 幂等建表，团队成员重启后端即自动具备。
+        createTableIfNotExists("tb_joint_invitation",
+                "CREATE TABLE IF NOT EXISTS tb_joint_invitation ("
+                        + "id INT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',"
+                        + "finance_id INT NOT NULL COMMENT '融资申请ID(tb_finance.finance_id)',"
+                        + "applicant_user_name VARCHAR(50) NOT NULL COMMENT '申请人(农户) userName',"
+                        + "joint_user_name VARCHAR(50) NOT NULL COMMENT '被邀请的联合贷款人 userName',"
+                        + "slot TINYINT NOT NULL DEFAULT 1 COMMENT '联合人位置 1或2',"
+                        + "status TINYINT NOT NULL DEFAULT 0 COMMENT '0待处理 1已同意 2已拒绝',"
+                        + "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',"
+                        + "handle_time DATETIME DEFAULT NULL COMMENT '处理时间',"
+                        + "INDEX idx_joint_invitation_finance (finance_id),"
+                        + "INDEX idx_joint_invitation_joint (joint_user_name)"
+                        + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '联合贷款人邀请'");
+
+        // 2026-07-21：还款计划表。融资审批通过后按等额本息自动生成各期还款计划。
+        createTableIfNotExists("tb_repayment",
+                "CREATE TABLE IF NOT EXISTS tb_repayment ("
+                        + "id INT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',"
+                        + "finance_id INT NOT NULL COMMENT '融资申请ID(tb_finance.finance_id)',"
+                        + "period_index INT NOT NULL COMMENT '期数 1..N',"
+                        + "due_date DATE DEFAULT NULL COMMENT '到期日',"
+                        + "principal DECIMAL(14,2) DEFAULT 0 COMMENT '本期本金',"
+                        + "interest DECIMAL(14,2) DEFAULT 0 COMMENT '本期利息',"
+                        + "total_amount DECIMAL(14,2) DEFAULT 0 COMMENT '本期应还本息',"
+                        + "paid_amount DECIMAL(14,2) DEFAULT 0 COMMENT '已还金额',"
+                        + "status TINYINT NOT NULL DEFAULT 0 COMMENT '0未还 1已还（逾期读取时动态判定）',"
+                        + "paid_time DATETIME DEFAULT NULL COMMENT '实还时间',"
+                        + "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',"
+                        + "INDEX idx_repayment_finance (finance_id)"
+                        + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '还款计划'");
+
         log.info("[DB迁移] 完成。");
     }
 
@@ -66,6 +122,30 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
         } catch (Exception e) {
             // 表尚未建好（新环境未导入建表脚本）等情况，打印警告但不阻断启动
             log.warn("[DB迁移] 新增列 {}.{} 失败，已跳过（不阻断启动）：{}", table, column, e.getMessage());
+        }
+    }
+
+    /**
+     * 幂等建表：表已存在则跳过，不存在则 CREATE TABLE IF NOT EXISTS。
+     * 用于消息表、还款表、信用日志表等新业务表——重启后端自动创建，团队成员无需手动跑 SQL。
+     */
+    private void createTableIfNotExists(String tableName, String createSql) {
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.TABLES "
+                            + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?",
+                    Integer.class, tableName);
+
+            if (count != null && count > 0) {
+                log.info("[DB迁移] 表 {} 已存在，跳过", tableName);
+                return;
+            }
+
+            jdbcTemplate.execute(createSql);
+            log.info("[DB迁移] 已新建表 {}", tableName);
+        } catch (Exception e) {
+            // 基础表未建好等情况，打印警告但不阻断启动
+            log.warn("[DB迁移] 建表 {} 失败，已跳过（不阻断启动）：{}", tableName, e.getMessage());
         }
     }
 }

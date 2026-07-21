@@ -23,4 +23,8 @@ public class Knowledge {
     /** 发布者真实姓名（非数据库列，由服务层按 ownName 批量回填，用于展示） */
     @TableField(exist = false)
     private String ownRealName;
+
+    /** 评论数（非数据库列，由服务层按 tb_discuss 统计回填，用于展示） */
+    @TableField(exist = false)
+    private Integer commentCount;
 }

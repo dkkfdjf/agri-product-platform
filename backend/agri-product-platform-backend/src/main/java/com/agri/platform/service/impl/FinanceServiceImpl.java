@@ -11,10 +11,14 @@ import com.agri.platform.mapper.FinanceMapper;
 import com.agri.platform.mapper.FinanceProductMapper;
 import com.agri.platform.mapper.UserMapper;
 import com.agri.platform.service.FinanceService;
+import com.agri.platform.service.JointInvitationService;
+import com.agri.platform.service.MessageService;
+import com.agri.platform.service.RepaymentService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -37,6 +41,15 @@ public class FinanceServiceImpl implements FinanceService {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private MessageService messageService;
+
+    @Autowired
+    private JointInvitationService jointInvitationService;
+
+    @Autowired
+    private RepaymentService repaymentService;
 
     @Override
     public void publishProduct(String userName, FinanceProductRequest request) {
@@ -70,6 +83,7 @@ public class FinanceServiceImpl implements FinanceService {
     }
 
     @Override
+    @Transactional
     public void applyFinance(String userName, FinanceRequest request) {
         // 验证用户是农户角色（按 role 字段判断，不能用用户名前缀判断）
         User user = userMapper.selectById(userName);
@@ -108,6 +122,21 @@ public class FinanceServiceImpl implements FinanceService {
         finance.setPurpose(request.getPurpose());
         finance.setRepaymentSource(request.getRepaymentSource());
         financeMapper.insert(finance);
+
+        // 联合贷款人：按选中的联系人创建邀请（待对方确认）。
+        // 联合人的姓名/电话/身份证号在对方同意后由 JointInvitationService 回填到 combination 字段，
+        // 因此此处 combination 字段先留空。
+        String j1 = request.getJointUserName1();
+        String j2 = request.getJointUserName2();
+        if (j1 != null && j2 != null && !j1.trim().isEmpty() && j1.trim().equals(j2.trim())) {
+            throw new RuntimeException("两个联合贷款人不能是同一个人");
+        }
+        if (j1 != null && !j1.trim().isEmpty()) {
+            jointInvitationService.invite(userName, finance.getFinanceId(), j1.trim(), 1);
+        }
+        if (j2 != null && !j2.trim().isEmpty()) {
+            jointInvitationService.invite(userName, finance.getFinanceId(), j2.trim(), 2);
+        }
     }
 
     @Override
@@ -132,14 +161,51 @@ public class FinanceServiceImpl implements FinanceService {
     }
 
     @Override
+    @Transactional
     public void approveFinance(Integer financeId, FinanceApprovalRequest request) {
         Finance finance = financeMapper.selectById(financeId);
         if (finance == null) {
             throw new RuntimeException("融资申请不存在");
         }
+        Integer previousStatus = finance.getStatus();
         finance.setStatus(request.getStatus());
         finance.setRemark(request.getRemark());
         financeMapper.updateById(finance);
+
+        // 首次审批（从「申请中」流转）联动调整农户信用分：通过 +1（封顶5），拒绝 -1（保底1）
+        Integer newStatus = request.getStatus();
+        if (previousStatus != null && previousStatus == 0
+                && newStatus != null && (newStatus == 1 || newStatus == 2)) {
+            User farmer = userMapper.selectById(finance.getOwnName());
+            if (farmer != null) {
+                int c = farmer.getCredit() == null ? 5 : farmer.getCredit();
+                c = newStatus == 1 ? Math.min(5, c + 1) : Math.max(1, c - 1);
+                farmer.setCredit(c);
+                userMapper.updateById(farmer);
+            }
+        }
+
+        // 通过审批：自动生成等额本息还款计划
+        if (newStatus != null && newStatus == 1) {
+            repaymentService.generatePlan(finance);
+        }
+
+        // 通知农户审批结果（1通过 2拒绝）
+        Integer st = request.getStatus();
+        String title;
+        String content;
+        if (st != null && st == 1) {
+            title = "融资申请已通过";
+            content = "您的融资申请已审批通过。";
+        } else if (st != null && st == 2) {
+            title = "融资申请未通过";
+            String remark = request.getRemark();
+            content = "您的融资申请未通过。" + (remark == null || remark.isEmpty() ? "" : "备注：" + remark);
+        } else {
+            title = "融资申请状态更新";
+            content = "您的融资申请状态已更新。";
+        }
+        messageService.send(finance.getOwnName(), "finance", title, content, "/farmer/my-finance");
     }
 
     @Override
@@ -216,6 +282,7 @@ public class FinanceServiceImpl implements FinanceService {
         wrapper.orderByDesc(Finance::getCreateTime);
         Page<Finance> result = financeMapper.selectPage(pageParam, wrapper);
         fillProductName(result.getRecords());
+        fillCredit(result.getRecords());
         return result;
     }
 
@@ -280,6 +347,8 @@ public class FinanceServiceImpl implements FinanceService {
 
         fillProductName(pendingList);
         fillProductName(recentList);
+        fillCredit(pendingList);
+        fillCredit(recentList);
 
         BankFinanceStats stats = new BankFinanceStats();
         stats.setPendingCount(pendingCount);
@@ -350,6 +419,29 @@ public class FinanceServiceImpl implements FinanceService {
             if (p != null) {
                 f.setProductName(p.getBankName());
             }
+        }
+    }
+
+    /** 批量回填每条申请对应申请人的信用分（tb_user.credit，1-5），供银行审批参考 */
+    private void fillCredit(List<Finance> list) {
+        if (list == null || list.isEmpty()) {
+            return;
+        }
+        Set<String> names = list.stream()
+                .map(Finance::getOwnName)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (names.isEmpty()) {
+            return;
+        }
+        List<User> users = userMapper.selectList(
+                new LambdaQueryWrapper<User>().in(User::getUserName, names));
+        Map<String, Integer> creditMap = users.stream()
+                .collect(Collectors.toMap(User::getUserName,
+                        u -> u.getCredit() == null ? 5 : u.getCredit(),
+                        (a, b) -> a));
+        for (Finance f : list) {
+            f.setCredit(creditMap.get(f.getOwnName()));
         }
     }
 

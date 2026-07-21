@@ -12,7 +12,7 @@ public interface OrderService {
     Integer submitOrder(String userName, OrderRequest request);
     Page<Purchase> getOrderList(String userName, int page, int pageSize);
     List<OrderResponse> getOrderListWithDetails(String userName, int page, int pageSize);
-    OrderPageResponse getOrderListWithDetailsPaged(String userName, int page, int pageSize);
+    OrderPageResponse getOrderListWithDetailsPaged(String userName, int page, int pageSize, Integer status);
     Purchase getOrderDetail(Integer purchaseId, String userName);
     OrderResponse getOrderDetailWithDetails(Integer purchaseId, String userName);
     void updateOrderStatus(Integer purchaseId, Integer status);
@@ -20,5 +20,5 @@ public interface OrderService {
     /** 支付成功后把订单从待付款(1)推进到待发货(2)；幂等，非待付款状态不处理。 */
     void markOrderPaid(Integer purchaseId);
     /** 获取农户作为卖家收到的订单（别人购买农户商品的订单） */
-    OrderPageResponse getReceivedOrdersPaged(String userName, int page, int pageSize);
+    OrderPageResponse getReceivedOrdersPaged(String userName, int page, int pageSize, Integer status);
 }

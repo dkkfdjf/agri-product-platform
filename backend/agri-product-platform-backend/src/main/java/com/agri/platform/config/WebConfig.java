@@ -3,6 +3,7 @@ package com.agri.platform.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -55,6 +56,10 @@ public class WebConfig implements WebMvcConfigurer {
      */
     @Bean
     public RestTemplate restTemplate() {
-        return new RestTemplate();
+        // 设连接/读取超时，避免出站调用（如 Turnstile siteverify）因对端无响应而长时间挂起
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);  // 5s
+        factory.setReadTimeout(8000);     // 8s
+        return new RestTemplate(factory);
     }
 }

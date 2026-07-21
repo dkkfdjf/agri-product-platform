@@ -5,6 +5,7 @@ import com.agri.platform.dto.OrderResponse;
 import com.agri.platform.dto.OrderPageResponse;
 import com.agri.platform.entity.*;
 import com.agri.platform.mapper.*;
+import com.agri.platform.service.MessageService;
 import com.agri.platform.service.OrderService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -40,6 +41,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private MessageService messageService;
 
     // 订单状态文本映射
     private static final Map<Integer, String> STATUS_TEXT_MAP = Map.of(
@@ -216,6 +220,11 @@ public class OrderServiceImpl implements OrderService {
         if (purchase.getPurchaseStatus() != null && purchase.getPurchaseStatus() == 1) {
             purchase.setPurchaseStatus(2); // 待发货
             purchaseMapper.updateById(purchase);
+            // 通知买家：支付成功，等待发货
+            messageService.send(purchase.getOwnName(), "order",
+                    "订单支付成功",
+                    "您的订单 #" + purchaseId + " 已支付成功，等待商家发货。",
+                    "/order/" + purchaseId);
         }
     }
 
@@ -227,6 +236,12 @@ public class OrderServiceImpl implements OrderService {
         }
         purchase.setPurchaseStatus(status);
         purchaseMapper.updateById(purchase);
+        // 通知买家订单状态变更（待发货/待收货/已完成/已取消等）
+        String statusText = STATUS_TEXT_MAP.getOrDefault(status, "已更新");
+        messageService.send(purchase.getOwnName(), "order",
+                "订单状态更新：" + statusText,
+                "您的订单 #" + purchaseId + " 状态已更新为「" + statusText + "」。",
+                "/order/" + purchaseId);
     }
 
     @Override
@@ -323,11 +338,15 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderPageResponse getOrderListWithDetailsPaged(String userName, int page, int pageSize) {
+    public OrderPageResponse getOrderListWithDetailsPaged(String userName, int page, int pageSize, Integer status) {
         // 获取订单列表
         Page<Purchase> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<Purchase> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Purchase::getOwnName, userName);
+        // 按状态筛选（status 为空时查全部）：1待付款 2待发货 3待收货 4已完成 5已取消
+        if (status != null) {
+            wrapper.eq(Purchase::getPurchaseStatus, status);
+        }
 
         // 排序：按状态优先级（订单中优先：2待发货、3待收货 > 1待付款 > 4已完成 > 5已取消）
         // 然后按创建时间倒序
@@ -405,7 +424,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderPageResponse getReceivedOrdersPaged(String userName, int page, int pageSize) {
+    public OrderPageResponse getReceivedOrdersPaged(String userName, int page, int pageSize, Integer status) {
         log.info("获取农户订单列表 - 用户名: {}, 页码: {}, 每页: {}", userName, page, pageSize);
 
         // 获取用户信息（包括真实姓名）
@@ -458,6 +477,10 @@ public class OrderServiceImpl implements OrderService {
         Page<Purchase> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<Purchase> purchaseWrapper = new LambdaQueryWrapper<>();
         purchaseWrapper.in(Purchase::getPurchaseId, purchaseIds);
+        // 按状态筛选（status 为空时查全部）：1待付款 2待发货 3待收货 4已完成 5已取消
+        if (status != null) {
+            purchaseWrapper.eq(Purchase::getPurchaseStatus, status);
+        }
 
         // 排序：按状态优先级（订单中优先：2待发货、3待收货 > 1待付款 > 4已完成 > 5已取消）
         // 然后按创建时间倒序
@@ -496,12 +519,29 @@ public class OrderServiceImpl implements OrderService {
         Map<Integer, List<PurchaseDetail>> detailMap = currentPageDetails.stream()
                 .collect(Collectors.groupingBy(PurchaseDetail::getPurchaseId));
 
+        // 批量回填买家真实姓名（订单 ownName 为买家登录账号），便于农户看到买家真名
+        List<String> buyerNames = purchasePage.getRecords().stream()
+                .map(Purchase::getOwnName)
+                .filter(n -> n != null)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<String, String> buyerRealNameMap = new HashMap<>();
+        if (!buyerNames.isEmpty()) {
+            List<User> buyers = userMapper.selectList(
+                    new LambdaQueryWrapper<User>().in(User::getUserName, buyerNames)
+            );
+            buyerRealNameMap = buyers.stream()
+                    .filter(u -> u.getRealName() != null)
+                    .collect(Collectors.toMap(User::getUserName, User::getRealName, (a, b) -> a));
+        }
+
         // 构建响应 - 只包含该农户的商品
         List<OrderResponse> responses = new ArrayList<>();
         for (Purchase purchase : purchasePage.getRecords()) {
             OrderResponse response = new OrderResponse();
             response.setPurchaseId(purchase.getPurchaseId());
             response.setOwnName(purchase.getOwnName());
+            response.setBuyerRealName(buyerRealNameMap.get(purchase.getOwnName()));
             response.setTotalPrice(purchase.getTotalPrice());
             response.setAddress(purchase.getAddress());
             response.setPurchaseStatus(purchase.getPurchaseStatus());

@@ -66,6 +66,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         wrapper.orderByDesc(Knowledge::getCreateTime);
         Page<Knowledge> result = knowledgeMapper.selectPage(pageParam, wrapper);
         fillOwnRealName(result.getRecords());
+        fillCommentCount(result.getRecords());
         return result;
     }
 
@@ -74,6 +75,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         Knowledge knowledge = knowledgeMapper.selectById(knowledgeId);
         if (knowledge != null) {
             fillOwnRealName(knowledge);
+            fillCommentCount(Collections.singletonList(knowledge));
         }
         return knowledge;
     }
@@ -161,6 +163,24 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         if (k == null) return;
         Map<String, String> nameMap = mapRealNames(Collections.singletonList(k.getOwnName()));
         k.setOwnRealName(nameMap.getOrDefault(k.getOwnName(), k.getOwnName()));
+    }
+
+    /** 批量回填评论数：一次查出这些知识的全部 tb_discuss，按 knowledgeId 分组计数 */
+    private void fillCommentCount(List<Knowledge> list) {
+        if (list == null || list.isEmpty()) return;
+        List<Integer> ids = list.stream()
+            .map(Knowledge::getKnowledgeId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+        if (ids.isEmpty()) return;
+        List<Discuss> discusses = discussMapper.selectList(
+            new LambdaQueryWrapper<Discuss>().in(Discuss::getKnowledgeId, ids)
+        );
+        Map<Integer, Long> countMap = discusses.stream()
+            .collect(Collectors.groupingBy(Discuss::getKnowledgeId, Collectors.counting()));
+        for (Knowledge k : list) {
+            k.setCommentCount(countMap.getOrDefault(k.getKnowledgeId(), 0L).intValue());
+        }
     }
 
     /** 批量回填评论人真实姓名 */

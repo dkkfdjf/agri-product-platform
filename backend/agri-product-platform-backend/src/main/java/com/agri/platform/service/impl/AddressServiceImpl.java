@@ -17,10 +17,19 @@ public class AddressServiceImpl implements AddressService {
 
     @Override
     public void addAddress(String userName, AddressRequest request) {
-        // 检查是否是第一个地址，如果是则自动设为默认
         Long count = addressMapper.selectCount(
             new LambdaQueryWrapper<Address>().eq(Address::getOwnName, userName)
         );
+        // 第一个地址自动默认；用户明确设默认也置为默认
+        boolean willBeDefault = count == 0 || (request.getIsDefault() != null && request.getIsDefault() == 1);
+
+        // 设为默认前先取消既有默认，避免出现多条 isDefault=1 共存（与 updateAddress 行为一致）
+        if (willBeDefault && count > 0) {
+            addressMapper.update(null,
+                new LambdaUpdateWrapper<Address>()
+                    .eq(Address::getOwnName, userName)
+                    .set(Address::getIsDefault, 0));
+        }
 
         Address address = new Address();
         address.setOwnName(userName);
@@ -30,8 +39,7 @@ public class AddressServiceImpl implements AddressService {
         address.setCity(request.getCity());
         address.setArea(request.getArea());
         address.setAddressDetail(request.getAddressDetail());
-        // 如果是第一个地址或者用户明确设为默认，则设为默认地址
-        address.setIsDefault((count == 0 || (request.getIsDefault() != null && request.getIsDefault() == 1)) ? 1 : 0);
+        address.setIsDefault(willBeDefault ? 1 : 0);
         addressMapper.insert(address);
     }
 
@@ -86,20 +94,36 @@ public class AddressServiceImpl implements AddressService {
             throw new RuntimeException("地址不存在或无权限");
         }
         addressMapper.deleteById(id);
+        // 若删除的恰是默认地址，把剩余最近的一条提升为默认，避免库内"无默认"导致结算取不到默认地址
+        if (address.getIsDefault() != null && address.getIsDefault() == 1) {
+            Address latest = addressMapper.selectOne(
+                new LambdaQueryWrapper<Address>()
+                    .eq(Address::getOwnName, userName)
+                    .orderByDesc(Address::getId)
+                    .last("LIMIT 1")
+            );
+            if (latest != null) {
+                latest.setIsDefault(1);
+                addressMapper.updateById(latest);
+            }
+        }
     }
 
     @Override
     public void setDefaultAddress(Integer id, String userName) {
-        // 取消其他默认地址
+        // 先校验归属：原实现先清空当前用户所有默认、再校验 id，
+        // 一旦传入不存在/他人的 id 就会把该用户全部默认地址静默清零。改为先校验、再清、再置。
+        Address address = addressMapper.selectById(id);
+        if (address == null || !address.getOwnName().equals(userName)) {
+            throw new RuntimeException("地址不存在或无权限");
+        }
+        // 取消当前用户的其他默认地址
         addressMapper.update(null,
             new LambdaUpdateWrapper<Address>()
                 .eq(Address::getOwnName, userName)
                 .set(Address::getIsDefault, 0));
-        // 设置新默认地址
-        Address address = addressMapper.selectById(id);
-        if (address != null && address.getOwnName().equals(userName)) {
-            address.setIsDefault(1);
-            addressMapper.updateById(address);
-        }
+        // 置为新默认
+        address.setIsDefault(1);
+        addressMapper.updateById(address);
     }
 }

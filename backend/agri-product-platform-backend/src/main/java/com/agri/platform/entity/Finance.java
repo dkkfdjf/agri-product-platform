@@ -41,4 +41,10 @@ public class Finance {
      */
     @TableField(exist = false)
     private String productName;
+
+    /**
+     * 非数据库字段：申请人的信用分(1-5)，仅在银行审批列表/详情中回填展示，不参与持久化。
+     */
+    @TableField(exist = false)
+    private Integer credit;
 }
