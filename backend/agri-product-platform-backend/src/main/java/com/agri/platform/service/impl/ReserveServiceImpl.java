@@ -14,6 +14,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.util.List;
+
 @Service
 public class ReserveServiceImpl implements ReserveService {
 
@@ -90,6 +93,7 @@ public class ReserveServiceImpl implements ReserveService {
 
     @Override
     public Page<Reserve> getReserveList(String userName, int page, int pageSize) {
+        sweepOverdue(); // 读取前惰性清理超期预约
         Page<Reserve> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<Reserve> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Reserve::getQuestioner, userName);
@@ -99,11 +103,61 @@ public class ReserveServiceImpl implements ReserveService {
 
     @Override
     public Page<Reserve> getReserveListByExpert(String expertName, int page, int pageSize) {
+        sweepOverdue(); // 读取前惰性清理超期预约
         Page<Reserve> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<Reserve> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Reserve::getExpertName, expertName);
         wrapper.orderByDesc(Reserve::getCreateTime);
         return reserveMapper.selectPage(pageParam, wrapper);
+    }
+
+    /**
+     * 超期自动关闭：期望时间(preferredTime)早于今天、且仍「待处理」(status=0)的预约，
+     * 置为「已过期」(status=3)，并通知预约人时间已过、请重新预约。
+     * 注：preferredTime 由前端按 yyyy-MM-dd[ HH:mm[:ss]] 传入，这里按日期(前10位)比较。
+     */
+    @Override
+    public void sweepOverdue() {
+        LambdaQueryWrapper<Reserve> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Reserve::getStatus, 0);
+        List<Reserve> pending = reserveMapper.selectList(wrapper);
+        if (pending == null || pending.isEmpty()) {
+            return;
+        }
+        LocalDate today = LocalDate.now();
+        for (Reserve r : pending) {
+            LocalDate d = parsePreferredDate(r.getPreferredTime());
+            if (d == null || !d.isBefore(today)) {
+                continue;
+            }
+            r.setStatus(3); // 已过期
+            reserveMapper.updateById(r);
+            String expertDisplay = r.getExpertRealName() != null ? r.getExpertRealName() : r.getExpertName();
+            messageService.send(r.getQuestioner(), "reserve",
+                    "预约已过期关闭",
+                    "您预约专家 " + expertDisplay + " 的期望时间(" + d.toString() + ")已过，系统已自动关闭该预约。如仍需咨询，请重新预约。",
+                    null);
+        }
+    }
+
+    /** 解析期望时间字符串(yyyy-MM-dd[ HH:mm[:ss]])为日期；非法返回 null */
+    private LocalDate parsePreferredDate(String s) {
+        if (s == null || s.trim().isEmpty()) {
+            return null;
+        }
+        String t = s.trim();
+        if (t.length() >= 10) {
+            try {
+                return LocalDate.parse(t.substring(0, 10));
+            } catch (Exception ignore) {
+                // 落到下面再尝试整体解析
+            }
+        }
+        try {
+            return LocalDate.parse(t);
+        } catch (Exception ignore) {
+            return null;
+        }
     }
 
     @Override

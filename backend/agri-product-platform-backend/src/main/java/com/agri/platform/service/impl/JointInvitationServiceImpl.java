@@ -56,6 +56,10 @@ public class JointInvitationServiceImpl implements JointInvitationService {
         if (jointUser == null) {
             throw new RuntimeException("所选联合贷款人不存在");
         }
+        // 联合贷款人只能是农户
+        if (!"farmer".equals(jointUser.getRole())) {
+            throw new RuntimeException("联合贷款人只能是农户");
+        }
 
         JointInvitation inv = new JointInvitation();
         inv.setFinanceId(financeId);
@@ -71,8 +75,8 @@ public class JointInvitationServiceImpl implements JointInvitationService {
         String applicantName = displayUserName(applicant, applicantUserName);
         messageService.send(jointUserName, "finance",
                 "联合贷款人邀请",
-                applicantName + " 邀请您作为融资申请 #" + financeId + " 的联合贷款人，请前往「我的联合贷款邀请」确认。",
-                "/joint-invitations");
+                applicantName + " 邀请您作为融资申请 #" + financeId + " 的联合贷款人，请前往「我的融资」确认。",
+                "/farmer/my-finance");
     }
 
     @Override

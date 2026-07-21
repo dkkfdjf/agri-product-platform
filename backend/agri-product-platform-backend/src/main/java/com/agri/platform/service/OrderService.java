@@ -15,7 +15,8 @@ public interface OrderService {
     OrderPageResponse getOrderListWithDetailsPaged(String userName, int page, int pageSize, Integer status);
     Purchase getOrderDetail(Integer purchaseId, String userName);
     OrderResponse getOrderDetailWithDetails(Integer purchaseId, String userName);
-    void updateOrderStatus(Integer purchaseId, Integer status);
+    /** 推进订单状态：status=3 发货（仅卖家）、status=4 确认收货（仅买家）；含所有权与状态机校验。 */
+    void updateOrderStatus(Integer purchaseId, Integer status, String userName);
     void cancelOrder(Integer purchaseId, String userName);
     /** 支付成功后把订单从待付款(1)推进到待发货(2)；幂等，非待付款状态不处理。 */
     void markOrderPaid(Integer purchaseId);

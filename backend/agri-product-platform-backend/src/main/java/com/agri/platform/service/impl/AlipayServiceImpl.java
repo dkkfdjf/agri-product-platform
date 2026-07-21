@@ -62,9 +62,20 @@ public class AlipayServiceImpl implements AlipayService {
                 : order.getTotalPrice().setScale(2, RoundingMode.HALF_UP);
         String amount = totalAmount.toPlainString();
 
-        // 用订单主键作为支付宝商户订单号 out_trade_no（便于回调/查询时反查）
-        String outTradeNo = String.valueOf(purchaseId);
+        // 商户订单号：每次发起支付都唯一（purchaseId + 时间戳），避免对同一订单重复发起时
+        // 支付宝侧 out_trade_no 冲突（表现为扫码后「订单不存在」）。回调/查询通过 tb_payment 反查 purchaseId。
+        String outTradeNo = purchaseId + "T" + System.currentTimeMillis();
         String subject = "农产品订单#" + purchaseId;
+
+        // 先落一条「待支付」流水，作为回调/主动查询时 out_trade_no → purchaseId 的映射。
+        Payment pending = new Payment();
+        pending.setPurchaseId(purchaseId);
+        pending.setOutTradeNo(outTradeNo);
+        pending.setTotalAmount(totalAmount);
+        pending.setTradeStatus("WAIT_BUYER_PAY");
+        pending.setPayTime(LocalDateTime.now());
+        pending.setCreateTime(LocalDateTime.now());
+        paymentMapper.insert(pending);
 
         // 当面付扫码支付（precreate）：返回二维码链接 qr_code，前端渲染成二维码让买家用支付宝App扫码付款
         AlipayTradePrecreateRequest request = new AlipayTradePrecreateRequest();
@@ -93,8 +104,11 @@ public class AlipayServiceImpl implements AlipayService {
         result.put("purchaseId", purchaseId);
 
         try {
+            // 用本订单最近一次发起支付的 out_trade_no 去查支付宝（每次发起都唯一）。
+            // 老订单若无流水记录，回退为 purchaseId，兼容历史数据。
+            String outTradeNo = latestOutTradeNo(purchaseId);
             AlipayTradeQueryRequest request = new AlipayTradeQueryRequest();
-            request.setBizContent("{\"out_trade_no\":\"" + purchaseId + "\"}");
+            request.setBizContent("{\"out_trade_no\":\"" + outTradeNo + "\"}");
             AlipayTradeQueryResponse response = buildClient().execute(request);
 
             result.put("tradeStatus", response.getTradeStatus());
@@ -104,7 +118,7 @@ public class AlipayServiceImpl implements AlipayService {
                 String amtStr = response.getTotalAmount();
                 BigDecimal paidAmount = (amtStr != null && !amtStr.isEmpty())
                         ? new BigDecimal(amtStr) : BigDecimal.ZERO;
-                savePaymentRecord(purchaseId, response.getTradeNo(), paidAmount, response.getTradeStatus(), null);
+                savePaymentRecord(outTradeNo, purchaseId, response.getTradeNo(), paidAmount, response.getTradeStatus(), null);
                 result.put("paid", true);
             } else {
                 result.put("paid", false);
@@ -131,12 +145,16 @@ public class AlipayServiceImpl implements AlipayService {
             String tradeStatus = params.get("trade_status");
             String outTradeNo = params.get("out_trade_no");
             if ("TRADE_SUCCESS".equals(tradeStatus) && outTradeNo != null && !outTradeNo.isEmpty()) {
-                Integer purchaseId = Integer.valueOf(outTradeNo);
+                // out_trade_no 形如 "purchaseId T timestamp"；优先按流水反查 purchaseId
+                Integer purchaseId = resolvePurchaseId(outTradeNo);
+                if (purchaseId == null) {
+                    return "fail";
+                }
                 orderService.markOrderPaid(purchaseId);
                 String amtStr = params.get("total_amount");
                 BigDecimal paidAmount = (amtStr != null && !amtStr.isEmpty())
                         ? new BigDecimal(amtStr) : BigDecimal.ZERO;
-                savePaymentRecord(purchaseId, params.get("trade_no"), paidAmount, tradeStatus, params.get("gmt_payment"));
+                savePaymentRecord(outTradeNo, purchaseId, params.get("trade_no"), paidAmount, tradeStatus, params.get("gmt_payment"));
             }
             return "success";
         } catch (Exception e) {
@@ -144,15 +162,40 @@ public class AlipayServiceImpl implements AlipayService {
         }
     }
 
+    /** 取本订单最近一次发起支付使用的 out_trade_no（paymentId 最大的一条），无则回退 purchaseId。 */
+    private String latestOutTradeNo(Integer purchaseId) {
+        Payment latest = paymentMapper.selectOne(
+                new LambdaQueryWrapper<Payment>()
+                        .eq(Payment::getPurchaseId, purchaseId)
+                        .orderByDesc(Payment::getPaymentId)
+                        .last("LIMIT 1"));
+        return latest != null && latest.getOutTradeNo() != null ? latest.getOutTradeNo() : String.valueOf(purchaseId);
+    }
+
+    /** 由 out_trade_no 反查 purchaseId：先查 tb_payment，再按 "purchaseId T timestamp" 前缀解析，最后回退整数解析。 */
+    private Integer resolvePurchaseId(String outTradeNo) {
+        Payment p = paymentMapper.selectOne(
+                new LambdaQueryWrapper<Payment>().eq(Payment::getOutTradeNo, outTradeNo).last("LIMIT 1"));
+        if (p != null && p.getPurchaseId() != null) {
+            return p.getPurchaseId();
+        }
+        int tIdx = outTradeNo.indexOf('T');
+        String head = tIdx > 0 ? outTradeNo.substring(0, tIdx) : outTradeNo;
+        try {
+            return Integer.valueOf(head);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     /**
-     * 幂等记录支付流水：按 out_trade_no(=purchaseId) 唯一键查重，存在则更新，不存在则插入。
+     * 幂等记录支付流水：按 out_trade_no（每次发起支付唯一）查重，存在则更新，不存在则插入。
      * 主动查询走 gmtPayment=null（用当前时间）；异步回调带支付宝返回的 gmt_payment。
      */
-    private void savePaymentRecord(Integer purchaseId, String alipayTradeNo, BigDecimal totalAmount,
-                                   String tradeStatus, String gmtPayment) {
-        String outTradeNo = String.valueOf(purchaseId);
+    private void savePaymentRecord(String outTradeNo, Integer purchaseId, String alipayTradeNo,
+                                   BigDecimal totalAmount, String tradeStatus, String gmtPayment) {
         Payment existing = paymentMapper.selectOne(
-                new LambdaQueryWrapper<Payment>().eq(Payment::getOutTradeNo, outTradeNo));
+                new LambdaQueryWrapper<Payment>().eq(Payment::getOutTradeNo, outTradeNo).last("LIMIT 1"));
         LocalDateTime payTime = parsePayTime(gmtPayment);
         if (existing == null) {
             Payment payment = new Payment();
@@ -162,6 +205,7 @@ public class AlipayServiceImpl implements AlipayService {
             payment.setTotalAmount(totalAmount);
             payment.setTradeStatus(tradeStatus);
             payment.setPayTime(payTime);
+            payment.setCreateTime(LocalDateTime.now());
             paymentMapper.insert(payment);
         } else {
             existing.setAlipayTradeNo(alipayTradeNo);

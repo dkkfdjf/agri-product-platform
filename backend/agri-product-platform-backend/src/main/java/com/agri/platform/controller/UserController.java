@@ -143,11 +143,13 @@ public class UserController {
 
     /**
      * 联系人列表（供联合贷款人等场景选择，排除自己；仅农户/买家/专家）
+     * @param role 可选，限定角色（如 farmer），不传则返回农户/买家/专家全部
      */
     @GetMapping("/contacts")
-    public Result<List<User>> contacts(@RequestHeader("Authorization") String token) {
+    public Result<List<User>> contacts(@RequestHeader("Authorization") String token,
+                                       @RequestParam(required = false) String role) {
         String userName = userService.getUserByUserNameFromToken(token);
-        return Result.success(userService.listContacts(userName));
+        return Result.success(userService.listContacts(userName, role));
     }
 
     /**

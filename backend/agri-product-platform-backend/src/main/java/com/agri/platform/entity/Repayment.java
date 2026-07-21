@@ -27,11 +27,18 @@ public class Repayment {
     private BigDecimal interest;      // 本期利息
     private BigDecimal totalAmount;   // 本期应还本息
     private BigDecimal paidAmount;    // 已还金额
-    private Integer status;           // 0未还 1已还（逾期在读取时动态判定）
-    private LocalDateTime paidTime;
+    private Integer status;           // 0未还 1已还 2待确认(农户已提交) 3已驳回（逾期读取时动态判定）
+    private LocalDateTime paidTime;   // 实还/提交时间
+    private String transactionNo;     // 还款流水号/备注（农户提交时填写）
+    private String payProof;          // 还款凭证图片URL（农户提交，经 /upload 上传）
+    private String rejectReason;      // 银行驳回原因
     private LocalDateTime createTime;
 
-    /** 非数据库字段：是否逾期（status==0 且到期日早于今天），仅在列表读取时回填 */
+    /** 非数据库字段：是否逾期（status∈{0未还,3已驳回} 且到期日早于今天），仅在列表读取时回填 */
     @TableField(exist = false)
     private Boolean overdue;
+
+    /** 非数据库字段：还款农户真名（由 financeId 反查 tb_finance.realName 回填），仅供银行审核列表展示 */
+    @TableField(exist = false)
+    private String farmerName;
 }

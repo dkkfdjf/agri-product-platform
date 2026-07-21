@@ -152,11 +152,17 @@ public class UserService {
     /**
      * 联系人列表：供「联合贷款人」等场景选择联系人。
      * 返回除自己外、正常状态的 农户/买家/专家（银行、管理员不作为共借人），仅取 姓名/电话/用户名，不含密码。
+     * @param excludeUserName 排除自己
+     * @param role            可选，限定角色（如 "farmer"）；为空则返回农户/买家/专家全部
      */
-    public List<User> listContacts(String excludeUserName) {
+    public List<User> listContacts(String excludeUserName, String role) {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        wrapper.in(User::getRole, "farmer", "buyer", "expert")
-                .eq(User::getStatus, 1)
+        if (role != null && !role.trim().isEmpty()) {
+            wrapper.eq(User::getRole, role.trim());
+        } else {
+            wrapper.in(User::getRole, "farmer", "buyer", "expert");
+        }
+        wrapper.eq(User::getStatus, 1)
                 .ne(User::getUserName, excludeUserName)
                 .select(User::getUserName, User::getRealName, User::getPhone);
         return userMapper.selectList(wrapper);

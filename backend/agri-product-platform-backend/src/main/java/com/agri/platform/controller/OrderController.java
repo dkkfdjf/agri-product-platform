@@ -75,9 +75,11 @@ public class OrderController {
 
     @PutMapping("/{purchaseId}/status")
     public Result<String> updateStatus(@PathVariable Integer purchaseId,
+                                        @RequestHeader("Authorization") String token,
                                         @RequestBody Map<String, Integer> request) {
         Integer status = request.get("status");
-        orderService.updateOrderStatus(purchaseId, status);
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        orderService.updateOrderStatus(purchaseId, status, userName);
         return Result.success("状态更新成功");
     }
 

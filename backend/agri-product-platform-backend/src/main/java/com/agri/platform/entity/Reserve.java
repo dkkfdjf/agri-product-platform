@@ -25,7 +25,7 @@ public class Reserve {
     private String message;
     private String preferredTime;
     private String answer;
-    private Integer status; // 0待处理 1已完成 2已拒绝
+    private Integer status; // 0待处理 1已完成 2已拒绝 3已过期（超期自动关闭）
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

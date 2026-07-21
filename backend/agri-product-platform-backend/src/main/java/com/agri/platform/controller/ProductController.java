@@ -44,6 +44,19 @@ public class ProductController {
         return Result.success(productService.getProductById(orderId));
     }
 
+    /**
+     * 联系发布方：把当前用户（联系人）的姓名/电话通过站内通知发给商品/求购的发布方。
+     */
+    @PostMapping("/{orderId}/contact")
+    public Result<String> contact(@PathVariable Integer orderId,
+                                  @RequestHeader("Authorization") String token,
+                                  @RequestBody(required = false) java.util.Map<String, String> body) {
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        String message = body == null ? null : body.get("message");
+        productService.contactSeller(userName, orderId, message);
+        return Result.success("已通知发布方，请保持电话畅通");
+    }
+
     @PutMapping("/{orderId}")
     public Result<String> update(@PathVariable Integer orderId,
                                   @RequestHeader("Authorization") String token,

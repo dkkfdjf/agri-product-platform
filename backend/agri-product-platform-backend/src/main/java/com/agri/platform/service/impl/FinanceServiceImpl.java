@@ -6,9 +6,11 @@ import com.agri.platform.dto.FinanceProductRequest;
 import com.agri.platform.dto.FinanceRequest;
 import com.agri.platform.entity.Finance;
 import com.agri.platform.entity.FinanceProduct;
+import com.agri.platform.entity.Product;
 import com.agri.platform.entity.User;
 import com.agri.platform.mapper.FinanceMapper;
 import com.agri.platform.mapper.FinanceProductMapper;
+import com.agri.platform.mapper.ProductMapper;
 import com.agri.platform.mapper.UserMapper;
 import com.agri.platform.service.FinanceService;
 import com.agri.platform.service.JointInvitationService;
@@ -39,6 +41,10 @@ public class FinanceServiceImpl implements FinanceService {
     @Autowired
     private FinanceMapper financeMapper;
 
+    /** 农产品(tb_product) Mapper，用于智能匹配中按 realName↔ownName 关联农户在售/种植的农产品 */
+    @Autowired
+    private ProductMapper agriProductMapper;
+
     @Autowired
     private UserMapper userMapper;
 
@@ -66,6 +72,7 @@ public class FinanceServiceImpl implements FinanceService {
         product.setMoney(request.getMoney());
         product.setRate(request.getRate());
         product.setRepayment(request.getRepayment());
+        product.setStatus(0); // 在售/可申请
         productMapper.insert(product);
     }
 
@@ -73,6 +80,17 @@ public class FinanceServiceImpl implements FinanceService {
     public Page<FinanceProduct> getProductList(int page, int pageSize) {
         Page<FinanceProduct> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<FinanceProduct> wrapper = new LambdaQueryWrapper<>();
+        // 公开列表仅展示「在售」产品：暂停供应的产品农户不可再申请，故不对公众展示
+        wrapper.eq(FinanceProduct::getStatus, 0);
+        wrapper.orderByDesc(FinanceProduct::getCreateTime);
+        return productMapper.selectPage(pageParam, wrapper);
+    }
+
+    @Override
+    public Page<FinanceProduct> getBankProductList(int page, int pageSize) {
+        Page<FinanceProduct> pageParam = new Page<>(page, pageSize);
+        LambdaQueryWrapper<FinanceProduct> wrapper = new LambdaQueryWrapper<>();
+        // 银行产品管理：返回全部状态（含已暂停），便于银行查看与恢复供应
         wrapper.orderByDesc(FinanceProduct::getCreateTime);
         return productMapper.selectPage(pageParam, wrapper);
     }
@@ -106,6 +124,10 @@ public class FinanceServiceImpl implements FinanceService {
         FinanceProduct product = productMapper.selectById(request.getProductId());
         if (product == null) {
             throw new RuntimeException("融资产品不存在");
+        }
+        // 暂停供应的产品不可继续申请（status: 0在售 1暂停供应；历史数据 status 为 null 视为在售）
+        if (product.getStatus() != null && product.getStatus() == 1) {
+            throw new RuntimeException("该融资产品已暂停供应，暂不可申请");
         }
 
         // 校验申请金额（money 为数据库 NOT NULL 列，必须校验，避免直接抛出原始 SQL 异常）
@@ -273,13 +295,18 @@ public class FinanceServiceImpl implements FinanceService {
     }
 
     @Override
-    public Page<Finance> getBankApplications(Integer status, String keyword, String startDate, String endDate, int page, int pageSize) {
+    public Page<Finance> getBankApplications(Integer status, String keyword, Integer productId, String startDate, String endDate, int page, int pageSize) {
         Page<Finance> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<Finance> wrapper = new LambdaQueryWrapper<>();
 
         // 状态过滤（不传则返回全部状态）
         if (status != null) {
             wrapper.eq(Finance::getStatus, status);
+        }
+
+        // 融资产品过滤：按所选产品ID精确筛选（含已暂停产品对应的申请）
+        if (productId != null) {
+            wrapper.eq(Finance::getProductId, productId);
         }
 
         // 关键词：模糊匹配 真实姓名 / 手机号 / 用户名
@@ -304,6 +331,67 @@ public class FinanceServiceImpl implements FinanceService {
         Page<Finance> result = financeMapper.selectPage(pageParam, wrapper);
         fillProductName(result.getRecords());
         fillCredit(result.getRecords());
+        return result;
+    }
+
+    @Override
+    public Page<Finance> getBankMatch(BigDecimal minMoney, BigDecimal maxMoney, Integer repayment, String keyword, int page, int pageSize) {
+        Page<Finance> pageParam = new Page<>(page, pageSize);
+        LambdaQueryWrapper<Finance> wrapper = new LambdaQueryWrapper<>();
+
+        // 智能匹配面向「申请中」的真实融资申请(status=0)，即银行可主动对接的潜在客户
+        wrapper.eq(Finance::getStatus, 0);
+
+        // 金额区间（元）
+        if (minMoney != null && minMoney.compareTo(BigDecimal.ZERO) > 0) {
+            wrapper.ge(Finance::getMoney, minMoney);
+        }
+        if (maxMoney != null && maxMoney.compareTo(BigDecimal.ZERO) > 0) {
+            wrapper.le(Finance::getMoney, maxMoney);
+        }
+
+        // 期限（月）精确匹配
+        if (repayment != null && repayment > 0) {
+            wrapper.eq(Finance::getRepayment, repayment);
+        }
+
+        // 作物/用途关键字：匹配融资用途 purpose，或该农户发布的农产品(标题/类型)命中关键字
+        // —— 这里即「tb_finance ↔ 农产品」的关联：用关键字反查 tb_product 命中的发布者真名(realName)。
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            String kw = keyword.trim();
+            List<Product> hitProducts = agriProductMapper.selectList(
+                    new LambdaQueryWrapper<Product>()
+                            .like(Product::getTitle, kw)
+                            .or().like(Product::getType, kw));
+            Set<String> ownerRealNames = hitProducts.stream()
+                    .map(Product::getOwnName)
+                    .filter(java.util.Objects::nonNull)
+                    .filter(n -> !n.isEmpty())
+                    .collect(Collectors.toSet());
+            wrapper.and(w -> {
+                w.like(Finance::getPurpose, kw);
+                if (!ownerRealNames.isEmpty()) {
+                    w.or().in(Finance::getRealName, ownerRealNames);
+                }
+            });
+        }
+
+        wrapper.orderByDesc(Finance::getCreateTime);
+        Page<Finance> result = financeMapper.selectPage(pageParam, wrapper);
+        fillProductName(result.getRecords());
+        fillCredit(result.getRecords());
+        fillProductNames(result.getRecords());
+
+        // 信用分无法在 SQL 层排序（credit 为非持久化回填字段），改为分页内按信用分降序、金额降序重排，
+        // 让高信用客户在本页优先展示。分页本身仍以申请时间全局排序。
+        result.getRecords().sort((a, b) -> {
+            int ca = a.getCredit() == null ? 0 : a.getCredit();
+            int cb = b.getCredit() == null ? 0 : b.getCredit();
+            if (cb != ca) return Integer.compare(cb, ca);
+            BigDecimal ma = a.getMoney() == null ? BigDecimal.ZERO : a.getMoney();
+            BigDecimal mb = b.getMoney() == null ? BigDecimal.ZERO : b.getMoney();
+            return mb.compareTo(ma);
+        });
         return result;
     }
 
@@ -390,23 +478,24 @@ public class FinanceServiceImpl implements FinanceService {
         if (product == null) {
             throw new RuntimeException("融资产品不存在");
         }
-        product.setBankName(request.getBankName());
-        product.setIntroduce(request.getIntroduce());
-        product.setBankPhone(request.getBankPhone());
-        product.setMoney(request.getMoney());
-        product.setRate(request.getRate());
-        product.setRepayment(request.getRepayment());
+        // 不可随意更改：核心条款(名称/额度/利率/期限)发布后锁定，仅允许修改介绍与联系电话
+        if (request.getIntroduce() != null) product.setIntroduce(request.getIntroduce());
+        if (request.getBankPhone() != null) product.setBankPhone(request.getBankPhone());
         productMapper.updateById(product);
     }
 
     @Override
-    public void deleteProduct(String userName, Integer productId) {
+    public void setProductStatus(String userName, Integer productId, Integer status) {
         requireBankRole(userName);
         FinanceProduct product = productMapper.selectById(productId);
         if (product == null) {
             throw new RuntimeException("融资产品不存在");
         }
-        productMapper.deleteById(productId);
+        if (status == null || (status != 0 && status != 1)) {
+            throw new RuntimeException("非法的状态参数");
+        }
+        product.setStatus(status);
+        productMapper.updateById(product);
     }
 
     // ==================== 私有辅助 ====================
@@ -463,6 +552,38 @@ public class FinanceServiceImpl implements FinanceService {
                         (a, b) -> a));
         for (Finance f : list) {
             f.setCredit(creditMap.get(f.getOwnName()));
+        }
+    }
+
+    /**
+     * 批量回填每条申请对应农户在售/种植的农产品名称。
+     * 关联依据：Finance.realName（农户真名）↔ Product.ownName（农产品发布方真名）。
+     * 每位农户取最多 5 个去重标题，逗号(、)拼接，供银行智能匹配展示「融资申请 ↔ 农产品」。
+     */
+    private void fillProductNames(List<Finance> list) {
+        if (list == null || list.isEmpty()) {
+            return;
+        }
+        Set<String> realNames = list.stream()
+                .map(Finance::getRealName)
+                .filter(java.util.Objects::nonNull)
+                .filter(n -> !n.isEmpty())
+                .collect(Collectors.toSet());
+        if (realNames.isEmpty()) {
+            return;
+        }
+        List<Product> products = agriProductMapper.selectList(
+                new LambdaQueryWrapper<Product>().in(Product::getOwnName, realNames));
+        Map<String, List<String>> titlesByOwner = products.stream()
+                .filter(p -> p.getOwnName() != null && p.getTitle() != null)
+                .collect(Collectors.groupingBy(Product::getOwnName,
+                        Collectors.mapping(Product::getTitle, Collectors.toList())));
+        for (Finance f : list) {
+            List<String> titles = titlesByOwner.get(f.getRealName());
+            if (titles != null && !titles.isEmpty()) {
+                String joined = titles.stream().distinct().limit(5).collect(Collectors.joining("、"));
+                f.setProductNames(joined);
+            }
         }
     }
 

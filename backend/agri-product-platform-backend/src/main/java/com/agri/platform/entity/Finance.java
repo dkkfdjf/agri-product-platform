@@ -47,4 +47,11 @@ public class Finance {
      */
     @TableField(exist = false)
     private Integer credit;
+
+    /**
+     * 非数据库字段：该农户在售/种植的农产品名称（逗号拼接，最多5个），仅在银行智能匹配中
+     * 按 realName↔tb_product.ownName 回填展示，作为「融资申请 ↔ 农产品」的对接依据，不参与持久化。
+     */
+    @TableField(exist = false)
+    private String productNames;
 }

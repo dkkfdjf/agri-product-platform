@@ -57,6 +57,12 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public Integer submitOrder(String userName, OrderRequest request) {
+        // 仅买家可下单购买（农户/专家/银行/管理员不可）
+        User buyer = userMapper.selectById(userName);
+        if (buyer == null || !"buyer".equals(buyer.getRole())) {
+            throw new RuntimeException("仅买家账号可下单购买");
+        }
+
         // 创建订单主记录
         Purchase purchase = new Purchase();
         purchase.setOwnName(userName);
@@ -229,19 +235,64 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public void updateOrderStatus(Integer purchaseId, Integer status) {
+    public void updateOrderStatus(Integer purchaseId, Integer status, String userName) {
         Purchase purchase = purchaseMapper.selectById(purchaseId);
         if (purchase == null) {
             throw new RuntimeException("订单不存在");
         }
+        Integer cur = purchase.getPurchaseStatus();
+        if (status != null && status == 3) {
+            // 发货：仅该订单的卖家（订单中某商品的发布者）可发货，且当前须为待发货(2)
+            if (cur == null || cur != 2) {
+                throw new RuntimeException("当前订单状态不可发货");
+            }
+            if (!isSellerOfOrder(purchaseId, userName)) {
+                throw new RuntimeException("无权操作该订单");
+            }
+        } else if (status != null && status == 4) {
+            // 确认收货：仅买家(purchase.ownName)可确认，且当前须为待收货(3)
+            if (cur == null || cur != 3) {
+                throw new RuntimeException("当前订单状态不可确认收货");
+            }
+            if (!purchase.getOwnName().equals(userName)) {
+                throw new RuntimeException("无权确认收货");
+            }
+        } else {
+            // 其他状态变更（取消走 DELETE 端点）一律拒绝，避免越权任意改状态
+            throw new RuntimeException("不支持的状态变更");
+        }
         purchase.setPurchaseStatus(status);
         purchaseMapper.updateById(purchase);
-        // 通知买家订单状态变更（待发货/待收货/已完成/已取消等）
+        // 通知买家订单状态变更（待收货/已完成等）
         String statusText = STATUS_TEXT_MAP.getOrDefault(status, "已更新");
         messageService.send(purchase.getOwnName(), "order",
                 "订单状态更新：" + statusText,
                 "您的订单 #" + purchaseId + " 状态已更新为「" + statusText + "」。",
                 "/order/" + purchaseId);
+    }
+
+    /**
+     * 判断 userName 是否为该订单中某商品的发布方（卖家）。
+     * 商品 ownName 存的是真实姓名，因此同时匹配 userName 与 realName。
+     */
+    private boolean isSellerOfOrder(Integer purchaseId, String userName) {
+        User user = userMapper.selectById(userName);
+        String realName = user != null ? user.getRealName() : null;
+        List<PurchaseDetail> details = detailMapper.selectList(
+                new LambdaQueryWrapper<PurchaseDetail>().eq(PurchaseDetail::getPurchaseId, purchaseId));
+        List<Integer> productIds = details.stream()
+                .map(PurchaseDetail::getOrderId)
+                .distinct()
+                .collect(Collectors.toList());
+        if (productIds.isEmpty()) {
+            return false;
+        }
+        List<Product> products = productMapper.selectBatchIds(productIds);
+        for (Product p : products) {
+            if (userName.equals(p.getOwnName())) return true;
+            if (realName != null && realName.equals(p.getOwnName())) return true;
+        }
+        return false;
     }
 
     @Override

@@ -16,6 +16,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+
 @RestController
 @RequestMapping("/finance")
 public class FinanceController {
@@ -103,11 +105,12 @@ public class FinanceController {
     @GetMapping("/bank/applications")
     public Result<Page<Finance>> bankApplications(@RequestParam(required = false) Integer status,
                                                    @RequestParam(required = false) String keyword,
+                                                   @RequestParam(required = false) Integer productId,
                                                    @RequestParam(required = false) String startDate,
                                                    @RequestParam(required = false) String endDate,
                                                    @RequestParam(defaultValue = "1") int page,
                                                    @RequestParam(defaultValue = "10") int pageSize) {
-        return Result.success(financeService.getBankApplications(status, keyword, startDate, endDate, page, pageSize));
+        return Result.success(financeService.getBankApplications(status, keyword, productId, startDate, endDate, page, pageSize));
     }
 
     /**
@@ -119,7 +122,31 @@ public class FinanceController {
     }
 
     /**
-     * 银行工作台 - 更新融资产品（仅银行角色）
+     * 银行工作台 - 智能匹配：在「申请中」的真实融资申请里按金额区间/期限/作物关键字筛选，
+     * 回填 productName + credit + productNames（该农户农产品），按信用分优先展示。
+     * 与 /intention/match（基于无人写入的融资意向表，恒空）不同，此处基于真实 tb_finance 数据。
+     */
+    @GetMapping("/bank/match")
+    public Result<Page<Finance>> bankMatch(@RequestParam(required = false) BigDecimal minMoney,
+                                            @RequestParam(required = false) BigDecimal maxMoney,
+                                            @RequestParam(required = false) Integer repayment,
+                                            @RequestParam(required = false) String keyword,
+                                            @RequestParam(defaultValue = "1") int page,
+                                            @RequestParam(defaultValue = "10") int pageSize) {
+        return Result.success(financeService.getBankMatch(minMoney, maxMoney, repayment, keyword, page, pageSize));
+    }
+
+    /**
+     * 银行工作台 - 本行全部融资产品（含已暂停），供产品管理页展示
+     */
+    @GetMapping("/bank/product/list")
+    public Result<Page<FinanceProduct>> bankProductList(@RequestParam(defaultValue = "1") int page,
+                                                         @RequestParam(defaultValue = "10") int pageSize) {
+        return Result.success(financeService.getBankProductList(page, pageSize));
+    }
+
+    /**
+     * 银行工作台 - 更新融资产品（仅银行角色；核心条款发布后锁定，仅可改介绍与电话）
      */
     @PutMapping("/bank/product/{productId}")
     public Result<String> updateProduct(@RequestHeader("Authorization") String token,
@@ -131,14 +158,15 @@ public class FinanceController {
     }
 
     /**
-     * 银行工作台 - 删除融资产品（仅银行角色）
+     * 银行工作台 - 切换融资产品上下架状态（0在售 / 1暂停供应）。产品不支持删除。
      */
-    @DeleteMapping("/bank/product/{productId}")
-    public Result<String> deleteProduct(@RequestHeader("Authorization") String token,
-                                         @PathVariable Integer productId) {
+    @PutMapping("/bank/product/{productId}/status")
+    public Result<String> setProductStatus(@RequestHeader("Authorization") String token,
+                                            @PathVariable Integer productId,
+                                            @RequestParam Integer status) {
         String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
-        financeService.deleteProduct(userName, productId);
-        return Result.success("产品删除成功");
+        financeService.setProductStatus(userName, productId, status);
+        return Result.success(status != null && status == 1 ? "已暂停供应" : "已恢复供应");
     }
 
     // 融资意向相关

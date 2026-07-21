@@ -10,6 +10,7 @@ import com.agri.platform.mapper.QuestionMapper;
 import com.agri.platform.mapper.ReserveMapper;
 import com.agri.platform.mapper.UserMapper;
 import com.agri.platform.service.ExpertService;
+import com.agri.platform.service.ReserveService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,9 @@ public class ExpertServiceImpl implements ExpertService {
     @Autowired
     private QuestionMapper questionMapper;
 
+    @Autowired
+    private ReserveService reserveService;
+
     @Override
     public void updateExpert(String userName, ExpertRequest request) {
         Expert expert = expertMapper.selectById(userName);
@@ -58,6 +62,8 @@ public class ExpertServiceImpl implements ExpertService {
 
     @Override
     public Page<Reserve> getReserveList(String expertName, int page, int pageSize, Integer status) {
+        // 读取前惰性清理超期预约（专家侧入口）
+        reserveService.sweepOverdue();
         Page<Reserve> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<Reserve> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Reserve::getExpertName, expertName);

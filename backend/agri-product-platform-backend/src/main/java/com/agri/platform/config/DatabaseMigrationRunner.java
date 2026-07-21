@@ -91,11 +91,29 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
                         + "interest DECIMAL(14,2) DEFAULT 0 COMMENT '本期利息',"
                         + "total_amount DECIMAL(14,2) DEFAULT 0 COMMENT '本期应还本息',"
                         + "paid_amount DECIMAL(14,2) DEFAULT 0 COMMENT '已还金额',"
-                        + "status TINYINT NOT NULL DEFAULT 0 COMMENT '0未还 1已还（逾期读取时动态判定）',"
-                        + "paid_time DATETIME DEFAULT NULL COMMENT '实还时间',"
+                        + "status TINYINT NOT NULL DEFAULT 0 COMMENT '0未还 1已还 2待确认(农户已提交) 3已驳回（逾期读取时动态判定）',"
+                        + "paid_time DATETIME DEFAULT NULL COMMENT '实还/提交时间',"
+                        + "transaction_no VARCHAR(64) DEFAULT NULL COMMENT '还款流水号/备注（农户提交时填写）',"
+                        + "pay_proof VARCHAR(512) DEFAULT NULL COMMENT '还款凭证图片URL（农户提交，经 /upload 上传）',"
+                        + "reject_reason VARCHAR(255) DEFAULT NULL COMMENT '银行驳回原因',"
                         + "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',"
-                        + "INDEX idx_repayment_finance (finance_id)"
+                        + "INDEX idx_repayment_finance (finance_id),"
+                        + "INDEX idx_repayment_status (status)"
                         + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT '还款计划'");
+
+        // 2026-07-21：还款计划表增加「流水号 / 凭证 / 驳回原因」三列，支撑还贷两阶段(农户提交→银行确认)。
+        // 既有库（表已存在但缺这三列）重启后端即自动补齐；全新库则上面的 CREATE 已含。
+        addColumnIfNotExists("tb_repayment", "transaction_no",
+                "VARCHAR(64) DEFAULT NULL COMMENT '还款流水号/备注（农户提交时填写）'");
+        addColumnIfNotExists("tb_repayment", "pay_proof",
+                "VARCHAR(512) DEFAULT NULL COMMENT '还款凭证图片URL（农户提交，经 /upload 上传）'");
+        addColumnIfNotExists("tb_repayment", "reject_reason",
+                "VARCHAR(255) DEFAULT NULL COMMENT '银行驳回原因'");
+
+        // 2026-07-21：融资产品表增加「上下架状态」。融资产品不可删除，只能暂停供应：
+        // 暂停(status=1)后农户无法再申请，但已申请记录仍保留在审批中。默认 0=在售。
+        addColumnIfNotExists("tb_finance_product", "status",
+                "TINYINT NOT NULL DEFAULT 0 COMMENT '0在售/可申请 1暂停供应'");
 
         log.info("[DB迁移] 完成。");
     }

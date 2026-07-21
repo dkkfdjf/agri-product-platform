@@ -18,6 +18,7 @@ public class FinanceProduct {
     private BigDecimal money;
     private BigDecimal rate;
     private Integer repayment;
+    private Integer status; // 0在售/可申请 1暂停供应（不可删除，只能暂停）
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

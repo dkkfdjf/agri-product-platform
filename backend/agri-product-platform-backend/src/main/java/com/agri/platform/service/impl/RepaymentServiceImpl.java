@@ -1,12 +1,17 @@
 package com.agri.platform.service.impl;
 
+import com.agri.platform.dto.RepaymentRejectRequest;
+import com.agri.platform.dto.RepaymentSubmitRequest;
 import com.agri.platform.entity.Finance;
 import com.agri.platform.entity.Repayment;
+import com.agri.platform.entity.User;
 import com.agri.platform.mapper.FinanceMapper;
 import com.agri.platform.mapper.RepaymentMapper;
+import com.agri.platform.mapper.UserMapper;
 import com.agri.platform.service.MessageService;
 import com.agri.platform.service.RepaymentService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +21,9 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class RepaymentServiceImpl implements RepaymentService {
@@ -25,6 +33,9 @@ public class RepaymentServiceImpl implements RepaymentService {
 
     @Autowired
     private FinanceMapper financeMapper;
+
+    @Autowired
+    private UserMapper userMapper;
 
     @Autowired
     private MessageService messageService;
@@ -105,8 +116,10 @@ public class RepaymentServiceImpl implements RepaymentService {
         List<Repayment> list = repaymentMapper.selectList(w);
         LocalDate today = LocalDate.now();
         for (Repayment r : list) {
-            boolean od = (r.getStatus() != null && r.getStatus() == 0
-                    && r.getDueDate() != null && r.getDueDate().isBefore(today));
+            // 逾期：未还(0) 或 已驳回(3) 且到期日早于今天
+            Integer st = r.getStatus();
+            boolean unpaid = st != null && (st == 0 || st == 3);
+            boolean od = unpaid && r.getDueDate() != null && r.getDueDate().isBefore(today);
             r.setOverdue(od);
         }
         return list;
@@ -114,7 +127,7 @@ public class RepaymentServiceImpl implements RepaymentService {
 
     @Override
     @Transactional
-    public void pay(Integer repaymentId, String userName) {
+    public void submit(Integer repaymentId, String userName, RepaymentSubmitRequest request) {
         Repayment r = repaymentMapper.selectById(repaymentId);
         if (r == null) {
             throw new RuntimeException("还款记录不存在");
@@ -126,18 +139,124 @@ public class RepaymentServiceImpl implements RepaymentService {
         if (!finance.getOwnName().equals(userName)) {
             throw new RuntimeException("无权操作此还款");
         }
-        if (r.getStatus() != null && r.getStatus() == 1) {
+        Integer st = r.getStatus();
+        if (st != null && st == 1) {
             throw new RuntimeException("该期已还款");
         }
+        if (st != null && st == 2) {
+            throw new RuntimeException("该期还款已提交，待银行确认");
+        }
+        // 仅 0未还 / 3已驳回 可提交
 
-        r.setStatus(1);
+        r.setStatus(2); // 待确认
         r.setPaidAmount(r.getTotalAmount());
         r.setPaidTime(LocalDateTime.now());
+        if (request != null) {
+            r.setTransactionNo(request.getTransactionNo());
+            r.setPayProof(request.getPayProof());
+        }
+        r.setRejectReason(null); // 清掉历史驳回原因
         repaymentMapper.updateById(r);
 
         messageService.send(userName, "finance",
-                "还款成功",
-                "您的融资申请 #" + finance.getFinanceId() + " 第 " + r.getPeriodIndex() + " 期已还款 ¥" + r.getTotalAmount() + "。",
+                "还款已提交",
+                "您的融资申请 #" + finance.getFinanceId() + " 第 " + r.getPeriodIndex()
+                        + " 期还款已提交（¥" + r.getTotalAmount() + "），等待银行确认。",
                 "/farmer/my-finance");
+    }
+
+    @Override
+    public Page<Repayment> bankList(Integer status, int page, int pageSize) {
+        Page<Repayment> pageParam = new Page<>(page, pageSize);
+        LambdaQueryWrapper<Repayment> w = new LambdaQueryWrapper<>();
+        if (status != null) {
+            w.eq(Repayment::getStatus, status);
+        } else {
+            w.eq(Repayment::getStatus, 2); // 默认查看「待确认」队列
+        }
+        w.orderByDesc(Repayment::getPaidTime);
+        Page<Repayment> result = repaymentMapper.selectPage(pageParam, w);
+        fillFarmerName(result.getRecords());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void bankConfirm(Integer repaymentId) {
+        Repayment r = repaymentMapper.selectById(repaymentId);
+        if (r == null) {
+            throw new RuntimeException("还款记录不存在");
+        }
+        if (r.getStatus() == null || r.getStatus() != 2) {
+            throw new RuntimeException("仅「待确认」的还款可确认");
+        }
+        r.setStatus(1); // 已还
+        repaymentMapper.updateById(r);
+
+        Finance finance = financeMapper.selectById(r.getFinanceId());
+        if (finance != null) {
+            // 信用闭环：每期还款被银行确认，农户信用分 +1（封顶5）—— 按时还款提升信用
+            User farmer = userMapper.selectById(finance.getOwnName());
+            if (farmer != null) {
+                int c = farmer.getCredit() == null ? 5 : farmer.getCredit();
+                farmer.setCredit(Math.min(5, c + 1));
+                userMapper.updateById(farmer);
+            }
+            messageService.send(finance.getOwnName(), "finance",
+                    "还款已确认",
+                    "您的融资申请 #" + finance.getFinanceId() + " 第 " + r.getPeriodIndex()
+                            + " 期还款（¥" + r.getTotalAmount() + "）已被银行确认，信用分 +1。",
+                    "/farmer/my-finance");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void bankReject(Integer repaymentId, RepaymentRejectRequest request) {
+        Repayment r = repaymentMapper.selectById(repaymentId);
+        if (r == null) {
+            throw new RuntimeException("还款记录不存在");
+        }
+        if (r.getStatus() == null || r.getStatus() != 2) {
+            throw new RuntimeException("仅「待确认」的还款可驳回");
+        }
+        String reason = request != null && request.getReason() != null ? request.getReason().trim() : "";
+        r.setStatus(3); // 已驳回
+        r.setRejectReason(reason.isEmpty() ? "未通过银行核验" : reason);
+        // 驳回 = 视为未实际还款，清零已还金额与时间（保留流水号/凭证作审计留痕）
+        r.setPaidAmount(BigDecimal.ZERO);
+        r.setPaidTime(null);
+        repaymentMapper.updateById(r);
+
+        Finance finance = financeMapper.selectById(r.getFinanceId());
+        if (finance != null) {
+            messageService.send(finance.getOwnName(), "finance",
+                    "还款被驳回",
+                    "您的融资申请 #" + finance.getFinanceId() + " 第 " + r.getPeriodIndex()
+                            + " 期还款被银行驳回：" + r.getRejectReason() + "，请核实后重新还款。",
+                    "/farmer/my-finance");
+        }
+    }
+
+    /** 批量回填还款记录对应的农户真名（由 financeId 反查 tb_finance.realName），供银行审核列表展示 */
+    private void fillFarmerName(List<Repayment> list) {
+        if (list == null || list.isEmpty()) {
+            return;
+        }
+        Set<Integer> financeIds = list.stream()
+                .map(Repayment::getFinanceId)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (financeIds.isEmpty()) {
+            return;
+        }
+        List<Finance> finances = financeMapper.selectBatchIds(financeIds);
+        Map<Integer, String> nameMap = finances.stream()
+                .collect(Collectors.toMap(Finance::getFinanceId,
+                        f -> f.getRealName() != null ? f.getRealName() : f.getOwnName(),
+                        (a, b) -> a));
+        for (Repayment r : list) {
+            r.setFarmerName(nameMap.get(r.getFinanceId()));
+        }
     }
 }

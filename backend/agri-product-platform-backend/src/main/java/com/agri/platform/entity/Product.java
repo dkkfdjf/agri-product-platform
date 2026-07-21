@@ -26,4 +26,8 @@ public class Product {
     private String ownName;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
+    /** 发布方联系电话（非持久化，按 ownName 批量回填，供商品/求购页展示） */
+    @TableField(exist = false)
+    private String ownPhone;
 }
