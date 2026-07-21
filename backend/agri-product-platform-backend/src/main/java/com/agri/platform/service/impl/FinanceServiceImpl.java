@@ -77,6 +77,17 @@ public class FinanceServiceImpl implements FinanceService {
             throw new RuntimeException("只有农户可以申请融资");
         }
 
+        // 申请必须使用该账号「注册时」的真实姓名和手机号：以后端查到的用户信息为准，
+        // 忽略前端传入，避免被篡改或填错
+        String realName = user.getRealName();
+        String phone = user.getPhone();
+        if (realName == null || realName.trim().isEmpty()) {
+            throw new RuntimeException("请先在个人中心完善真实姓名后再申请融资");
+        }
+        if (phone == null || phone.trim().isEmpty()) {
+            throw new RuntimeException("请先在个人中心完善手机号后再申请融资");
+        }
+
         // 获取融资产品信息
         FinanceProduct product = productMapper.selectById(request.getProductId());
         if (product == null) {
@@ -88,11 +99,21 @@ public class FinanceServiceImpl implements FinanceService {
             throw new RuntimeException("请输入正确的申请金额");
         }
 
+        // 申请原因 / 还款来源：去首尾空格后不少于 15 个字
+        String purpose = request.getPurpose() == null ? "" : request.getPurpose().trim();
+        if (purpose.length() < 15) {
+            throw new RuntimeException("申请原因不能少于15个字");
+        }
+        String repaymentSource = request.getRepaymentSource() == null ? "" : request.getRepaymentSource().trim();
+        if (repaymentSource.length() < 15) {
+            throw new RuntimeException("还款来源不能少于15个字");
+        }
+
         Finance finance = new Finance();
         finance.setProductId(request.getProductId());
         finance.setOwnName(userName);
-        finance.setRealName(request.getRealName());
-        finance.setPhone(request.getPhone());
+        finance.setRealName(realName.trim());    // 使用注册真实姓名
+        finance.setPhone(phone.trim());          // 使用注册手机号
         finance.setIdNum(request.getIdNum());
         finance.setMoney(request.getMoney());
         finance.setRate(product.getRate());
@@ -105,8 +126,8 @@ public class FinanceServiceImpl implements FinanceService {
         finance.setCombinationPhone2(request.getCombinationPhone2());
         finance.setCombinationIdnum2(request.getCombinationIdnum2());
         finance.setFileInfo(request.getFileInfo());
-        finance.setPurpose(request.getPurpose());
-        finance.setRepaymentSource(request.getRepaymentSource());
+        finance.setPurpose(purpose);
+        finance.setRepaymentSource(repaymentSource);
         financeMapper.insert(finance);
     }
 
