@@ -89,6 +89,11 @@
           <el-table-column label="申请人" width="110" show-overflow-tooltip>
             <template #default="{ row }">{{ row.realName || row.ownName }}</template>
           </el-table-column>
+          <el-table-column label="信用" width="130" align="center">
+            <template #default="{ row }">
+              <el-rate :model-value="row.credit || 0" disabled size="small" />
+            </template>
+          </el-table-column>
           <el-table-column prop="phone" label="联系电话" width="130" />
           <el-table-column label="融资产品" width="130" show-overflow-tooltip>
             <template #default="{ row }">{{ row.productName || '—' }}</template>
@@ -144,6 +149,10 @@
         <p><span class="label">联系电话</span>{{ current.phone || '—' }}</p>
         <p><span class="label">融资产品</span>{{ current.productName || '—' }}</p>
         <p><span class="label">申请金额</span>¥ {{ formatNumber(current.money) }}</p>
+        <p>
+          <span class="label">信用分</span>
+          <el-rate :model-value="current.credit || 0" disabled size="small" show-score score-template="{value} 星" style="vertical-align: middle" />
+        </p>
         <p><span class="label">融资用途</span>{{ current.purpose || '—' }}</p>
       </div>
       <el-form label-width="90px" style="margin-top: 16px">
@@ -183,12 +192,25 @@
         <el-descriptions-item label="用户名">{{ current.ownName }}</el-descriptions-item>
         <el-descriptions-item label="联系电话">{{ current.phone || '—' }}</el-descriptions-item>
         <el-descriptions-item label="身份证号">{{ current.idNum || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="信用分">
+          <el-rate :model-value="current.credit || 0" disabled size="small" show-score score-template="{value} 星" style="vertical-align: middle" />
+        </el-descriptions-item>
         <el-descriptions-item label="融资产品">{{ current.productName || '—' }}</el-descriptions-item>
         <el-descriptions-item label="申请金额">¥ {{ formatNumber(current.money) }}</el-descriptions-item>
         <el-descriptions-item label="年利率">{{ current.rate != null ? current.rate + '%' : '—' }}</el-descriptions-item>
         <el-descriptions-item label="还款期限">{{ current.repayment ? current.repayment + ' 个月' : '—' }}</el-descriptions-item>
         <el-descriptions-item label="融资用途" :span="2">{{ current.purpose || '—' }}</el-descriptions-item>
         <el-descriptions-item label="还款来源" :span="2">{{ current.repaymentSource || '—' }}</el-descriptions-item>
+        <el-descriptions-item v-if="hasCombination(current)" label="联合贷款人" :span="2">
+          <div class="combination-block">
+            <div v-if="current.combinationName1 || current.combinationPhone1 || current.combinationIdnum1" class="combination-person">
+              <span class="cp-label">联合人1：</span>{{ current.combinationName1 || '—' }} · {{ current.combinationPhone1 || '—' }} · {{ current.combinationIdnum1 || '—' }}
+            </div>
+            <div v-if="current.combinationName2 || current.combinationPhone2 || current.combinationIdnum2" class="combination-person">
+              <span class="cp-label">联合人2：</span>{{ current.combinationName2 || '—' }} · {{ current.combinationPhone2 || '—' }} · {{ current.combinationIdnum2 || '—' }}
+            </div>
+          </div>
+        </el-descriptions-item>
         <el-descriptions-item label="申请状态">
           <el-tag :type="statusType(current.status)" size="small">{{ statusText(current.status) }}</el-tag>
         </el-descriptions-item>
@@ -332,6 +354,7 @@ const openDetail = (row) => {
   detailVisible.value = true
 }
 
+const hasCombination = (d) => !!(d && (d.combinationName1 || d.combinationPhone1 || d.combinationIdnum1 || d.combinationName2 || d.combinationPhone2 || d.combinationIdnum2))
 const statusType = (s) => ({ 0: 'warning', 1: 'success', 2: 'danger' }[s] || 'info')
 const statusText = (s) => ({ 0: '待审批', 1: '已通过', 2: '已拒绝' }[s] || '未知')
 
@@ -473,6 +496,21 @@ const formatTime = (t) => {
   display: inline-block;
   width: 80px;
   color: var(--color-text-tertiary, #6b7280);
+}
+
+.combination-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.combination-person {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #4a5249);
+  line-height: 1.5;
+}
+.cp-label {
+  color: var(--color-text-tertiary, #6b7280);
+  margin-right: 4px;
 }
 
 @media (max-width: 1024px) {

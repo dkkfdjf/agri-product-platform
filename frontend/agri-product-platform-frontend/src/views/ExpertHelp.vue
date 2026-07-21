@@ -1,8 +1,9 @@
 <template>
   <div class="expert-help-page">
+    <!-- 统一返回栏（左上，与全站其它页一致） -->
+    <BackBar to="/" />
     <!-- 页面标题区 -->
     <div class="page-header">
-      <el-button @click="goBack" :icon="ArrowLeft" class="back-btn">返回</el-button>
       <div class="title-section">
         <h1 class="page-title">专家助力</h1>
         <p class="page-subtitle">农业专家在线，为您答疑解惑</p>
@@ -35,29 +36,9 @@
         </div>
       </div>
 
-      <!-- 热门问题 -->
+      <!-- 知识推荐（问答为农户与专家的私下咨询，不对外公开；此处仅推荐公开的知识库内容） -->
       <div class="questions-section">
-        <h2 class="section-title">热门问答</h2>
-        <div class="questions-list">
-          <div v-for="question in hotQuestions" :key="question.id" class="question-item" @click="goToQuestion(question.id)">
-            <div class="question-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-            </div>
-            <div class="question-content">
-              <div class="question-title">{{ question.title }}</div>
-              <div class="question-meta">
-                <span>{{ question.answersCount }} 个回答</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 知识推荐 -->
-        <h2 class="section-title" style="margin-top: var(--spacing-6, 24px)">知识推荐</h2>
+        <h2 class="section-title">知识推荐</h2>
         <div class="knowledge-list">
           <div v-for="knowledge in knowledgeList" :key="knowledge.id" class="knowledge-item" @click="goToKnowledge(knowledge.id)">
             <div class="knowledge-icon">
@@ -82,6 +63,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import BackBar from '@/components/BackBar.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -104,11 +86,6 @@ const goToExpertDetail = (userName) => {
   if (userName) router.push({ path: `/expert/${userName}`, query: { from: route.fullPath } })
 }
 
-// 跳转问题详情
-const goToQuestion = (id) => {
-  router.push({ path: `/question/${id}`, query: { from: route.fullPath } })
-}
-
 // 跳转知识详情
 const goToKnowledge = (id) => {
   router.push({ path: `/knowledge/${id}`, query: { from: route.fullPath } })
@@ -119,7 +96,6 @@ const loadExperts = async () => {
   loading.value = true
   try {
     const { getExpertList } = await import('@/api/expert')
-    const { getQuestionList } = await import('@/api/question')
     const { getKnowledgeList } = await import('@/api/knowledge')
 
     // 获取专家列表（/expert/list 返回的是数组，不是分页对象）
@@ -139,18 +115,6 @@ const loadExperts = async () => {
       }
     }
 
-    // 获取热门问题
-    const questionRes = await getQuestionList({ page: 1, pageSize: 5 })
-    if (questionRes.code === 200) {
-      const qList = questionRes.data.records || []
-      if (qList.length > 0) {
-        hotQuestions.value = qList.map(q => ({
-          id: q.id,
-          title: q.title
-        }))
-      }
-    }
-
     // 获取知识推荐
     const knowledgeRes = await getKnowledgeList({ page: 1, pageSize: 5 })
     if (knowledgeRes.code === 200) {
@@ -159,7 +123,7 @@ const loadExperts = async () => {
         knowledgeList.value = kList.map(k => ({
           id: k.knowledgeId,
           title: k.title,
-          author: k.ownName || '专家'
+          author: k.ownRealName || k.ownName || '专家'
         }))
       }
     }
@@ -172,8 +136,6 @@ const loadExperts = async () => {
 }
 
 const experts = ref([])
-
-const hotQuestions = ref([])
 
 const knowledgeList = ref([])
 
@@ -296,67 +258,6 @@ onMounted(() => {
 }
 
 .stat-item {
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-tertiary, #6b7280);
-}
-
-/* ===== 问题列表 ===== */
-.questions-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2, 8px);
-}
-
-.question-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3, 12px);
-  padding: var(--spacing-3, 12px);
-  background: var(--color-bg-primary, #ffffff);
-  border: 1px solid var(--color-border, #e5e0d8);
-  border-radius: var(--radius-base, 8px);
-  cursor: pointer;
-  transition: all var(--transition-fast, 150ms ease);
-}
-
-.question-item:hover {
-  background: var(--color-bg-secondary, #f7f5f0);
-  border-color: var(--color-expert, #b85c38);
-}
-
-.question-icon {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(184, 92, 56, 0.1);
-  border-radius: var(--radius-base, 8px);
-  color: var(--color-expert, #b85c38);
-  flex-shrink: 0;
-}
-
-.question-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.question-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.question-title {
-  font-size: var(--font-size-sm, 14px);
-  font-weight: var(--font-weight-medium, 500);
-  color: var(--color-text-primary, #1f2923);
-  margin-bottom: var(--spacing-1, 4px);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.question-meta {
   font-size: var(--font-size-xs, 12px);
   color: var(--color-text-tertiary, #6b7280);
 }

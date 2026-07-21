@@ -146,35 +146,8 @@
       </div>
     </div>
 
-    <!-- 待办事项 -->
-    <div class="content-card">
-      <div class="card-header">
-        <h3 class="card-title">待办事项</h3>
-      </div>
-      <div class="todo-list">
-        <div class="todo-item urgent">
-          <div class="todo-content">
-            <div class="todo-title">处理买家退货申请</div>
-            <div class="todo-time">1小时前</div>
-          </div>
-          <el-button type="primary" size="small">处理</el-button>
-        </div>
-        <div class="todo-item">
-          <div class="todo-content">
-            <div class="todo-title">完成融资资料补充</div>
-            <div class="todo-time">今天 18:00截止</div>
-          </div>
-          <el-button type="primary" size="small">去处理</el-button>
-        </div>
-        <div class="todo-item">
-          <div class="todo-content">
-            <div class="todo-title">专家预约确认</div>
-            <div class="todo-time">明天 10:00</div>
-          </div>
-          <el-button type="primary" size="small">查看</el-button>
-        </div>
-      </div>
-    </div>
+    <!-- 最新动态（真实站内通知，来自 tb_message） -->
+    <RecentNotifications title="最新动态" />
   </div>
 </template>
 
@@ -186,6 +159,7 @@ import { Top } from '@element-plus/icons-vue'
 import { getProducts } from '@/api/product'
 import { getOrders } from '@/api/order'
 import { getMyFinanceApplications } from '@/api/finance'
+import RecentNotifications from '@/components/RecentNotifications.vue'
 
 const userStore = useUserStore()
 
@@ -590,49 +564,6 @@ onMounted(() => {
   font-size: var(--font-size-sm, 14px);
   font-weight: var(--font-weight-medium, 500);
   color: var(--color-text-primary, #1f2923);
-}
-
-/* ===== 待办事项 ===== */
-.todo-list {
-  padding: var(--spacing-3, 12px);
-}
-
-.todo-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-4, 16px);
-  border-bottom: 1px solid var(--color-divider, #edebe6);
-  gap: var(--spacing-4, 16px);
-}
-
-.todo-item:last-child {
-  border-bottom: none;
-}
-
-.todo-item.urgent {
-  background: rgba(184, 92, 56, 0.03);
-}
-
-.todo-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.todo-title {
-  font-size: var(--font-size-sm, 14px);
-  font-weight: var(--font-weight-medium, 500);
-  color: var(--color-text-primary, #1f2923);
-  margin-bottom: var(--spacing-1, 4px);
-}
-
-.todo-time {
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-tertiary, #6b7280);
-}
-
-.todo-item.urgent .todo-title {
-  color: var(--color-error, #b85c38);
 }
 
 /* ===== 响应式 ===== */

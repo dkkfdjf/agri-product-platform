@@ -75,3 +75,13 @@ export function getMyApplications() {
   })
 }
 
+/**
+ * 联系人列表（供联合贷款人等场景选择，已排除自己；仅农户/买家/专家）
+ */
+export function getContacts() {
+  return request({
+    url: '/user/contacts',
+    method: 'get'
+  })
+}
+

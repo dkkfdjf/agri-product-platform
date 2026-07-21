@@ -49,6 +49,11 @@ const routes = [
         component: () => import('@/views/farmer/Products.vue')
       },
       {
+        path: 'market',
+        name: 'FarmerMarket',
+        component: () => import('@/views/Market.vue')
+      },
+      {
         path: 'orders',
         name: 'FarmerOrders',
         component: () => import('@/views/farmer/Orders.vue')
@@ -109,6 +114,11 @@ const routes = [
         path: 'orders',
         name: 'BuyerOrders',
         component: () => import('@/views/OrderList.vue')
+      },
+      {
+        path: 'my-products',
+        name: 'BuyerMyProducts',
+        component: () => import('@/views/buyer/Products.vue')
       },
       {
         path: 'expert',
@@ -373,6 +383,12 @@ const routes = [
     path: '/role-application',
     name: 'RoleApplication',
     component: () => import('@/views/RoleApplication.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/joint-invitations',
+    name: 'JointInvitations',
+    component: () => import('@/views/JointInvitations.vue'),
     meta: { requiresAuth: true }
   },
   {

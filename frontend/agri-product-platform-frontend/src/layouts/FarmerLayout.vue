@@ -20,6 +20,11 @@ const farmerMenuItems = [
     icon: 'Goods'
   },
   {
+    path: '/farmer/market',
+    title: '农产品市场',
+    icon: 'ShoppingBag'
+  },
+  {
     path: '/farmer/orders',
     title: '订单管理',
     icon: 'DocumentChecked'

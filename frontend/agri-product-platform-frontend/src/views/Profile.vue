@@ -9,7 +9,11 @@
           <h2>{{ userStore.displayName() }}</h2>
           <p class="role">{{ getRoleText(userStore.role) }}</p>
           <p class="phone">{{ userStore.userInfo?.phone || '未设置电话' }}</p>
-          <p class="email">{{ userStore.userInfo?.email || '未设置邮箱' }}</p>
+          <p class="id-num">{{ maskIdNum(userStore.userInfo?.identityNum) || '未设置身份证号' }}</p>
+          <p class="credit" v-if="isFarmer">
+            信用分
+            <el-rate :model-value="userStore.userInfo?.credit || 0" disabled size="small" show-score score-template="{value} 星" style="vertical-align: middle; margin-left: 6px" />
+          </p>
         </div>
         <el-button type="primary" @click="goToEdit" class="edit-btn">编辑资料</el-button>
       </div>
@@ -17,15 +21,15 @@
 
     <h3 class="section-title">快捷功能</h3>
     <el-row :gutter="20" class="menu-row">
-      <el-col :span="8">
-        <el-card class="menu-card" @click="$router.push('/order')">
+      <el-col :span="8" v-if="isFarmer || isBuyer">
+        <el-card class="menu-card" @click="goToOrders">
           <div class="menu-item">
             <el-icon :size="32" color="#409eff"><Document /></el-icon>
             <span>我的订单</span>
           </div>
         </el-card>
       </el-col>
-      <el-col :span="8">
+      <el-col :span="8" v-if="isBuyer">
         <el-card class="menu-card" @click="$router.push('/cart')">
           <div class="menu-item">
             <el-icon :size="32" color="#67c23a"><ShoppingCart /></el-icon>
@@ -45,7 +49,7 @@
 
     <el-row :gutter="20" class="menu-row" v-if="isFarmer || isBuyer">
       <el-col :span="12">
-        <el-card class="menu-card" @click="$router.push('/expert-help')">
+        <el-card class="menu-card" @click="goToExpertConsult">
           <div class="menu-item">
             <el-icon :size="32" color="#909399"><ChatLineSquare /></el-icon>
             <span>专家咨询</span>
@@ -53,7 +57,7 @@
         </el-card>
       </el-col>
       <el-col :span="12">
-        <el-card class="menu-card" @click="$router.push('/knowledge')">
+        <el-card class="menu-card" @click="goToKnowledge">
           <div class="menu-item">
             <el-icon :size="32" color="#f56c6c"><Reading /></el-icon>
             <span>农业知识</span>
@@ -73,6 +77,17 @@
       </el-col>
     </el-row>
 
+    <el-row :gutter="20" class="menu-row" v-if="isFarmer || isBuyer || isExpert">
+      <el-col :span="12">
+        <el-card class="menu-card" @click="$router.push('/joint-invitations')">
+          <div class="menu-item">
+            <el-icon :size="32" color="#9c27b0"><Connection /></el-icon>
+            <span>我的联合贷款邀请</span>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <el-row :gutter="20" class="menu-row" v-if="isFarmer">
       <el-col :span="12">
         <el-card class="menu-card" @click="$router.push('/farmer/my-finance')">
@@ -83,7 +98,7 @@
         </el-card>
       </el-col>
       <el-col :span="12">
-        <el-card class="menu-card" @click="$router.push('/product/publish')">
+        <el-card class="menu-card" @click="$router.push('/farmer/products')">
           <div class="menu-item">
             <el-icon :size="32" color="#67c23a"><Plus /></el-icon>
             <span>发布商品</span>
@@ -159,7 +174,8 @@ import {
   ChatLineSquare,
   Reading,
   DataAnalysis,
-  Promotion
+  Promotion,
+  Connection
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -182,8 +198,37 @@ const getRoleText = (role) => {
   return map[role] || role
 }
 
+// 身份证号脱敏展示（仅本人个人中心可见）
+const maskIdNum = (id) => {
+  if (!id) return ''
+  if (id.length <= 6) return id
+  return id.slice(0, 6) + '********' + id.slice(-4)
+}
+
 const goToEdit = () => {
   router.push('/profile/edit')
+}
+
+// 角色感知跳转：我的订单（农户→农户订单页，买家→买家订单页）
+// /order 与 /cart 路由带 roles:['buyer']，非买家会被全局守卫弹回首页，故按角色分流
+const goToOrders = () => {
+  if (isFarmer.value) router.push('/farmer/orders')
+  else router.push('/order')
+}
+
+// 专家咨询：跳农户/买家各自的咨询工作台（/farmer/expert、/buyer/expert）
+// 注意：/expert-help 是"专家助力"列表页，不是咨询工作台，此前错指过去
+const goToExpertConsult = () => {
+  router.push(isFarmer.value ? '/farmer/expert' : '/buyer/expert')
+}
+
+// 农业知识：进入「专家咨询」工作台的「知识库」标签页（侧边栏布局内），与其他功能一致；
+// 不再跳独立的公开 /knowledge 列表页
+const goToKnowledge = () => {
+  router.push({
+    path: isFarmer.value ? '/farmer/expert' : '/buyer/expert',
+    query: { tab: 'knowledge' }
+  })
 }
 </script>
 

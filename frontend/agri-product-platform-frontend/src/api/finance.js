@@ -173,3 +173,48 @@ export function deleteBankProduct(productId) {
     method: 'delete'
   })
 }
+
+// ==================== 联合贷款人邀请 ====================
+
+/**
+ * 我收到的联合贷款邀请（作为被邀请人）
+ */
+export function getMyJointInvitations() {
+  return request({
+    url: '/joint-invitation/mine',
+    method: 'get'
+  })
+}
+
+/**
+ * 某笔融资申请下的全部邀请（农户查看各联合人确认状态）
+ * @param {String|Number} financeId - 融资申请ID
+ */
+export function getFinanceJointInvitations(financeId) {
+  return request({
+    url: `/joint-invitation/finance/${financeId}`,
+    method: 'get'
+  })
+}
+
+/**
+ * 同意联合贷款邀请
+ * @param {String|Number} id - 邀请ID
+ */
+export function acceptJointInvitation(id) {
+  return request({
+    url: `/joint-invitation/${id}/accept`,
+    method: 'post'
+  })
+}
+
+/**
+ * 拒绝联合贷款邀请
+ * @param {String|Number} id - 邀请ID
+ */
+export function declineJointInvitation(id) {
+  return request({
+    url: `/joint-invitation/${id}/decline`,
+    method: 'post'
+  })
+}

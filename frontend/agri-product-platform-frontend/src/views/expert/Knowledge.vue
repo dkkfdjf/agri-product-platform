@@ -34,7 +34,7 @@
         </div>
 
         <div class="knowledge-content">
-          <p class="content-preview">{{ knowledge.content }}</p>
+          <p class="content-preview">{{ stripHtml(knowledge.content) }}</p>
         </div>
 
         <div class="knowledge-actions">
@@ -132,35 +132,12 @@
         </el-button>
       </template>
     </el-dialog>
-
-    <!-- 查看对话框 -->
-    <el-dialog
-      v-model="viewDialogVisible"
-      title="知识详情"
-      width="700px"
-    >
-      <div class="knowledge-detail" v-if="currentKnowledge">
-        <h2>{{ currentKnowledge.title }}</h2>
-        <div class="detail-meta">
-          <span>作者：{{ currentKnowledge.ownName }}</span>
-          <span>时间：{{ formatDate(currentKnowledge.createTime) }}</span>
-          <el-tag :type="currentKnowledge.status === 1 ? 'success' : 'info'" size="small">
-            {{ currentKnowledge.status === 1 ? '已发布' : '草稿' }}
-          </el-tag>
-        </div>
-        <div class="detail-content">
-          <p>{{ currentKnowledge.content }}</p>
-        </div>
-        <div v-if="currentKnowledge.picPath" class="detail-image">
-          <img :src="currentKnowledge.picPath" :alt="currentKnowledge.title">
-        </div>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Plus,
@@ -178,7 +155,15 @@ import {
 } from '@/api/knowledge'
 import { useUserStore } from '@/stores/user'
 
+const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
+
+// 去除 HTML 标签，用于列表预览纯文本展示（避免出现 <p> 等标签）
+const stripHtml = (html) => {
+  if (!html) return ''
+  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+}
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -188,9 +173,7 @@ const total = ref(0)
 const knowledgeList = ref([])
 
 const editDialogVisible = ref(false)
-const viewDialogVisible = ref(false)
 const isEditing = ref(false)
-const currentKnowledge = ref(null)
 const formRef = ref(null)
 
 const formData = reactive({
@@ -264,10 +247,9 @@ const handleEdit = (knowledge) => {
   editDialogVisible.value = true
 }
 
-// 查看知识
+// 查看知识：跳转到知识详情页（含评论区），此前本地对话框看不到评论
 const handleView = (knowledge) => {
-  currentKnowledge.value = knowledge
-  viewDialogVisible.value = true
+  router.push({ path: `/knowledge/${knowledge.id}`, query: { from: route.fullPath } })
 }
 
 // 删除知识

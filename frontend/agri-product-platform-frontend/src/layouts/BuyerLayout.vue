@@ -20,6 +20,11 @@ const buyerMenuItems = [
     icon: 'ShoppingBag'
   },
   {
+    path: '/buyer/my-products',
+    title: '我的发布',
+    icon: 'Goods'
+  },
+  {
     path: '/buyer/cart',
     title: '购物车',
     icon: 'ShoppingCart'

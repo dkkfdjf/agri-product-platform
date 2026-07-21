@@ -89,6 +89,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowLeft } from '@element-plus/icons-vue'
 import {
@@ -100,6 +101,7 @@ import {
 } from '@/api/address'
 import { regionData } from 'element-china-area-data'
 
+const router = useRouter()
 const addresses = ref([])
 const dialogVisible = ref(false)
 const editingAddress = ref(null)

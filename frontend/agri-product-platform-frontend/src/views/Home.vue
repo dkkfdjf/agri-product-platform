@@ -243,7 +243,8 @@
         <div class="experts-list">
           <div v-for="expert in featuredExperts" :key="expert.id" class="expert-card">
             <div class="expert-avatar">
-              <img :src="expert.avatar" :alt="expert.name" />
+              <img v-if="expert.avatar" :src="expert.avatar" :alt="expert.name" />
+              <span v-else class="expert-avatar-fallback">{{ (expert.name || '专').charAt(0) }}</span>
               <span class="expert-status" :class="{ online: expert.online }"></span>
             </div>
             <div class="expert-info">
@@ -251,12 +252,6 @@
               <p class="expert-title">{{ expert.title }}</p>
               <p class="expert-specialty">{{ expert.specialty }}</p>
               <div class="expert-stats">
-                <span class="stat-item">
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-                    <path d="M7 2l1.5 3.5L12 7l-3 2.5L10.5 13 7 11 3.5 13 4.5 9.5l-3-2.5 3.5-1.5L7 2z"/>
-                  </svg>
-                  {{ expert.rating }}
-                </span>
                 <span class="stat-item">{{ expert.answers }} 回答</span>
               </div>
             </div>
@@ -309,28 +304,6 @@
             </div>
           </div>
 
-          <!-- Q&A -->
-          <div class="knowledge-qa">
-            <h3 class="subsection-title">热门问答</h3>
-            <div class="qa-list">
-              <div v-for="qa in featuredQA" :key="qa.id" class="qa-card" @click="viewQA(qa)">
-                <div class="qa-status" :class="{ answered: qa.answered }">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <circle cx="8" cy="4" r="2"/>
-                    <path d="M4 8a4 4 0 018 0v2H4V8z"/>
-                  </svg>
-                </div>
-                <div class="qa-content">
-                  <h4 class="qa-title">{{ qa.title }}</h4>
-                  <p class="qa-question">{{ qa.question }}</p>
-                  <div class="qa-meta">
-                    <span class="qa-expert">{{ qa.expert }}</span>
-                    <span class="qa-answers">{{ qa.answers }} 个回答</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div class="section-more">
@@ -411,26 +384,25 @@ import { getBanners } from '@/api/banner'
 import { getProducts } from '@/api/product'
 import { getFinanceProducts } from '@/api/finance'
 import { getKnowledgeList } from '@/api/knowledge'
+import { getExpertList } from '@/api/expert'
 
 const router = useRouter()
 const userStore = useUserStore()
 
-// 获取用户显示名称
+// 获取用户显示名称：优先真实姓名 realName
+// 此前 farmer 无 farmName / expert 无 expertName 时会落到 userName（登录账号），不符合"显示真实姓名"
 const getUserDisplayName = () => {
   const userInfo = userStore.userInfo
   if (!userInfo) return ''
   const role = userStore.role
   switch (role) {
-    case 'farmer':
-      return userInfo.farmName || userInfo.userName
-    case 'expert':
-      return userInfo.expertName || userInfo.userName
     case 'bank':
-      return userInfo.bankName || userInfo.userName
+      // 银行角色显示银行名称更合适
+      return userInfo.bankName || userInfo.realName || userInfo.userName
     case 'admin':
       return '管理员'
     default:
-      return userInfo.userName
+      return userInfo.realName || userInfo.userName
   }
 }
 
@@ -525,8 +497,12 @@ const handleExpertClick = (expert) => {
     router.push('/login')
     return
   }
-  // TODO: 跳转到专家详情或发起咨询
-  ElMessage.info('咨询专家：' + expert.name)
+  // 跳转到专家详情页（可提问/预约）
+  if (expert.userName) {
+    router.push('/expert/' + expert.userName)
+  } else {
+    router.push('/expert-help')
+  }
 }
 
 const viewArticle = (article) => {
@@ -535,8 +511,7 @@ const viewArticle = (article) => {
     router.push('/login')
     return
   }
-  // TODO: 跳转到文章详情页
-  ElMessage.info('查看文章：' + article.title)
+  router.push('/knowledge/' + article.id)
 }
 
 const viewQA = (qa) => {
@@ -547,6 +522,18 @@ const viewQA = (qa) => {
   }
   // TODO: 跳转到问答详情页
   ElMessage.info('查看问答：' + qa.title)
+}
+
+// 去除 HTML 标签，用于知识摘要纯文本展示（避免列表里出现 <p> 等标签）
+const stripHtml = (html) => {
+  if (!html) return ''
+  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+// 格式化日期
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('zh-CN')
 }
 
 // Load data from API
@@ -568,16 +555,59 @@ const loadHomeData = async () => {
       featuredProducts.value = productRes.data.records || productRes.data || []
     }
 
-    // Load finance products (6 items as per brief)
+    // Load finance products (6 items)
+    // 后端 FinanceProduct 字段为 productId/bankName/introduce/money/rate/repayment，
+    // 映射成卡片所需形状（title/description/features/amount），否则模板字段错位渲染空卡片
     const financeRes = await getFinanceProducts({ page: 1, pageSize: 6 })
     if (financeRes.code === 200 && financeRes.data) {
-      financingItems.value = financeRes.data.records || financeRes.data || []
+      const records = financeRes.data.records || financeRes.data || []
+      financingItems.value = records.map(p => ({
+        id: p.productId,
+        title: p.bankName || '融资产品',
+        description: p.introduce || '',
+        features: [
+          p.rate ? `年利率 ${p.rate}%` : null,
+          p.repayment ? `${p.repayment}个月` : null
+        ].filter(Boolean),
+        amount: p.money ? `¥${p.money}` : '面议'
+      }))
     }
 
-    // Load knowledge articles (5 items as per brief)
+    // Load knowledge articles (5 items)
+    // 映射 picPath→image、content→excerpt、ownRealName→author，并只取已发布(status===1)
     const knowledgeRes = await getKnowledgeList({ page: 1, pageSize: 5 })
     if (knowledgeRes.code === 200 && knowledgeRes.data) {
-      knowledgeArticles.value = knowledgeRes.data.records || knowledgeRes.data || []
+      const records = knowledgeRes.data.records || knowledgeRes.data || []
+      knowledgeArticles.value = records
+        .filter(k => k.status === 1)
+        .slice(0, 5)
+        .map(k => ({
+          id: k.knowledgeId || k.id,
+          title: k.title,
+          excerpt: stripHtml(k.content).substring(0, 80),
+          image: k.picPath || '',
+          category: '农业知识',
+          author: k.ownRealName || k.ownName || '专家',
+          date: formatDate(k.createTime)
+        }))
+    }
+
+    // Load experts (4 items) —— 此前 featuredExperts 从未赋值，专家区块一直空白
+    const expertRes = await getExpertList()
+    if (expertRes.code === 200 && expertRes.data) {
+      const list = expertRes.data || []
+      featuredExperts.value = list.slice(0, 4).map(e => ({
+        id: e.userName,
+        userName: e.userName,
+        name: e.realName || e.userName || '专家',
+        title: e.position || '农业专家',
+        specialty: e.profession || e.belong || '',
+        // 头像来自 tb_user.avatar；无图时模板用首字母兜底，避免 broken image
+        avatar: e.avatar || '',
+        online: false,
+        // 回答数=该专家已回答问题数（后端回填）；专家不借款，不展示星级
+        answers: e.answerCount || 0
+      }))
     }
   } catch (error) {
     console.error('加载首页数据失败:', error)
@@ -1317,6 +1347,21 @@ onMounted(() => {
   background: #10B981;
 }
 
+/* 无头像时用首字母圆形兜底，避免 broken image */
+.expert-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+}
+
 .expert-info {
   flex: 1;
 }
@@ -1376,7 +1421,7 @@ onMounted(() => {
 
 .knowledge-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 48px;
 }
 
