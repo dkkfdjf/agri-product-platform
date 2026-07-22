@@ -195,6 +195,11 @@ const routes = [
         component: () => import('@/views/bank/Matching.vue')
       },
       {
+        path: 'repayments',
+        name: 'BankRepayments',
+        component: () => import('@/views/bank/Repayments.vue')
+      },
+      {
         path: 'products',
         name: 'BankProducts',
         component: () => import('@/views/bank/Products.vue')
@@ -383,12 +388,6 @@ const routes = [
     path: '/role-application',
     name: 'RoleApplication',
     component: () => import('@/views/RoleApplication.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/joint-invitations',
-    name: 'JointInvitations',
-    component: () => import('@/views/JointInvitations.vue'),
     meta: { requiresAuth: true }
   },
   {

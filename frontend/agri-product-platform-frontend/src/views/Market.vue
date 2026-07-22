@@ -80,7 +80,10 @@
             <div class="product-price">
               {{ product.type === 'goods' ? `¥${product.price}` : '面议' }}
             </div>
-            <div class="product-seller">{{ product.ownName || '未知卖家' }}</div>
+            <div class="product-seller">
+              {{ product.ownName || '未知卖家' }}
+              <span v-if="product.ownPhone" class="seller-phone">· {{ product.ownPhone }}</span>
+            </div>
           </div>
           <div class="product-time">{{ formatTime(product.createTime) }}</div>
         </div>

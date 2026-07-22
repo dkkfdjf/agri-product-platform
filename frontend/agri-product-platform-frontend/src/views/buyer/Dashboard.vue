@@ -147,35 +147,6 @@
       </div>
     </div>
 
-    <!-- 最近订单 -->
-    <div class="content-card">
-      <div class="card-header">
-        <h3 class="card-title">最近订单</h3>
-        <router-link to="/buyer/orders" class="card-link">查看全部</router-link>
-      </div>
-      <div class="order-list">
-        <div v-if="recentOrders.length > 0">
-          <div v-for="order in recentOrders" :key="order.orderId" class="order-item">
-            <div class="order-info">
-              <div class="order-products">{{ order.productTitle || '商品订单' }}</div>
-              <div class="order-meta">
-                <span class="order-id">订单号：{{ order.orderId }}</span>
-                <span class="order-time">{{ formatTime(order.createTime) }}</span>
-              </div>
-            </div>
-            <div class="order-amount">¥{{ order.totalPrice }}</div>
-            <div class="order-status" :class="getStatusClass(order.orderStatus)">
-              {{ getStatusText(order.orderStatus) }}
-            </div>
-          </div>
-        </div>
-        <div v-else class="empty-orders">
-          <p>暂无订单</p>
-          <router-link to="/buyer/market">去逛逛市场</router-link>
-        </div>
-      </div>
-    </div>
-
     <!-- 最新动态（真实站内通知，来自 tb_message） -->
     <RecentNotifications title="最新动态" />
     </template>
@@ -205,9 +176,6 @@ const stats = ref({
 
 // 推荐商品
 const recommendedProducts = ref([])
-
-// 最近订单
-const recentOrders = ref([])
 
 // 加载状态
 const loading = ref(false)
@@ -274,11 +242,10 @@ const loadDashboardData = async () => {
       recommendedProducts.value = productRes.data.records || []
     }
 
-    // 加载最近订单
+    // 加载订单用于统计（累计订单/累计消费），概览页不再展示最近订单列表
     const orderRes = await getOrders({ page: 1, pageSize: 5 })
     if (orderRes.code === 200) {
       const orders = orderRes.data.records || []
-      recentOrders.value = orders
       stats.value.totalOrders = orderRes.data.total || 0
       stats.value.totalSpent = orders.reduce((sum, order) => sum + (order.totalPrice || 0), 0)
     }

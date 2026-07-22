@@ -69,8 +69,8 @@
               <el-button v-if="order.purchaseStatus === 2" type="primary" size="small" @click="shipOrder(order)">
                 发货
               </el-button>
-              <el-button v-if="order.purchaseStatus === 3" type="success" size="small" @click="confirmReceipt(order)">
-                确认收货
+              <el-button v-if="order.purchaseStatus === 3" type="info" size="small" plain disabled>
+                待买家收货
               </el-button>
               <el-button v-if="order.purchaseStatus === 1" type="danger" size="small" plain @click="cancelOrder(order)">
                 取消订单
@@ -148,9 +148,6 @@
         <el-button @click="detailVisible = false">关闭</el-button>
         <el-button v-if="current && current.purchaseStatus === 2" type="primary" @click="runFromDetail(shipOrder)">
           发货
-        </el-button>
-        <el-button v-if="current && current.purchaseStatus === 3" type="success" @click="runFromDetail(confirmReceipt)">
-          确认收货
         </el-button>
       </template>
     </el-dialog>
@@ -254,18 +251,6 @@ const shipOrder = async (order) => {
     await loadOrders()
   } catch (error) {
     if (error !== 'cancel') ElMessage.error('发货失败')
-  }
-}
-
-// 确认收货：状态 3(待收货) → 4(已完成)
-const confirmReceipt = async (order) => {
-  try {
-    await ElMessageBox.confirm(`确认订单 ${order.purchaseId} 已收货？`, '提示', { type: 'info' })
-    await updateOrderStatus(order.purchaseId, { status: 4 })
-    ElMessage.success('确认收货成功')
-    await loadOrders()
-  } catch (error) {
-    if (error !== 'cancel') ElMessage.error('确认收货失败')
   }
 }
 

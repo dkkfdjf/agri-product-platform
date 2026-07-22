@@ -20,6 +20,11 @@ const bankMenuItems = [
     icon: 'DocumentChecked'
   },
   {
+    path: '/bank/repayments',
+    title: '还款审核',
+    icon: 'Wallet'
+  },
+  {
     path: '/bank/products',
     title: '融资产品',
     icon: 'Coin'

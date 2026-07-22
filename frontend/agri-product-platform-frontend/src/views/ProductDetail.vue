@@ -35,6 +35,7 @@
           <div class="product-meta">
             <span class="product-id">商品编号: {{ product.productId }}</span>
             <span class="product-seller">发布方: {{ product.ownName || '农户' }}</span>
+            <span v-if="product.ownPhone" class="product-phone">电话: {{ product.ownPhone }}</span>
           </div>
 
           <div class="price-section" v-if="product.type === 'goods'">
@@ -62,7 +63,7 @@
             </div>
           </div>
 
-          <div class="action-section" v-if="product.type === 'goods' && product.orderStatus !== 2">
+          <div class="action-section" v-if="product.type === 'goods' && product.orderStatus !== 2 && isBuyer">
             <div class="quantity-selector">
               <span class="quantity-label">数量：</span>
               <el-input-number
@@ -92,8 +93,15 @@
             </div>
           </div>
 
+          <div class="action-section" v-else-if="product.type === 'goods' && product.orderStatus !== 2 && !isBuyer">
+            <div class="non-buyer-tip">仅买家账号可购买，如需采购请使用买家账号登录。</div>
+          </div>
+
           <div class="action-section" v-else-if="product.type === 'demand'">
-            <el-button type="primary" size="large" @click="contactSeller">
+            <template v-if="isOwner">
+              <div class="non-buyer-tip">这是您自己发布的求购信息。</div>
+            </template>
+            <el-button v-else type="primary" size="large" @click="contactSeller">
               <el-icon><ChatLineSquare /></el-icon>
               联系发布方
             </el-button>
@@ -103,8 +111,12 @@
             <div class="seller-info">
               <span class="seller-label">发布方：</span>
               <span class="seller-name">{{ product.ownName || '农户' }}</span>
+              <span v-if="product.ownPhone" class="seller-phone">{{ product.ownPhone }}</span>
             </div>
-            <el-button type="primary" link size="small" @click="contactSeller">联系卖家</el-button>
+            <el-button v-if="!isOwner" type="primary" link size="small" @click="contactSeller">
+              {{ product.type === 'demand' ? '联系发布方' : '联系卖家' }}
+            </el-button>
+            <span v-else class="seller-self">我发布的</span>
           </div>
         </div>
       </div>
@@ -136,17 +148,15 @@
               </div>
               <div class="detail-item">
                 <h4>发布方</h4>
-                <p>{{ product.ownName || '未知' }}</p>
+                <p>
+                  {{ product.ownName || '未知' }}
+                  <span v-if="product.ownPhone" class="detail-phone">（电话：{{ product.ownPhone }}）</span>
+                </p>
               </div>
               <div class="detail-item">
                 <h4>发布时间</h4>
                 <p>{{ formatTime(product.createTime) }}</p>
               </div>
-            </div>
-          </el-tab-pane>
-          <el-tab-pane label="商品评价" name="reviews">
-            <div class="reviews-content">
-              <el-empty description="暂无评价" />
             </div>
           </el-tab-pane>
         </el-tabs>
@@ -169,12 +179,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, ShoppingCart, ChatLineSquare } from '@element-plus/icons-vue'
-import { getProductDetail } from '@/api/product'
+import { getProductDetail, contactSeller as contactSellerApi } from '@/api/product'
 import { addToCart as addCartItem } from '@/api/cart'
 
 const router = useRouter()
@@ -185,6 +195,17 @@ const loading = ref(false)
 const product = ref(null)
 const quantity = ref(1)
 const activeTab = ref('detail')
+const contacting = ref(false)
+
+// 仅买家可购买/加购物车；农户等角色不展示购买入口
+const isBuyer = computed(() => userStore.role === 'buyer')
+
+// 是否为当前用户自己发布的信息（发布方 ownName 存真实姓名）：禁止联系自己
+const isOwner = computed(() => {
+  if (!product.value || !userStore.userInfo) return false
+  const me = userStore.userInfo
+  return product.value.ownName === me.realName || product.value.ownName === me.userName
+})
 
 onMounted(() => {
   loadProductDetail()
@@ -231,6 +252,11 @@ const addToCart = async () => {
     return
   }
 
+  if (!isBuyer.value) {
+    ElMessage.warning('仅买家账号可加入购物车')
+    return
+  }
+
   if (!product.value) {
     ElMessage.warning('商品信息未加载')
     return
@@ -274,6 +300,11 @@ const buyNow = async () => {
     return
   }
 
+  if (!isBuyer.value) {
+    ElMessage.warning('仅买家账号可购买')
+    return
+  }
+
   if (!product.value) {
     ElMessage.warning('商品信息未加载')
     return
@@ -311,8 +342,41 @@ const buyNow = async () => {
   })
 }
 
-const contactSeller = () => {
-  ElMessage.info('联系卖家功能即将上线')
+const contactSeller = async () => {
+  if (!userStore.isLoggedIn()) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  if (!product.value) return
+  // 询问留言（选填），确认后通过站内通知把联系方式发给发布方
+  let message = ''
+  try {
+    const { value } = await ElMessageBox.prompt(
+      '确认后系统会把您的姓名和电话通过通知发给发布方，对方会主动与您联系。可附留言（选填）：',
+      product.value.type === 'demand' ? '联系发布方' : '联系卖家',
+      {
+        confirmButtonText: '发送联系请求',
+        cancelButtonText: '取消',
+        inputPlaceholder: '留言（选填，如：想了解规格/物流/供货量等）',
+        inputType: 'textarea',
+        inputValue: ''
+      }
+    )
+    message = (value || '').trim()
+  } catch (e) {
+    return // 用户取消
+  }
+
+  contacting.value = true
+  try {
+    await contactSellerApi(product.value.productId, message)
+    ElMessage.success('已通知发布方，请保持电话畅通')
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.message || error?.message || '发送联系请求失败')
+  } finally {
+    contacting.value = false
+  }
 }
 
 const handleImageError = (e) => {
@@ -644,6 +708,34 @@ const formatTime = (time) => {
   color: var(--color-text-primary, #1f2923);
 }
 
+.product-phone,
+.seller-phone {
+  color: var(--color-text-tertiary, #6b7280);
+}
+
+.seller-phone {
+  font-size: var(--font-size-sm, 14px);
+  margin-left: var(--spacing-2, 8px);
+}
+
+.seller-self {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-tertiary, #6b7280);
+}
+
+.detail-phone {
+  color: var(--color-text-tertiary, #6b7280);
+  font-size: var(--font-size-sm, 14px);
+}
+
+.non-buyer-tip {
+  padding: var(--spacing-3, 12px) var(--spacing-4, 16px);
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-warning, #c9a661);
+  background: rgba(201, 166, 97, 0.1);
+  border-radius: var(--radius-base, 8px);
+}
+
 /* 标签页 */
 .detail-tabs {
   background: var(--color-bg-primary, #ffffff);
@@ -678,86 +770,7 @@ const formatTime = (time) => {
   margin: 0;
 }
 
-/* 评价区 */
-.reviews-content {
-  padding: var(--spacing-6, 24px);
-}
-
-.review-summary {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-4, 16px);
-  padding-bottom: var(--spacing-4, 16px);
-  border-bottom: 1px solid var(--color-border, #e5e0d8);
-  margin-bottom: var(--spacing-4, 16px);
-}
-
-.rating-score {
-  font-size: var(--font-size-5xl, 60px);
-  font-weight: var(--font-weight-bold, 700);
-  color: var(--color-warning, #c9a661);
-}
-
-.rating-info {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1, 4px);
-}
-
-.rating-stars {
-  font-size: var(--font-size-xl, 24px);
-  color: var(--color-warning, #c9a661);
-  letter-spacing: var(--spacing-1, 4px);
-}
-
-.rating-count {
-  font-size: var(--font-size-sm, 14px);
-  color: var(--color-text-tertiary, #6b7280);
-}
-
-.review-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4, 16px);
-}
-
-.review-item {
-  padding: var(--spacing-4, 16px);
-  background: var(--color-bg-secondary, #f7f5f0);
-  border-radius: var(--radius-base, 8px);
-}
-
-.review-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-2, 8px);
-}
-
-.reviewer {
-  font-size: var(--font-size-sm, 14px);
-  font-weight: var(--font-weight-medium, 500);
-  color: var(--color-text-primary, #1f2923);
-}
-
-.review-date {
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-tertiary, #6b7280);
-}
-
-.review-rating {
-  font-size: var(--font-size-lg, 20px);
-  color: var(--color-warning, #c9a661);
-  letter-spacing: var(--spacing-1, 4px);
-  margin-bottom: var(--spacing-2, 8px);
-}
-
-.review-text {
-  font-size: var(--font-size-base, 16px);
-  line-height: 1.6;
-  color: var(--color-text-secondary, #4a5249);
-  margin: 0;
-}
+/* 评价区（已下线，仅保留占位） */
 
 /* 404 */
 .not-found {
