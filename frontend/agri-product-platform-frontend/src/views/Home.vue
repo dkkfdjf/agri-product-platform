@@ -115,8 +115,12 @@
     </section>
 
     <!-- Banner Carousel：有轮播图时作为 hero 下方独立区块显示（与 hero 非互斥） -->
+    <!-- 仅一张轮播图时固定展示、不轮播（无箭头/指示点/自动播放），避免单图也出现空转的轮播组件 -->
     <section v-if="banners.length > 0" class="banner-section">
-      <el-carousel height="400px" :interval="5000" arrow="hover">
+      <div v-if="banners.length === 1" class="banner-static">
+        <img :src="banners[0].picPath" class="banner-image" :alt="banners[0].title || 'Banner'" />
+      </div>
+      <el-carousel v-else height="400px" :interval="5000" arrow="hover">
         <el-carousel-item v-for="banner in banners" :key="banner.bannerId">
           <img :src="banner.picPath" class="banner-image" :alt="banner.title || 'Banner'" />
         </el-carousel-item>
@@ -628,6 +632,13 @@ onMounted(() => {
 .banner-section {
   width: 100%;
   margin-bottom: 0;
+}
+
+/* 单张轮播图：固定展示，高度与轮播模式一致，图片撑满 */
+.banner-static {
+  width: 100%;
+  height: 400px;
+  overflow: hidden;
 }
 
 .banner-image {

@@ -93,11 +93,13 @@
           <el-input-number v-model="form.price" :min="0" :precision="2" :step="0.01" />
           <span v-if="form.type === 'demand'" class="field-hint">求购预算价，留 0 表示面议</span>
         </el-form-item>
-        <el-form-item label="类型" prop="type">
-          <el-radio-group v-model="form.type">
-            <el-radio value="goods">货源（出售）</el-radio>
-            <el-radio value="demand">需求（求购）</el-radio>
-          </el-radio-group>
+        <el-form-item label="类型">
+          <!-- 类型由角色固定：农户只能发布货源(goods)、买家只能发布需求(demand)，不可更改。
+               此前用可点的 radio-group，任何角色都能切换，即便后端拒绝也不应提供该入口。 -->
+          <el-tag :type="form.type === 'goods' ? 'success' : 'warning'">
+            {{ form.type === 'goods' ? '货源（出售）' : '需求（求购）' }}
+          </el-tag>
+          <span class="field-hint">由您的角色决定，不可更改</span>
         </el-form-item>
         <el-form-item label="图片" prop="picPath">
           <div class="product-image-upload">
@@ -235,7 +237,7 @@ const editProduct = (product) => {
     content: product.content,
     price: product.price,
     picPath: product.picPath,
-    type: product.type || props.defaultType
+    type: props.defaultType
   })
   dialogVisible.value = true
 }

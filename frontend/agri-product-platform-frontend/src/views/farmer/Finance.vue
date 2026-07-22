@@ -65,7 +65,7 @@
             {{ formatTime(row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <el-button
               v-if="row.status === 0"
@@ -83,8 +83,17 @@
             >
               撤销
             </el-button>
-            <el-button v-else link type="info" @click="viewDetails(row)">
+            <el-button link type="primary" @click="viewDetail(row)">
               详情
+            </el-button>
+            <!-- 已被拒绝的申请允许删除（清理记录）；已通过的进入放款/还款流程不可删 -->
+            <el-button
+              v-if="row.status === 2"
+              link
+              type="danger"
+              @click="deleteApplication(row)"
+            >
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -210,6 +219,71 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 详情对话框（与"我的融资"详情一致） -->
+    <el-dialog v-model="detailVisible" title="融资申请详情" width="680px">
+      <el-descriptions v-if="currentDetail" :column="2" border>
+        <el-descriptions-item label="申请人">{{ currentDetail.realName || currentDetail.ownName }}</el-descriptions-item>
+        <el-descriptions-item label="联系电话">{{ currentDetail.phone || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="身份证号">{{ currentDetail.idNum || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="融资产品">
+          <span>{{ resolveProductName(currentDetail) }}</span>
+          <!-- 该申请对应产品若已被银行暂停供应，给出提示（衔接银行"只能暂停不可删"的改动） -->
+          <el-tag v-if="currentDetail.productStatus === 1" type="warning" size="small" style="margin-left: 8px">已暂停供应</el-tag>
+          <div v-if="currentProduct?.introduce" class="product-introduce">{{ currentProduct.introduce }}</div>
+        </el-descriptions-item>
+        <el-descriptions-item label="申请金额">¥ {{ formatNumber(currentDetail.money) }}</el-descriptions-item>
+        <el-descriptions-item label="年利率">{{ currentDetail.rate != null ? currentDetail.rate + '%' : '—' }}</el-descriptions-item>
+        <el-descriptions-item label="还款期限">{{ currentDetail.repayment ? currentDetail.repayment + ' 个月' : '—' }}</el-descriptions-item>
+        <el-descriptions-item label="申请状态">
+          <el-tag :type="getStatusType(currentDetail.status)" size="small">{{ getStatusText(currentDetail.status) }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="融资用途" :span="2">{{ currentDetail.purpose || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="还款来源" :span="2">{{ currentDetail.repaymentSource || '—' }}</el-descriptions-item>
+        <el-descriptions-item v-if="currentInvitations.length" label="联合贷款人" :span="2">
+          <div class="combination-block">
+            <div v-for="inv in currentInvitations" :key="inv.id" class="combination-person">
+              <span class="cp-label">联合人{{ inv.slot }}：</span>
+              {{ inv.jointRealName || inv.jointUserName }} · {{ inv.jointPhone || '—' }}
+              <el-tag size="small" :type="inviteStatusType(inv.status)" style="margin-left: 8px">{{ inviteStatusText(inv.status) }}</el-tag>
+            </div>
+          </div>
+        </el-descriptions-item>
+        <el-descriptions-item label="申请时间" :span="2">{{ formatDetailTime(currentDetail.createTime) }}</el-descriptions-item>
+        <el-descriptions-item v-if="currentDetail.remark" label="审批备注" :span="2">{{ currentDetail.remark }}</el-descriptions-item>
+      </el-descriptions>
+
+      <!-- 还款计划：仅已通过融资展示 -->
+      <div v-if="currentDetail?.status === 1" class="repayment-section">
+        <h4 class="repayment-title">还款计划（等额本息）</h4>
+        <el-table :data="currentRepayments" stripe size="small" style="width: 100%">
+          <el-table-column label="期数" width="80" align="center">
+            <template #default="{ row }">第 {{ row.periodIndex }} 期</template>
+          </el-table-column>
+          <el-table-column label="到期日" width="120">
+            <template #default="{ row }">{{ row.dueDate || '—' }}</template>
+          </el-table-column>
+          <el-table-column label="本金" width="110" align="right">
+            <template #default="{ row }">¥ {{ formatNumber(row.principal) }}</template>
+          </el-table-column>
+          <el-table-column label="利息" width="100" align="right">
+            <template #default="{ row }">¥ {{ formatNumber(row.interest) }}</template>
+          </el-table-column>
+          <el-table-column label="本期合计" width="120" align="right">
+            <template #default="{ row }">¥ {{ formatNumber(row.totalAmount) }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="90" align="center">
+            <template #default="{ row }">{{ repayStatusText(row) }}</template>
+          </el-table-column>
+          <template #empty>
+            <el-empty description="暂无还款计划" :image-size="60" />
+          </template>
+        </el-table>
+      </div>
+      <template #footer>
+        <el-button @click="detailVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -217,7 +291,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { getFinanceProducts, applyFinance, cancelFinance, getMyFinanceApplications } from '@/api/finance'
+import { getFinanceProducts, applyFinance, cancelFinance, getMyFinanceApplications, getFinanceProductDetail, getFinanceJointInvitations, getFinanceRepayments } from '@/api/finance'
 import { getContacts } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 
@@ -234,6 +308,13 @@ const total = ref(0)
 const dialogVisible = ref(false)
 const formRef = ref(null)
 const editingApplicationId = ref(null)
+
+// 详情对话框（与"我的融资"详情一致）
+const detailVisible = ref(false)
+const currentDetail = ref(null)
+const currentProduct = ref(null)      // 详情对应融资产品（用于展示介绍；推荐列表只含在售产品，暂停产品需单独拉取）
+const currentInvitations = ref([])    // 详情对应的联合贷款人邀请
+const currentRepayments = ref([])     // 已通过融资的还款计划
 
 // 联系人列表（农户/买家/专家，排除自己），用于选择联合贷款人
 const contactOptions = ref([])
@@ -407,10 +488,72 @@ const cancelApplication = async (application) => {
   }
 }
 
-// 查看详情
-const viewDetails = (application) => {
-  ElMessage.info('查看详情功能待实现')
+// 查看详情：与"我的融资"详情一致 —— 回填产品(含暂停状态)/联合贷款人/还款计划
+const viewDetail = async (application) => {
+  currentDetail.value = application
+  currentProduct.value = null
+  currentInvitations.value = []
+  currentRepayments.value = []
+  detailVisible.value = true
+  // 产品介绍单独拉取：推荐列表只含在售产品，被银行暂停的产品不会在其中
+  if (application.productId) {
+    try {
+      const res = await getFinanceProductDetail(application.productId)
+      if (res.code === 200) currentProduct.value = res.data
+    } catch (e) { /* 忽略：仅影响介绍展示 */ }
+  }
+  // 联合贷款人邀请
+  try {
+    const res = await getFinanceJointInvitations(application.financeId)
+    currentInvitations.value = res.data || []
+  } catch (e) { /* 忽略：老申请可能无邀请记录 */ }
+  // 已通过融资：等额本息还款计划
+  if (application.status === 1) {
+    try {
+      const res = await getFinanceRepayments(application.financeId)
+      currentRepayments.value = res.data || []
+    } catch (e) { /* 忽略 */ }
+  }
 }
+
+// 删除已被拒绝的申请（status=2）；后端仅允许删除 申请中(0)/已拒绝(2)，已通过(1)不可删
+const deleteApplication = async (application) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这条已拒绝的申请吗？删除后不可恢复。', '删除确认', {
+      type: 'warning'
+    })
+    await cancelFinance(application.financeId)
+    ElMessage.success('已删除')
+    await loadApplications()
+  } catch (error) {
+    if (error !== 'cancel') {
+      const msg = error?.response?.data?.message || error?.message || '删除失败'
+      ElMessage.error(msg)
+    }
+  }
+}
+
+// 详情/格式化辅助
+const resolveProductName = (row) => row?.productName || '—'
+const formatNumber = (num) => {
+  if (num === null || num === undefined || num === '') return '0'
+  return Number(num).toLocaleString()
+}
+const formatDetailTime = (t) => {
+  if (!t) return '—'
+  const d = new Date(t)
+  if (isNaN(d.getTime())) return t
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+const repayStatusText = (rp) => {
+  if (rp.status === 1) return '已还款'
+  if (rp.status === 2) return '待确认'
+  if (rp.status === 3) return '已驳回'
+  return rp.overdue ? '已逾期' : '待还款'
+}
+const inviteStatusType = (s) => ({ 0: 'warning', 1: 'success', 2: 'danger' }[s] || 'info')
+const inviteStatusText = (s) => ({ 0: '待确认', 1: '已同意', 2: '已拒绝' }[s] || '未知')
 
 // 格式化时间
 const formatTime = (time) => {
@@ -546,5 +689,36 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   margin-top: 20px;
+}
+
+/* 详情弹窗：产品介绍 / 联合贷款人 / 还款计划 */
+.product-introduce {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #909399;
+  line-height: 1.5;
+}
+.combination-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.combination-person {
+  font-size: 14px;
+  color: #4a5249;
+  line-height: 1.5;
+}
+.cp-label {
+  color: #909399;
+  margin-right: 4px;
+}
+.repayment-section {
+  margin-top: 20px;
+}
+.repayment-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2923;
+  margin: 0 0 12px;
 }
 </style>

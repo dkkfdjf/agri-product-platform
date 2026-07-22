@@ -157,7 +157,7 @@ import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { Top } from '@element-plus/icons-vue'
 import { getProducts } from '@/api/product'
-import { getOrders } from '@/api/order'
+import { getReceivedOrders } from '@/api/order'
 import { getMyFinanceApplications } from '@/api/finance'
 import RecentNotifications from '@/components/RecentNotifications.vue'
 
@@ -193,7 +193,9 @@ const loadDashboardData = async () => {
     }
 
     // 获取订单列表和统计
-    const orderRes = await getOrders({ page: 1, pageSize: 10 })
+    // 注意：农户要用「收到的订单」（别人买了我商品的订单），而非 getOrders（那是买家视角、按 purchase.ownName=自己 过滤，
+    // 农户不能下单故恒为空）——此前销售额/待处理/最近订单全部为空即因此而来
+    const orderRes = await getReceivedOrders({ page: 1, pageSize: 10 })
     if (orderRes.code === 200) {
       // 处理分页数据
       const orderData = orderRes.data

@@ -128,10 +128,12 @@ const knowledge = ref({})
 const comments = ref([])
 const commentContent = ref('')
 
-// 是否可以编辑文章
+// 是否可以编辑/删除文章：仅文章作者本人或管理员可见操作按钮
+// 此前仅按角色(expert/admin)判断 → 任意专家都能看到并尝试删除/编辑他人文章（越权）
 const canEdit = computed(() => {
   if (!userStore.isLoggedIn()) return false
-  return userStore.hasRole(['expert', 'admin'])
+  if (userStore.hasRole(['admin'])) return true
+  return knowledge.value.ownName === userStore.userInfo?.userName
 })
 
 // 是否可以删除评论

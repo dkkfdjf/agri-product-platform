@@ -49,11 +49,11 @@
 
     <div v-if="!collapsed" class="sidebar-footer">
       <div class="footer-content">
-        <div class="help-item">
+        <div class="help-item" @click="showHelp">
           <el-icon><QuestionFilled /></el-icon>
           <span>帮助中心</span>
         </div>
-        <div class="help-item">
+        <div class="help-item" @click="showContact">
           <el-icon><Service /></el-icon>
           <span>联系客服</span>
         </div>
@@ -65,6 +65,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
 
 const props = defineProps({
   title: {
@@ -89,6 +90,30 @@ const activeMenu = computed(() => {
 const toggleCollapse = () => {
   collapsed.value = !collapsed.value
   emit('toggle-collapse', collapsed.value)
+}
+
+// 帮助中心：按用户建议做成小提示弹窗，给出各角色使用指引
+const showHelp = () => {
+  ElMessageBox.alert(
+    '农户：发布农产品 · 申请融资 · 预约专家咨询<br/>' +
+    '买家：浏览市场 · 发布求购 · 下单采购<br/>' +
+    '专家：在线答疑 · 处理预约<br/>' +
+    '银行：发布融资产品 · 审批申请 · 还款核验<br/><br/>' +
+    '遇到问题可在对应页面联系发布方，或通过「联系客服」反馈。',
+    '帮助中心',
+    { confirmButtonText: '我知道了', type: 'info', dangerouslyUseHTMLString: true }
+  )
+}
+
+// 联系客服：弹窗给出联系方式
+const showContact = () => {
+  ElMessageBox.alert(
+    '客服热线：400-888-0000（工作日 9:00–18:00）<br/>' +
+    '客服邮箱：support@nongronghui.com<br/><br/>' +
+    '请描述您的问题，客服将在 1 个工作日内回复。',
+    '联系客服',
+    { confirmButtonText: '关闭', type: 'info', dangerouslyUseHTMLString: true }
+  )
 }
 </script>
 

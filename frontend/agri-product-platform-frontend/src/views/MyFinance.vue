@@ -110,9 +110,11 @@
           <el-table-column label="申请时间" width="160">
             <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="100" fixed="right">
+          <el-table-column label="操作" width="130" fixed="right">
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="viewDetail(row)">详情</el-button>
+              <!-- 已被拒绝的申请允许删除；已通过的进入放款/还款流程不可删 -->
+              <el-button v-if="row.status === 2" type="danger" link size="small" @click="deleteApplication(row)">删除</el-button>
             </template>
           </el-table-column>
           <template #empty>
@@ -273,6 +275,7 @@ import {
   getFinanceJointInvitations,
   getFinanceRepayments,
   submitRepayment,
+  cancelFinance,
   getMyJointInvitations,
   acceptJointInvitation,
   declineJointInvitation
@@ -393,12 +396,16 @@ const loadProducts = async () => {
   }
 }
 
-// 解析融资产品名称：优先用后端回填的 productName，缺失则按 productId 在前端补全
+// 解析融资产品名称：优先用后端回填的 productName，缺失则按 productId 在前端补全；
+// 若该产品已被银行暂停供应(status===1)，追加提示（衔接银行"只能暂停不可删"的改动）
 const resolveProductName = (row) => {
   if (!row) return '—'
-  if (row.productName) return row.productName
-  const p = productMap.value[row.productId]
-  return p ? p.bankName : '—'
+  let name = row.productName
+  if (!name) {
+    const p = productMap.value[row.productId]
+    name = p ? p.bankName : '—'
+  }
+  return row.productStatus === 1 ? `${name}（已暂停供应）` : name
 }
 
 // 当前详情对应的产品对象（用于展示产品介绍）
@@ -454,6 +461,18 @@ const viewDetail = async (row) => {
     } catch (e) {
       // 忽略：早期通过但未生成计划的记录
     }
+  }
+}
+
+// 删除已被拒绝的申请（status=2）；后端仅允许删除 申请中(0)/已拒绝(2)，已通过(1)不可删
+const deleteApplication = async (row) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这条已拒绝的申请吗？删除后不可恢复。', '删除确认', { type: 'warning' })
+    await cancelFinance(row.financeId)
+    ElMessage.success('已删除')
+    await loadApplications()
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error(e?.response?.data?.message || e?.message || '删除失败')
   }
 }
 
