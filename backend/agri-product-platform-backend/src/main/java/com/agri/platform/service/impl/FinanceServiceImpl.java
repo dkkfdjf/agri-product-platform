@@ -286,10 +286,13 @@ public class FinanceServiceImpl implements FinanceService {
             throw new RuntimeException("融资申请不存在");
         }
         if (!finance.getOwnName().equals(userName)) {
-            throw new RuntimeException("无权限撤销此申请");
+            throw new RuntimeException("无权限删除此申请");
         }
-        if (finance.getStatus() != 0) {
-            throw new RuntimeException("只有申请中的记录可以撤销");
+        // 仅允许删除「申请中(0)」与「已拒绝(2)」的记录：申请中可撤销，被拒绝后可清理；
+        // 已通过(1)的融资已进入放款/还款流程，不可删除。
+        Integer st = finance.getStatus();
+        if (st == null || (st != 0 && st != 2)) {
+            throw new RuntimeException("只有申请中或已拒绝的记录可以删除");
         }
         financeMapper.deleteById(financeId);
     }
@@ -528,6 +531,8 @@ public class FinanceServiceImpl implements FinanceService {
             FinanceProduct p = productMap.get(f.getProductId());
             if (p != null) {
                 f.setProductName(p.getBankName());
+                // 同步回填产品上下架状态：农户端可据此提示「该产品已暂停供应」
+                f.setProductStatus(p.getStatus());
             }
         }
     }

@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 public interface ProductService {
     void publishProduct(String userName, ProductRequest request);
-    Page<Product> getProductPage(int page, int pageSize, String type);
+    Page<Product> getProductPage(int page, int pageSize, String type, String keyword);
     Product getProductById(Integer orderId);
     void updateProduct(Integer orderId, String userName, ProductRequest request);
     void deleteProduct(Integer orderId, String userName);

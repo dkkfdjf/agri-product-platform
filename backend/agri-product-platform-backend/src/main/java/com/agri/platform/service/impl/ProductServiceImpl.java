@@ -56,11 +56,16 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Page<Product> getProductPage(int page, int pageSize, String type) {
+    public Page<Product> getProductPage(int page, int pageSize, String type, String keyword) {
         Page<Product> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
         if (type != null && !type.isEmpty()) {
             wrapper.eq(Product::getType, type);
+        }
+        // 关键字：模糊匹配标题或描述（市场搜索）。用 and(...) 包裹保证 OR 不污染外层条件
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            String kw = keyword.trim();
+            wrapper.and(w -> w.like(Product::getTitle, kw).or().like(Product::getContent, kw));
         }
         wrapper.orderByDesc(Product::getCreateTime);
         Page<Product> result = productMapper.selectPage(pageParam, wrapper);

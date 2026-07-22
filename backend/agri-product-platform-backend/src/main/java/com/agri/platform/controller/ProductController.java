@@ -35,8 +35,9 @@ public class ProductController {
     @GetMapping("/page")
     public Result<Page<Product>> page(@RequestParam(defaultValue = "1") int page,
                                        @RequestParam(defaultValue = "10") int pageSize,
-                                       @RequestParam(required = false) String type) {
-        return Result.success(productService.getProductPage(page, pageSize, type));
+                                       @RequestParam(required = false) String type,
+                                       @RequestParam(required = false) String keyword) {
+        return Result.success(productService.getProductPage(page, pageSize, type, keyword));
     }
 
     @GetMapping("/{orderId}")

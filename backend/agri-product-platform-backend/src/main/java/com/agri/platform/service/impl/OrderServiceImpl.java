@@ -211,6 +211,7 @@ public class OrderServiceImpl implements OrderService {
             }
             items.add(item);
         }
+        response.setSellerName(resolveSellerNames(details, productMap));
         response.setItems(items);
 
         return response;
@@ -231,6 +232,13 @@ public class OrderServiceImpl implements OrderService {
                     "订单支付成功",
                     "您的订单 #" + purchaseId + " 已支付成功，等待商家发货。",
                     "/order/" + purchaseId);
+            // 通知卖家（农户）：有新订单待发货
+            for (String seller : getSellerUserNames(purchaseId)) {
+                messageService.send(seller, "order",
+                        "您有新订单待发货",
+                        "订单 #" + purchaseId + " 已付款，请尽快发货。",
+                        "/farmer/orders");
+            }
         }
     }
 
@@ -269,6 +277,15 @@ public class OrderServiceImpl implements OrderService {
                 "订单状态更新：" + statusText,
                 "您的订单 #" + purchaseId + " 状态已更新为「" + statusText + "」。",
                 "/order/" + purchaseId);
+        // 买家确认收货(4)时，额外通知卖家（农户）：买家已收货，交易完成
+        if (status != null && status == 4) {
+            for (String seller : getSellerUserNames(purchaseId)) {
+                messageService.send(seller, "order",
+                        "买家已确认收货",
+                        "买家已确认收到订单 #" + purchaseId + " 的商品，交易完成。",
+                        "/farmer/orders");
+            }
+        }
     }
 
     /**
@@ -293,6 +310,52 @@ public class OrderServiceImpl implements OrderService {
             if (realName != null && realName.equals(p.getOwnName())) return true;
         }
         return false;
+    }
+
+    /**
+     * 获取订单中所有商品发布方（卖家/农户）的登录账号列表，用于站内通知。
+     * 商品 ownName 存的是真实姓名，因此同时按 userName 与 realName 反查用户。
+     */
+    private List<String> getSellerUserNames(Integer purchaseId) {
+        List<PurchaseDetail> details = detailMapper.selectList(
+                new LambdaQueryWrapper<PurchaseDetail>().eq(PurchaseDetail::getPurchaseId, purchaseId));
+        List<Integer> productIds = details.stream()
+                .map(PurchaseDetail::getOrderId)
+                .distinct()
+                .collect(Collectors.toList());
+        if (productIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Product> products = productMapper.selectBatchIds(productIds);
+        List<String> ownNames = products.stream()
+                .map(Product::getOwnName)
+                .filter(n -> n != null && !n.isEmpty())
+                .distinct()
+                .collect(Collectors.toList());
+        if (ownNames.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<User> users = userMapper.selectList(
+                new LambdaQueryWrapper<User>()
+                        .and(w -> w.in(User::getUserName, ownNames).or().in(User::getRealName, ownNames)));
+        return users.stream()
+                .map(User::getUserName)
+                .filter(n -> n != null)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 拼接订单的发货人展示名（买家订单列表用）。商品 ownName 即真实姓名；
+     * 一单含多卖家时以「、」连接。
+     */
+    private String resolveSellerNames(List<PurchaseDetail> orderDetails, Map<Integer, Product> productMap) {
+        return orderDetails.stream()
+                .map(d -> productMap.get(d.getOrderId()))
+                .filter(p -> p != null && p.getOwnName() != null && !p.getOwnName().isEmpty())
+                .map(Product::getOwnName)
+                .distinct()
+                .collect(Collectors.joining("、"));
     }
 
     @Override
@@ -381,6 +444,7 @@ public class OrderServiceImpl implements OrderService {
                 }
                 items.add(item);
             }
+            response.setSellerName(resolveSellerNames(orderDetails, productMap));
             response.setItems(items);
             responses.add(response);
         }
@@ -467,6 +531,7 @@ public class OrderServiceImpl implements OrderService {
                 }
                 items.add(item);
             }
+            response.setSellerName(resolveSellerNames(orderDetails, productMap));
             response.setItems(items);
             responses.add(response);
         }

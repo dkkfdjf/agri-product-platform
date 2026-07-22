@@ -43,6 +43,13 @@ public class Finance {
     private String productName;
 
     /**
+     * 非数据库字段：申请所对应融资产品的上下架状态(0在售 1暂停供应)。
+     * 农户在「我的融资/融资申请」中若该产品已被银行暂停，则据此展示「已暂停供应」提示，不参与持久化。
+     */
+    @TableField(exist = false)
+    private Integer productStatus;
+
+    /**
      * 非数据库字段：申请人的信用分(1-5)，仅在银行审批列表/详情中回填展示，不参与持久化。
      */
     @TableField(exist = false)

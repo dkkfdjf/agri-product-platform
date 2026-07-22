@@ -22,6 +22,8 @@ public class OrderResponse {
     private String ownName;
     /** 买家真实姓名（仅卖家"收到的订单"列表回填，便于农户看到买家真名而非登录账号） */
     private String buyerRealName;
+    /** 发货人/卖家真实姓名（买家订单列表回填；一单多卖家时以「、」拼接） */
+    private String sellerName;
     private BigDecimal totalPrice;
     private String address;
     private Integer purchaseStatus;

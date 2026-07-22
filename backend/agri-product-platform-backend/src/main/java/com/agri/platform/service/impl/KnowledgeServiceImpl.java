@@ -86,7 +86,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         if (knowledge == null) {
             throw new RuntimeException("知识不存在");
         }
-        if (!knowledge.getOwnName().equals(userName)) {
+        if (!knowledge.getOwnName().equals(userName) && !isAdmin(userName)) {
             throw new RuntimeException("无权限修改此知识");
         }
         if (request.getTitle() != null) knowledge.setTitle(request.getTitle());
@@ -102,10 +102,16 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         if (knowledge == null) {
             throw new RuntimeException("知识不存在");
         }
-        if (!knowledge.getOwnName().equals(userName)) {
+        if (!knowledge.getOwnName().equals(userName) && !isAdmin(userName)) {
             throw new RuntimeException("无权限删除此知识");
         }
         knowledgeMapper.deleteById(knowledgeId);
+    }
+
+    /** 判断当前用户是否为管理员（管理员可管理所有知识文章，用于内容审核） */
+    private boolean isAdmin(String userName) {
+        User u = userMapper.selectById(userName);
+        return u != null && "admin".equals(u.getRole());
     }
 
     @Override
