@@ -112,13 +112,20 @@ public class JointInvitationServiceImpl implements JointInvitationService {
         if (inv.getStatus() != null && inv.getStatus() != 0) {
             throw new RuntimeException("该邀请已处理");
         }
+        // 同意前校验：被邀请人须已填写身份证号，否则姓名/电话/身份证号无法绑定到融资申请
+        User jointUser = userMapper.selectById(jointUserName);
+        if (jointUser == null) {
+            throw new RuntimeException("用户信息不存在");
+        }
+        if (jointUser.getIdentityNum() == null || jointUser.getIdentityNum().trim().isEmpty()) {
+            throw new RuntimeException("请先在个人资料中填写身份证号后再同意联合贷款邀请");
+        }
         inv.setStatus(1);
         inv.setHandleTime(LocalDateTime.now());
         jointInvitationMapper.updateById(inv);
 
         // 同意后：把联合人资料（姓名/电话/身份证号，均来自个人资料）回填到融资申请对应 slot
         Finance finance = financeMapper.selectById(inv.getFinanceId());
-        User jointUser = userMapper.selectById(jointUserName);
         if (finance != null && jointUser != null) {
             if (inv.getSlot() != null && inv.getSlot() == 2) {
                 finance.setCombinationName2(jointUser.getRealName());

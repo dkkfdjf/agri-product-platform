@@ -51,13 +51,13 @@ public class UserController {
             if (request.getRole() == null) {
                 return Result.error("请选择角色类型");
             }
-            // 验证角色类型
-            if (!request.getRole().matches("farmer|buyer")) {
+            // 验证角色类型：专家/银行采用「注册即申请」，需管理员审核通过后才能登录
+            if (!request.getRole().matches("farmer|buyer|expert|bank")) {
                 return Result.error("角色类型错误");
             }
 
-            userService.register(request);
-            return Result.success("注册成功");
+            String message = userService.register(request);
+            return Result.success(message);
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

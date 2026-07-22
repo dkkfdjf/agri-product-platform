@@ -7,10 +7,12 @@ import com.agri.platform.dto.FinanceRequest;
 import com.agri.platform.entity.Finance;
 import com.agri.platform.entity.FinanceProduct;
 import com.agri.platform.entity.Product;
+import com.agri.platform.entity.PurchaseDetail;
 import com.agri.platform.entity.User;
 import com.agri.platform.mapper.FinanceMapper;
 import com.agri.platform.mapper.FinanceProductMapper;
 import com.agri.platform.mapper.ProductMapper;
+import com.agri.platform.mapper.PurchaseDetailMapper;
 import com.agri.platform.mapper.UserMapper;
 import com.agri.platform.service.FinanceService;
 import com.agri.platform.service.JointInvitationService;
@@ -45,6 +47,10 @@ public class FinanceServiceImpl implements FinanceService {
     @Autowired
     private ProductMapper agriProductMapper;
 
+    /** 订单明细(tb_purchase_detail) Mapper，用于智能匹配中统计农户交易活跃度 */
+    @Autowired
+    private PurchaseDetailMapper purchaseDetailMapper;
+
     @Autowired
     private UserMapper userMapper;
 
@@ -66,7 +72,12 @@ public class FinanceServiceImpl implements FinanceService {
         }
 
         FinanceProduct product = new FinanceProduct();
-        product.setBankName(request.getBankName());
+        // 产品名称由银行自行命名（如"助农贷"）；银行名称固定取自该银行注册信息(realName)，
+        // 禁止前端冒名填写其它银行，从根本上杜绝"青岛银行冒名发布中国储蓄银行产品"。
+        product.setProductName(request.getProductName());
+        product.setBankName(user.getRealName());
+        // 记录发布银行账号，用于银行间数据隔离（银行只能管理本行产品）
+        product.setBankUserName(userName);
         product.setIntroduce(request.getIntroduce());
         product.setBankPhone(request.getBankPhone());
         product.setMoney(request.getMoney());
@@ -87,10 +98,11 @@ public class FinanceServiceImpl implements FinanceService {
     }
 
     @Override
-    public Page<FinanceProduct> getBankProductList(int page, int pageSize) {
+    public Page<FinanceProduct> getBankProductList(String bankUserName, int page, int pageSize) {
         Page<FinanceProduct> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<FinanceProduct> wrapper = new LambdaQueryWrapper<>();
-        // 银行产品管理：返回全部状态（含已暂停），便于银行查看与恢复供应
+        // 银行数据隔离：仅返回本行发布的产品（含已暂停），便于银行查看与恢复供应
+        wrapper.eq(FinanceProduct::getBankUserName, bankUserName);
         wrapper.orderByDesc(FinanceProduct::getCreateTime);
         return productMapper.selectPage(pageParam, wrapper);
     }
@@ -147,6 +159,8 @@ public class FinanceServiceImpl implements FinanceService {
 
         Finance finance = new Finance();
         finance.setProductId(request.getProductId());
+        // 冗余写入所属银行账号，用于银行工作台按行隔离展示/审批（与 realName 冗余惯例一致）
+        finance.setBankUserName(product.getBankUserName());
         finance.setOwnName(userName);
         finance.setRealName(realName.trim());    // 使用注册真实姓名
         finance.setPhone(phone.trim());          // 使用注册手机号
@@ -205,10 +219,21 @@ public class FinanceServiceImpl implements FinanceService {
 
     @Override
     @Transactional
-    public void approveFinance(Integer financeId, FinanceApprovalRequest request) {
+    public void approveFinance(Integer financeId, String bankUserName, FinanceApprovalRequest request) {
         Finance finance = financeMapper.selectById(financeId);
         if (finance == null) {
             throw new RuntimeException("融资申请不存在");
+        }
+        // 权限校验：仅本行银行可审批该申请（融资审批归属于各银行，管理员不再参与审批）。
+        User operator = userMapper.selectById(bankUserName);
+        if (operator == null) {
+            throw new RuntimeException("用户不存在");
+        }
+        boolean isOwnerBank = "bank".equals(operator.getRole())
+                && finance.getBankUserName() != null
+                && finance.getBankUserName().equals(bankUserName);
+        if (!isOwnerBank) {
+            throw new RuntimeException("无权审批该融资申请（仅本行银行可审批）");
         }
         Integer previousStatus = finance.getStatus();
         finance.setStatus(request.getStatus());
@@ -298,9 +323,12 @@ public class FinanceServiceImpl implements FinanceService {
     }
 
     @Override
-    public Page<Finance> getBankApplications(Integer status, String keyword, Integer productId, String startDate, String endDate, int page, int pageSize) {
+    public Page<Finance> getBankApplications(String bankUserName, Integer status, String keyword, Integer productId, String startDate, String endDate, int page, int pageSize) {
         Page<Finance> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<Finance> wrapper = new LambdaQueryWrapper<>();
+
+        // 银行数据隔离：仅本行产品的融资申请
+        wrapper.eq(Finance::getBankUserName, bankUserName);
 
         // 状态过滤（不传则返回全部状态）
         if (status != null) {
@@ -338,56 +366,40 @@ public class FinanceServiceImpl implements FinanceService {
     }
 
     @Override
-    public Page<Finance> getBankMatch(BigDecimal minMoney, BigDecimal maxMoney, Integer repayment, String keyword, int page, int pageSize) {
-        Page<Finance> pageParam = new Page<>(page, pageSize);
+    public Page<Finance> getBankMatch(String bankUserName, BigDecimal minMoney, BigDecimal maxMoney, Integer repayment, int page, int pageSize) {
+        // 智能匹配：仅本行产品的「申请中」(status=0) 申请参与匹配。
+        // 综合匹配度以「信用/联合贷款人信用/交易活跃度/借贷负担」等多重因素自动计算为主；
+        // 金额/期限目标为可选细化指标——未填则直接按自动评分排序，填了则按 7:3 与目标契合度融合。
         LambdaQueryWrapper<Finance> wrapper = new LambdaQueryWrapper<>();
-
-        // 智能匹配面向「申请中」的真实融资申请(status=0)，即银行可主动对接的潜在客户
-        wrapper.eq(Finance::getStatus, 0);
-
-        // 金额区间（元）
-        if (minMoney != null && minMoney.compareTo(BigDecimal.ZERO) > 0) {
-            wrapper.ge(Finance::getMoney, minMoney);
+        wrapper.eq(Finance::getBankUserName, bankUserName).eq(Finance::getStatus, 0);
+        List<Finance> all = financeMapper.selectList(wrapper);
+        if (all.isEmpty()) {
+            Page<Finance> empty = new Page<>(page, pageSize, 0);
+            empty.setRecords(new ArrayList<>());
+            return empty;
         }
-        if (maxMoney != null && maxMoney.compareTo(BigDecimal.ZERO) > 0) {
-            wrapper.le(Finance::getMoney, maxMoney);
-        }
+        fillProductName(all);
+        fillCredit(all);
+        fillProductNames(all);
 
-        // 期限（月）精确匹配
-        if (repayment != null && repayment > 0) {
-            wrapper.eq(Finance::getRepayment, repayment);
-        }
+        // 预计算各维度数据，避免逐条查询
+        Map<Integer, Integer> jointCreditMap = buildJointCreditMap(all);   // financeId -> 联合贷款人均信用(1-5)
+        Map<String, Integer> orderCountMap = buildOrderCountMap(all);      // realName -> 成交订单条数
+        Map<String, Integer> loanCountMap = buildActiveLoanCountMap(all);  // ownName -> 已通过贷款笔数
 
-        // 作物/用途关键字：匹配融资用途 purpose，或该农户发布的农产品(标题/类型)命中关键字
-        // —— 这里即「tb_finance ↔ 农产品」的关联：用关键字反查 tb_product 命中的发布者真名(realName)。
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            String kw = keyword.trim();
-            List<Product> hitProducts = agriProductMapper.selectList(
-                    new LambdaQueryWrapper<Product>()
-                            .like(Product::getTitle, kw)
-                            .or().like(Product::getType, kw));
-            Set<String> ownerRealNames = hitProducts.stream()
-                    .map(Product::getOwnName)
-                    .filter(java.util.Objects::nonNull)
-                    .filter(n -> !n.isEmpty())
-                    .collect(Collectors.toSet());
-            wrapper.and(w -> {
-                w.like(Finance::getPurpose, kw);
-                if (!ownerRealNames.isEmpty()) {
-                    w.or().in(Finance::getRealName, ownerRealNames);
-                }
-            });
+        boolean hasTarget = (minMoney != null && minMoney.compareTo(BigDecimal.ZERO) > 0)
+                || (maxMoney != null && maxMoney.compareTo(BigDecimal.ZERO) > 0)
+                || (repayment != null && repayment > 0);
+
+        for (Finance f : all) {
+            f.setMatchScore(calcMatchScore(f, jointCreditMap, orderCountMap, loanCountMap, minMoney, maxMoney, repayment, hasTarget));
         }
 
-        wrapper.orderByDesc(Finance::getCreateTime);
-        Page<Finance> result = financeMapper.selectPage(pageParam, wrapper);
-        fillProductName(result.getRecords());
-        fillCredit(result.getRecords());
-        fillProductNames(result.getRecords());
-
-        // 信用分无法在 SQL 层排序（credit 为非持久化回填字段），改为分页内按信用分降序、金额降序重排，
-        // 让高信用客户在本页优先展示。分页本身仍以申请时间全局排序。
-        result.getRecords().sort((a, b) -> {
+        // 排序：匹配度降序 → 信用分降序 → 金额降序
+        all.sort((a, b) -> {
+            int sa = a.getMatchScore() == null ? 0 : a.getMatchScore();
+            int sb = b.getMatchScore() == null ? 0 : b.getMatchScore();
+            if (sb != sa) return Integer.compare(sb, sa);
             int ca = a.getCredit() == null ? 0 : a.getCredit();
             int cb = b.getCredit() == null ? 0 : b.getCredit();
             if (cb != ca) return Integer.compare(cb, ca);
@@ -395,13 +407,208 @@ public class FinanceServiceImpl implements FinanceService {
             BigDecimal mb = b.getMoney() == null ? BigDecimal.ZERO : b.getMoney();
             return mb.compareTo(ma);
         });
+
+        // 内存分页（评分排序需在全集中进行，否则高分申请可能落在后续页；数据量不大可一次加载）
+        int total = all.size();
+        int from = Math.min(Math.max(page - 1, 0) * pageSize, total);
+        int to = Math.min(from + pageSize, total);
+        Page<Finance> result = new Page<>(page, pageSize, total);
+        result.setRecords(all.subList(from, to));
         return result;
     }
 
+    /**
+     * 综合匹配度(0-100)：
+     *   自动评分（未设目标时即为最终分）：农户信用30 + 联合贷款人信用20 + 交易活跃度25 + 借贷负担25
+     *   目标契合（可选，0-100）：金额契合(0-40) + 期限契合(0-20) 归一
+     * 若银行设置了任意金额/期限目标：最终分 = 自动评分*0.7 + 目标契合*0.3；否则直接取自动评分。
+     */
+    private int calcMatchScore(Finance f, Map<Integer, Integer> jointCreditMap, Map<String, Integer> orderCountMap,
+                               Map<String, Integer> loanCountMap, BigDecimal minMoney, BigDecimal maxMoney,
+                               Integer repayment, boolean hasTarget) {
+        int credit = scoreCreditAuto(f.getCredit());                                   // 0-30
+        int joint = scoreJointAuto(jointCreditMap.get(f.getFinanceId()));              // 0-20
+        int activity = scoreActivity(orderCountMap.getOrDefault(f.getRealName(), 0));  // 0-25
+        int burden = scoreBurden(loanCountMap.getOrDefault(f.getOwnName(), 0));        // 0-25
+        int autoScore = clamp(credit + joint + activity + burden, 0, 100);
+        if (!hasTarget) return autoScore;
+        int alignment = scoreAlignment(f.getMoney(), f.getRepayment(), minMoney, maxMoney, repayment); // 0-100
+        return clamp(Math.round(autoScore * 0.7f + alignment * 0.3f), 0, 100);
+    }
+
+    /** 收集每条申请的联合贷款人均信用(1-5)：combination 字段为对方真实姓名，按 realName 反查 tb_user.credit 取均值。 */
+    private Map<Integer, Integer> buildJointCreditMap(List<Finance> list) {
+        Map<Integer, Integer> result = new java.util.HashMap<>();
+        Set<String> names = new java.util.HashSet<>();
+        for (Finance f : list) {
+            if (f.getCombinationName1() != null && !f.getCombinationName1().trim().isEmpty()) names.add(f.getCombinationName1().trim());
+            if (f.getCombinationName2() != null && !f.getCombinationName2().trim().isEmpty()) names.add(f.getCombinationName2().trim());
+        }
+        Map<String, Integer> creditByName = new java.util.HashMap<>();
+        if (!names.isEmpty()) {
+            List<User> users = userMapper.selectList(new LambdaQueryWrapper<User>().in(User::getRealName, names));
+            for (User u : users) {
+                if (u.getRealName() != null) creditByName.put(u.getRealName(), u.getCredit() == null ? 5 : u.getCredit());
+            }
+        }
+        for (Finance f : list) {
+            int sum = 0, n = 0;
+            for (String cn : new String[]{f.getCombinationName1(), f.getCombinationName2()}) {
+                if (cn == null || cn.trim().isEmpty()) continue;
+                Integer c = creditByName.get(cn.trim());
+                if (c != null) { sum += c; n++; }
+            }
+            if (n > 0) result.put(f.getFinanceId(), Math.round((float) sum / n));
+        }
+        return result;
+    }
+
+    /** 统计每位农户(realName)的成交订单条数：其发布的农产品(tb_product.order_id)对应的 tb_purchase_detail 数。 */
+    private Map<String, Integer> buildOrderCountMap(List<Finance> list) {
+        Map<String, Integer> result = new java.util.HashMap<>();
+        Set<String> realNames = list.stream()
+                .map(Finance::getRealName)
+                .filter(java.util.Objects::nonNull)
+                .filter(n -> !n.isEmpty())
+                .collect(Collectors.toSet());
+        if (realNames.isEmpty()) return result;
+        // realName -> 其商品 order_id 列表
+        List<Product> products = agriProductMapper.selectList(
+                new LambdaQueryWrapper<Product>().in(Product::getOwnName, realNames));
+        Map<String, List<Integer>> pidsByOwner = new java.util.HashMap<>();
+        Set<Integer> allPids = new java.util.HashSet<>();
+        for (Product p : products) {
+            if (p.getOwnName() == null || p.getOrderId() == null) continue;
+            pidsByOwner.computeIfAbsent(p.getOwnName(), k -> new ArrayList<>()).add(p.getOrderId());
+            allPids.add(p.getOrderId());
+        }
+        if (allPids.isEmpty()) return result;
+        // 统计每个商品的订单明细条数（本平台 PurchaseDetail.orderId 即商品 order_id）
+        List<PurchaseDetail> details = purchaseDetailMapper.selectList(
+                new LambdaQueryWrapper<PurchaseDetail>().in(PurchaseDetail::getOrderId, allPids));
+        Map<Integer, Long> cntByPid = details.stream()
+                .filter(d -> d.getOrderId() != null)
+                .collect(Collectors.groupingBy(PurchaseDetail::getOrderId, Collectors.counting()));
+        for (Map.Entry<String, List<Integer>> e : pidsByOwner.entrySet()) {
+            long cnt = e.getValue().stream().mapToLong(pid -> cntByPid.getOrDefault(pid, 0L)).sum();
+            result.put(e.getKey(), (int) Math.min(cnt, Integer.MAX_VALUE));
+        }
+        return result;
+    }
+
+    /** 统计每位农户(userName)已通过的贷款笔数：已有多笔贷款视为借贷负担，匹配度相应降低。 */
+    private Map<String, Integer> buildActiveLoanCountMap(List<Finance> list) {
+        Map<String, Integer> result = new java.util.HashMap<>();
+        Set<String> userNames = list.stream()
+                .map(Finance::getOwnName)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (userNames.isEmpty()) return result;
+        List<Finance> approved = financeMapper.selectList(
+                new LambdaQueryWrapper<Finance>().in(Finance::getOwnName, userNames).eq(Finance::getStatus, 1));
+        Map<String, Long> cnt = approved.stream()
+                .collect(Collectors.groupingBy(Finance::getOwnName, Collectors.counting()));
+        for (String u : userNames) result.put(u, cnt.getOrDefault(u, 0L).intValue());
+        return result;
+    }
+
+    /** 农户信用(0-30)：信用分(1-5)线性映射。 */
+    private int scoreCreditAuto(Integer credit) {
+        int c = credit == null ? 0 : credit;
+        if (c > 5) c = 5;
+        if (c < 0) c = 0;
+        return Math.round(c * 30f / 5f);
+    }
+
+    /** 联合贷款人均信用(0-20)：无联合人记中性10；有则按均信用(1-5)映射。 */
+    private int scoreJointAuto(Integer jointCredit) {
+        if (jointCredit == null) return 10;
+        int c = jointCredit;
+        if (c > 5) c = 5;
+        if (c < 0) c = 0;
+        return Math.round(c * 20f / 5f);
+    }
+
+    /** 交易活跃度(0-25)：成交订单条数越多越活跃。 */
+    private int scoreActivity(int orderCount) {
+        if (orderCount <= 0) return 5;
+        if (orderCount <= 3) return 15;
+        if (orderCount <= 10) return 22;
+        return 25;
+    }
+
+    /** 借贷负担(0-25)：已通过贷款笔数越少越优（0笔满分，逐级递减）。 */
+    private int scoreBurden(int loanCount) {
+        switch (loanCount) {
+            case 0: return 25;
+            case 1: return 18;
+            case 2: return 12;
+            case 3: return 6;
+            default: return 3;
+        }
+    }
+
+    /** 目标契合度(0-100)：金额契合(0-40)与期限契合(0-20)各自归一到0-100后，按已设维度取均值。 */
+    private int scoreAlignment(BigDecimal money, Integer term, BigDecimal min, BigDecimal max, Integer target) {
+        boolean hasMin = min != null && min.compareTo(BigDecimal.ZERO) > 0;
+        boolean hasMax = max != null && max.compareTo(BigDecimal.ZERO) > 0;
+        boolean hasTerm = target != null && target > 0;
+        double sum = 0;
+        int dims = 0;
+        if (hasMin || hasMax) {
+            sum += scoreAmountFit(money, min, max) / 40.0 * 100;
+            dims++;
+        }
+        if (hasTerm) {
+            sum += scoreTermFit(term, target) / 20.0 * 100;
+            dims++;
+        }
+        if (dims == 0) return 100;
+        return (int) Math.round(sum / dims);
+    }
+
+    /** 金额契合度(0-40)：在[min,max]内满分；低于min按 money/min 衰减；高于max按 max/money 衰减；无金额目标记满分。 */
+    private int scoreAmountFit(BigDecimal money, BigDecimal min, BigDecimal max) {
+        boolean hasMin = min != null && min.compareTo(BigDecimal.ZERO) > 0;
+        boolean hasMax = max != null && max.compareTo(BigDecimal.ZERO) > 0;
+        if (!hasMin && !hasMax) return 40;
+        if (money == null) return 20;
+        double m = money.doubleValue();
+        if (hasMin && hasMax) {
+            double lo = min.doubleValue(), hi = max.doubleValue();
+            if (m >= lo && m <= hi) return 40;
+            if (m < lo) return (int) Math.round(40 * m / lo);
+            return (int) Math.round(40 * hi / m);
+        }
+        if (hasMin) {
+            double lo = min.doubleValue();
+            return m >= lo ? 40 : (int) Math.round(40 * m / lo);
+        }
+        double hi = max.doubleValue();
+        return m <= hi ? 40 : (int) Math.round(40 * hi / m);
+    }
+
+    /** 期限契合度(0-20)：与目标月数差距越小越高；无期限目标记满分，申请未填期限记中性10。 */
+    private int scoreTermFit(Integer term, Integer target) {
+        if (target == null || target <= 0) return 20;
+        if (term == null) return 10;
+        int diff = Math.abs(term - target);
+        if (diff == 0) return 20;
+        if (diff <= 3) return 16;
+        if (diff <= 6) return 12;
+        if (diff <= 12) return 8;
+        return 4;
+    }
+
+    private int clamp(int v, int lo, int hi) {
+        return Math.max(lo, Math.min(hi, v));
+    }
+
     @Override
-    public BankFinanceStats getBankStats() {
-        // 数据量较小，一次性拉取后在内存聚合
+    public BankFinanceStats getBankStats(String bankUserName) {
+        // 数据量较小，一次性拉取后在内存聚合；仅统计本行产品的融资申请（银行数据隔离）
         LambdaQueryWrapper<Finance> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Finance::getBankUserName, bankUserName);
         wrapper.orderByDesc(Finance::getCreateTime);
         List<Finance> all = financeMapper.selectList(wrapper);
 
@@ -431,7 +638,7 @@ public class FinanceServiceImpl implements FinanceService {
                 }
             } else if (st == 2) {
                 rejectedCount++;
-                totalAmount = totalAmount.add(money);
+                // 申请总额按「已通过」口径统计（不含已拒绝金额），故此处不计入 totalAmount
             }
         }
 
@@ -481,7 +688,9 @@ public class FinanceServiceImpl implements FinanceService {
         if (product == null) {
             throw new RuntimeException("融资产品不存在");
         }
-        // 不可随意更改：核心条款(名称/额度/利率/期限)发布后锁定，仅允许修改介绍与联系电话
+        requireOwnProduct(userName, product);
+        // 不可随意更改：核心条款(额度/利率/期限)发布后锁定；产品名称、介绍与联系电话可随时调整
+        if (request.getProductName() != null) product.setProductName(request.getProductName());
         if (request.getIntroduce() != null) product.setIntroduce(request.getIntroduce());
         if (request.getBankPhone() != null) product.setBankPhone(request.getBankPhone());
         productMapper.updateById(product);
@@ -494,6 +703,7 @@ public class FinanceServiceImpl implements FinanceService {
         if (product == null) {
             throw new RuntimeException("融资产品不存在");
         }
+        requireOwnProduct(userName, product);
         if (status == null || (status != 0 && status != 1)) {
             throw new RuntimeException("非法的状态参数");
         }
@@ -508,6 +718,13 @@ public class FinanceServiceImpl implements FinanceService {
         User user = userMapper.selectById(userName);
         if (user == null || !"bank".equals(user.getRole())) {
             throw new RuntimeException("只有银行可以管理融资产品");
+        }
+    }
+
+    /** 校验融资产品归属于当前银行，防止跨行编辑/暂停/恢复 */
+    private void requireOwnProduct(String bankUserName, FinanceProduct product) {
+        if (product.getBankUserName() == null || !product.getBankUserName().equals(bankUserName)) {
+            throw new RuntimeException("无权操作该融资产品");
         }
     }
 
@@ -530,7 +747,9 @@ public class FinanceServiceImpl implements FinanceService {
             if (f.getProductId() == null) continue;
             FinanceProduct p = productMap.get(f.getProductId());
             if (p != null) {
-                f.setProductName(p.getBankName());
+                // 优先展示产品名称（如"助农贷"），旧数据无产品名时回退银行名
+                f.setProductName(p.getProductName() != null && !p.getProductName().isEmpty()
+                        ? p.getProductName() : p.getBankName());
                 // 同步回填产品上下架状态：农户端可据此提示「该产品已暂停供应」
                 f.setProductStatus(p.getStatus());
             }

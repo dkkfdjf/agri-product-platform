@@ -115,6 +115,20 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
         addColumnIfNotExists("tb_finance_product", "status",
                 "TINYINT NOT NULL DEFAULT 0 COMMENT '0在售/可申请 1暂停供应'");
 
+        // 2026-07-22：融资产品增加「产品名称」。银行可发布多个产品，产品名与银行名分离：
+        // 银行名固定取自该银行注册信息(realName)，产品名由银行自行命名（如"助农贷"）。
+        addColumnIfNotExists("tb_finance_product", "product_name",
+                "VARCHAR(100) DEFAULT NULL COMMENT '产品名称（由银行命名，如：助农贷）'");
+
+        // 2026-07-22：银行间数据隔离。融资产品/融资申请增加「所属银行账号(bank_user_name)」，
+        // 使每家银行只能看到/管理本行产品与对应申请。幂等加列 + 存量数据按 bank_name↔real_name 回填
+        // （等价于手工脚本 v3_bank_isolation.sql，团队成员重启后端即自动具备，无需手动跑 v3）。
+        addColumnIfNotExists("tb_finance_product", "bank_user_name",
+                "VARCHAR(64) DEFAULT NULL COMMENT '发布该产品的银行账号(userName)，用于银行间数据隔离'");
+        addColumnIfNotExists("tb_finance", "bank_user_name",
+                "VARCHAR(64) DEFAULT NULL COMMENT '该申请所对应产品的银行账号(userName)，用于银行间数据隔离'");
+        backfillBankUserName();
+
         log.info("[DB迁移] 完成。");
     }
 
@@ -164,6 +178,33 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
         } catch (Exception e) {
             // 基础表未建好等情况，打印警告但不阻断启动
             log.warn("[DB迁移] 建表 {} 失败，已跳过（不阻断启动）：{}", tableName, e.getMessage());
+        }
+    }
+
+    /**
+     * 银行间数据隔离的存量回填（幂等）：把历史遗留、bank_user_name 为空的记录按
+     * bank_name ↔ role=bank 用户 real_name 尽力回填；已回填的(WHERE IS NULL)启动时自动跳过。
+     * 等价于手工脚本 v3_bank_isolation.sql 的回填段，确保团队成员重启后端即与 v3 结果一致。
+     */
+    private void backfillBankUserName() {
+        try {
+            // 产品：按 bank_name 匹配 role=bank 用户的 real_name
+            int n1 = jdbcTemplate.update(
+                    "UPDATE tb_finance_product p JOIN tb_user u "
+                            + "ON u.role = 'bank' AND u.real_name = p.bank_name "
+                            + "SET p.bank_user_name = u.user_name "
+                            + "WHERE p.bank_user_name IS NULL");
+            // 申请：取其所申请产品的 bank_user_name
+            int n2 = jdbcTemplate.update(
+                    "UPDATE tb_finance f JOIN tb_finance_product p ON p.product_id = f.product_id "
+                            + "SET f.bank_user_name = p.bank_user_name "
+                            + "WHERE f.bank_user_name IS NULL");
+            if (n1 > 0 || n2 > 0) {
+                log.info("[DB迁移] 银行隔离回填：产品 {} 条、申请 {} 条", n1, n2);
+            }
+        } catch (Exception e) {
+            // 列未就绪或基础表缺失等情况，打印警告但不阻断启动
+            log.warn("[DB迁移] 银行隔离回填失败，已跳过（不阻断启动）：{}", e.getMessage());
         }
     }
 }

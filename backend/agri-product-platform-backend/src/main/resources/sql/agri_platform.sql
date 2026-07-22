@@ -144,6 +144,7 @@ DROP TABLE IF EXISTS `tb_finance_product`;
 CREATE TABLE `tb_finance_product` (
   `product_id` int NOT NULL AUTO_INCREMENT COMMENT '产品ID',
   `bank_name` varchar(100) NOT NULL COMMENT '银行名称',
+  `bank_user_name` varchar(64) DEFAULT NULL COMMENT '所属银行账号(userName)，用于银行间数据隔离',
   `introduce` varchar(500) NOT NULL COMMENT '银行介绍',
   `bank_phone` varchar(20) NOT NULL COMMENT '联系电话',
   `money` decimal(12,2) NOT NULL COMMENT '可贷金额',
@@ -161,6 +162,7 @@ DROP TABLE IF EXISTS `tb_finance`;
 CREATE TABLE `tb_finance` (
   `finance_id` int NOT NULL AUTO_INCREMENT COMMENT '申请ID',
   `product_id` int NOT NULL COMMENT '融资产品ID',
+  `bank_user_name` varchar(64) DEFAULT NULL COMMENT '所属银行账号(userName)，用于银行间数据隔离',
   `own_name` varchar(64) NOT NULL COMMENT '申请人用户名',
   `real_name` varchar(64) DEFAULT NULL COMMENT '真实姓名',
   `phone` varchar(20) DEFAULT NULL COMMENT '手机号',

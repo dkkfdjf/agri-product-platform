@@ -82,11 +82,15 @@ public class AdminController {
     @GetMapping("/users")
     public Result<List<User>> getAllUsers(@RequestHeader("Authorization") String token,
                                            @RequestParam(required = false) String role,
+                                           @RequestParam(required = false) Integer status,
                                            @RequestParam(required = false) String keyword) {
         requireAdmin(token);
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         if (role != null && !role.isEmpty()) {
             wrapper.eq(User::getRole, role);
+        }
+        if (status != null) {
+            wrapper.eq(User::getStatus, status);
         }
         if (keyword != null && !keyword.trim().isEmpty()) {
             String kw = keyword.trim();
@@ -162,6 +166,10 @@ public class AdminController {
         if (request.getIdentityNum() != null) user.setIdentityNum(request.getIdentityNum());
         if (request.getAddress() != null) user.setAddress(request.getAddress());
         if (request.getStatus() != null) user.setStatus(request.getStatus());
+        // 管理员可调整农户信用分（0-5），影响其融资智能匹配与展示
+        if (request.getCredit() != null && request.getCredit() >= 0 && request.getCredit() <= 5) {
+            user.setCredit(request.getCredit());
+        }
         if (request.getRole() != null && request.getRole().matches("farmer|buyer|expert|bank|admin")) {
             user.setRole(request.getRole());
         }

@@ -14,6 +14,9 @@ public class Finance {
     @TableId(type = IdType.AUTO)
     private Integer financeId;
     private Integer productId;
+    /** 该申请所对应的银行账号(userName)，用于银行间数据隔离：银行仅能看到本行产品的申请。
+     *  申请提交时由所申请产品的 bank_user_name 冗余写入（与 realName 冗余惯例一致）。 */
+    private String bankUserName;
     private String ownName;
     private String realName;
     private String phone;
@@ -61,4 +64,11 @@ public class Finance {
      */
     @TableField(exist = false)
     private String productNames;
+
+    /**
+     * 非数据库字段：与银行目标条件(金额/期限/用途)及农户信用的综合匹配度(0-100)，
+     * 仅在银行智能匹配中回填，按其降序排列，不参与持久化。
+     */
+    @TableField(exist = false)
+    private Integer matchScore;
 }

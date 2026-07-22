@@ -74,9 +74,11 @@ public class FinanceController {
     }
 
     @PutMapping("/apply/{financeId}")
-    public Result<String> approve(@PathVariable Integer financeId,
+    public Result<String> approve(@RequestHeader("Authorization") String token,
+                                  @PathVariable Integer financeId,
                                   @RequestBody FinanceApprovalRequest request) {
-        financeService.approveFinance(financeId, request);
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        financeService.approveFinance(financeId, userName, request);
         return Result.success("审批完成");
     }
 
@@ -103,22 +105,25 @@ public class FinanceController {
      * 银行工作台 - 融资申请列表（全状态，支持筛选）
      */
     @GetMapping("/bank/applications")
-    public Result<Page<Finance>> bankApplications(@RequestParam(required = false) Integer status,
+    public Result<Page<Finance>> bankApplications(@RequestHeader("Authorization") String token,
+                                                   @RequestParam(required = false) Integer status,
                                                    @RequestParam(required = false) String keyword,
                                                    @RequestParam(required = false) Integer productId,
                                                    @RequestParam(required = false) String startDate,
                                                    @RequestParam(required = false) String endDate,
                                                    @RequestParam(defaultValue = "1") int page,
                                                    @RequestParam(defaultValue = "10") int pageSize) {
-        return Result.success(financeService.getBankApplications(status, keyword, productId, startDate, endDate, page, pageSize));
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        return Result.success(financeService.getBankApplications(userName, status, keyword, productId, startDate, endDate, page, pageSize));
     }
 
     /**
      * 银行工作台 - 数据概览聚合统计
      */
     @GetMapping("/bank/stats")
-    public Result<BankFinanceStats> bankStats() {
-        return Result.success(financeService.getBankStats());
+    public Result<BankFinanceStats> bankStats(@RequestHeader("Authorization") String token) {
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        return Result.success(financeService.getBankStats(userName));
     }
 
     /**
@@ -127,22 +132,25 @@ public class FinanceController {
      * 与 /intention/match（基于无人写入的融资意向表，恒空）不同，此处基于真实 tb_finance 数据。
      */
     @GetMapping("/bank/match")
-    public Result<Page<Finance>> bankMatch(@RequestParam(required = false) BigDecimal minMoney,
+    public Result<Page<Finance>> bankMatch(@RequestHeader("Authorization") String token,
+                                            @RequestParam(required = false) BigDecimal minMoney,
                                             @RequestParam(required = false) BigDecimal maxMoney,
                                             @RequestParam(required = false) Integer repayment,
-                                            @RequestParam(required = false) String keyword,
                                             @RequestParam(defaultValue = "1") int page,
                                             @RequestParam(defaultValue = "10") int pageSize) {
-        return Result.success(financeService.getBankMatch(minMoney, maxMoney, repayment, keyword, page, pageSize));
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        return Result.success(financeService.getBankMatch(userName, minMoney, maxMoney, repayment, page, pageSize));
     }
 
     /**
      * 银行工作台 - 本行全部融资产品（含已暂停），供产品管理页展示
      */
     @GetMapping("/bank/product/list")
-    public Result<Page<FinanceProduct>> bankProductList(@RequestParam(defaultValue = "1") int page,
+    public Result<Page<FinanceProduct>> bankProductList(@RequestHeader("Authorization") String token,
+                                                         @RequestParam(defaultValue = "1") int page,
                                                          @RequestParam(defaultValue = "10") int pageSize) {
-        return Result.success(financeService.getBankProductList(page, pageSize));
+        String userName = jwtUtil.getUsernameFromToken(token.replace("Bearer ", ""));
+        return Result.success(financeService.getBankProductList(userName, page, pageSize));
     }
 
     /**

@@ -12,7 +12,10 @@ import java.time.LocalDateTime;
 public class FinanceProduct {
     @TableId(type = IdType.AUTO)
     private Integer productId;
+    private String productName;
     private String bankName;
+    /** 发布该产品的银行账号(userName)，用于银行间数据隔离：银行仅能看到/管理本行产品 */
+    private String bankUserName;
     private String introduce;
     private String bankPhone;
     private BigDecimal money;

@@ -2,7 +2,9 @@ package com.agri.platform.service;
 
 import com.agri.platform.dto.UserLoginRequest;
 import com.agri.platform.dto.UserRegisterRequest;
+import com.agri.platform.entity.RoleApplication;
 import com.agri.platform.entity.User;
+import com.agri.platform.mapper.RoleApplicationMapper;
 import com.agri.platform.mapper.UserMapper;
 import com.agri.platform.util.JwtUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -25,14 +27,25 @@ public class UserService {
     private UserMapper userMapper;
 
     @Autowired
+    private RoleApplicationMapper roleApplicationMapper;
+
+    @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private MessageService messageService;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     /**
-     * 用户注册
+     * 用户注册。
+     * <p>农户/买家：注册即启用，可直接登录。
+     * <p>专家/银行：采用「注册即申请」——先以禁用(status=0)状态建号并落一条角色申请，
+     * 携带资质材料，待管理员审核通过后启用账号方可登录。
+     *
+     * @return 提示信息（前端据区分为「注册成功」/「申请已提交」）
      */
-    public void register(UserRegisterRequest request) {
+    public String register(UserRegisterRequest request) {
         // 检查用户名是否已存在
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getUserName, request.getUserName());
@@ -41,20 +54,71 @@ public class UserService {
             throw new RuntimeException("用户名已存在");
         }
 
-        // 创建新用户
+        String role = request.getRole();
+        boolean needsApproval = "expert".equals(role) || "bank".equals(role);
+        // 专家/银行注册需补充真实姓名；银行名称(belong)用于审核通过后写入 realName
+        if (needsApproval) {
+            if (request.getRealName() == null || request.getRealName().trim().isEmpty()) {
+                throw new RuntimeException("请填写真实姓名");
+            }
+            if (request.getPhone() == null || request.getPhone().trim().isEmpty()) {
+                throw new RuntimeException("请填写手机号");
+            }
+            if ("bank".equals(role) && (request.getBelong() == null || request.getBelong().trim().isEmpty())) {
+                throw new RuntimeException("请填写银行名称");
+            }
+        }
+
+        // 创建用户
         User user = new User();
         user.setUserName(request.getUserName());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRealName(request.getRealName());
         user.setPhone(request.getPhone());
-        user.setRole(request.getRole());
+        user.setRole(role);
         user.setIntegral(500);
         user.setCredit(5);
-        user.setStatus(1);
+        // 专家/银行：审核通过前为禁用状态，禁止登录
+        user.setStatus(needsApproval ? 0 : 1);
         user.setCreateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());
-
         userMapper.insert(user);
+
+        if (needsApproval) {
+            // 落一条角色申请，供管理员审核（携带资质材料）
+            RoleApplication app = new RoleApplication();
+            app.setUserName(request.getUserName());
+            app.setTargetRole(role);
+            app.setRealName(request.getRealName());
+            app.setPhone(request.getPhone());
+            app.setProfession(request.getProfession());
+            app.setPosition(request.getPosition());
+            app.setBelong(request.getBelong());
+            app.setReason(request.getReason());
+            app.setMaterials(request.getMaterials());
+            app.setStatus(0);
+            roleApplicationMapper.insert(app);
+            // 通知所有启用状态的管理员：有新的专家/银行注册申请待审核
+            String roleLabel = "bank".equals(role) ? "银行" : "专家";
+            String displayName = "bank".equals(role)
+                    ? (request.getBelong() != null && !request.getBelong().trim().isEmpty()
+                        ? request.getBelong().trim() : request.getRealName())
+                    : request.getRealName();
+            notifyAdmins("新" + roleLabel + "注册申请待审核",
+                    "用户「" + request.getUserName() + "」（" + roleLabel + "：" + displayName
+                            + "）提交了注册申请，请前往「角色申请」审核。");
+            return "申请已提交，请等待管理员审核通过后即可登录";
+        }
+        return "注册成功";
+    }
+
+    /** 通知所有启用状态的管理员（站内消息），用于注册/角色升级申请提交后提醒审核。 */
+    private void notifyAdmins(String title, String content) {
+        List<User> admins = userMapper.selectList(
+                new LambdaQueryWrapper<User>().eq(User::getRole, "admin").eq(User::getStatus, 1));
+        for (User admin : admins) {
+            messageService.send(admin.getUserName(), "system", title, content, "/admin/applications");
+        }
     }
 
     /**
@@ -89,9 +153,9 @@ public class UserService {
             throw new RuntimeException("密码错误");
         }
 
-        // 检查用户状态
+        // 检查用户状态：0 可能是「专家/银行注册待审核」或「被管理员禁用」
         if (user.getStatus() == 0) {
-            throw new RuntimeException("账号已被禁用");
+            throw new RuntimeException("账号尚未启用，若您注册的是专家/银行账号，请等待管理员审核通过");
         }
 
         // 生成Token

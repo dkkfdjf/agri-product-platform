@@ -18,6 +18,8 @@ public class AdminUserRequest {
     private String role;
     /** 1正常 0禁用 */
     private Integer status;
+    /** 农户信用分（0-5，仅管理员可调整） */
+    private Integer credit;
     // 当 role=expert 时可附带专家资料
     private String profession;
     private String position;
