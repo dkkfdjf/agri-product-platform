@@ -15,7 +15,8 @@
       </template>
       <div class="products-grid">
         <div v-for="product in financeProducts" :key="product.productId" class="product-item">
-          <div class="product-name">{{ product.bankName }}</div>
+          <div class="product-name">{{ product.productName || product.bankName }}</div>
+          <div class="product-bank-row">{{ product.bankName }}</div>
           <div class="product-desc">{{ product.introduce }}</div>
           <div class="product-terms">
             <div class="term">
@@ -127,7 +128,7 @@
             <el-option
               v-for="product in financeProducts"
               :key="product.productId"
-              :label="product.bankName"
+              :label="`${product.productName || product.bankName}${product.bankName ? ' · ' + product.bankName : ''}`"
               :value="product.productId"
             />
           </el-select>
@@ -645,6 +646,13 @@ onMounted(() => {
 .product-name {
   font-weight: 600;
   font-size: 16px;
+}
+
+.product-bank-row {
+  font-size: 13px;
+  color: #2d5a3d;
+  margin-top: -6px;
+  margin-bottom: 4px;
 }
 
 .product-desc {

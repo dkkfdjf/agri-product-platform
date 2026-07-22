@@ -16,7 +16,7 @@
         <nav class="main-nav">
           <a href="#products" @click.prevent="scrollToSection('products')">农产品</a>
           <a href="#financing" @click.prevent="scrollToSection('financing')">融资服务</a>
-          <a href="#experts" @click.prevent="scrollToSection('experts')">专家助力</a>
+          <a v-if="showExpertSection" href="#experts" @click.prevent="scrollToSection('experts')">专家助力</a>
           <a href="#knowledge" @click.prevent="scrollToSection('knowledge')">农业知识</a>
         </nav>
 
@@ -193,6 +193,7 @@
               </svg>
             </div>
             <h3 class="financing-title">{{ item.title }}</h3>
+            <p v-if="item.bank" class="financing-bank">{{ item.bank }}</p>
             <p class="financing-desc">{{ item.description }}</p>
             <div class="financing-features">
               <span v-for="feature in item.features" :key="feature" class="feature-tag">
@@ -219,7 +220,7 @@
     </section>
 
     <!-- Experts Section -->
-    <section id="experts" class="experts-section">
+    <section v-if="showExpertSection" id="experts" class="experts-section">
       <div class="section-inner">
         <div class="section-header">
           <div class="section-eyebrow">专业指导</div>
@@ -242,7 +243,7 @@
                 <span class="stat-item">{{ expert.answers }} 回答</span>
               </div>
             </div>
-            <button class="expert-action" @click="handleExpertClick(expert)">
+            <button v-if="canConsultExpert" class="expert-action" @click="handleExpertClick(expert)">
               咨询
             </button>
           </div>
@@ -349,16 +350,70 @@
           </div>
           <div class="footer-link-group">
             <h4>关于我们</h4>
-            <a href="#">平台介绍</a>
-            <a href="#">联系我们</a>
-            <a href="#">帮助中心</a>
+            <a href="#" @click.prevent="aboutVisible = true">平台介绍</a>
+            <a href="#" @click.prevent="contactVisible = true">联系我们</a>
+            <a href="#" @click.prevent="helpVisible = true">帮助中心</a>
           </div>
         </div>
       </div>
       <div class="footer-bottom">
-        <p>&copy; 2024 农融汇. All rights reserved.</p>
+        <p>&copy; 2026 农融汇. All rights reserved.</p>
       </div>
     </footer>
+
+    <!-- 平台介绍 -->
+    <el-dialog v-model="aboutVisible" title="平台介绍" width="560px">
+      <div class="footer-modal-content">
+        <p><b>农融汇</b>是一个连接农户与市场、融销一体的农产品服务平台。</p>
+        <p>我们为农户提供农产品上架与交易、融资贷款对接、农业专家咨询与农业知识等一站式服务，助力农业生产数字化、农产品销售便捷化、农村融资普惠化。</p>
+        <ul>
+          <li>📦 农产品交易：货源直达买家，价格透明</li>
+          <li>💰 融资服务：对接合作银行，便捷申请贷款</li>
+          <li>🌾 专家助力：农业专家在线答疑、预约指导</li>
+          <li>📚 农业知识：专业知识库持续更新</li>
+        </ul>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="aboutVisible = false">我知道了</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 联系我们 -->
+    <el-dialog v-model="contactVisible" title="联系我们" width="480px">
+      <div class="footer-modal-content">
+        <p><span class="contact-label">客服电话：</span>400-888-0000</p>
+        <p><span class="contact-label">客服邮箱：</span>support@nongronghui.com</p>
+        <p><span class="contact-label">办公地址：</span>山东省青岛市农业科技产业园</p>
+        <p><span class="contact-label">服务时间：</span>周一至周日 9:00 - 18:00</p>
+        <p class="contact-tip">如您在使用过程中遇到任何问题，欢迎通过以上方式与我们联系，我们将尽快为您处理。</p>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="contactVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 帮助中心 -->
+    <el-dialog v-model="helpVisible" title="帮助中心" width="560px">
+      <div class="footer-modal-content">
+        <el-collapse>
+          <el-collapse-item title="如何注册账号？" name="1">
+            点击页面右上角「免费注册」，选择角色（农户 / 买家 / 专家 / 银行）并填写信息即可。专家与银行角色需上传资质材料，待管理员审核通过后即可登录。
+          </el-collapse-item>
+          <el-collapse-item title="农户如何申请融资？" name="2">
+            登录后进入「我的融资 → 申请新融资」，选择银行融资产品并填写申请信息，提交后等待银行审批。
+          </el-collapse-item>
+          <el-collapse-item title="如何购买农产品？" name="3">
+            在「农产品」市场浏览商品，加入购物车或直接购买，确认订单并完成支付即可。
+          </el-collapse-item>
+          <el-collapse-item title="忘记密码怎么办？" name="4">
+            请联系平台客服（400-888-0000）核实身份后协助重置密码。
+          </el-collapse-item>
+        </el-collapse>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="helpVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -375,6 +430,17 @@ import { getExpertList } from '@/api/expert'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+// 只有农户/买家可以咨询提问与预约专家；银行/管理员/专家在首页不展示咨询入口
+const canConsultExpert = computed(() => ['farmer', 'buyer'].includes(userStore.role))
+// 首页「专家助力」区块：未登录可见（对外宣传/引导注册），登录后仅农户/买家可见。
+// 银行/管理员/专家不展示该区块——其角色无需浏览与咨询专家。
+const showExpertSection = computed(() => !userStore.isLoggedIn() || canConsultExpert.value)
+
+// 页脚弹窗：平台介绍 / 联系我们 / 帮助中心
+const aboutVisible = ref(false)
+const contactVisible = ref(false)
+const helpVisible = ref(false)
 
 // 获取用户显示名称：优先真实姓名 realName
 // 此前 farmer 无 farmName / expert 无 expertName 时会落到 userName（登录账号），不符合"显示真实姓名"
@@ -485,6 +551,10 @@ const handleExpertClick = (expert) => {
     router.push('/login')
     return
   }
+  if (!canConsultExpert.value) {
+    ElMessage.info('仅农户与买家可咨询和预约专家')
+    return
+  }
   // 跳转到专家详情页（可提问/预约）
   if (expert.userName) {
     router.push('/expert/' + expert.userName)
@@ -548,15 +618,16 @@ const loadHomeData = async () => {
       featuredProducts.value = productRes.data.records || productRes.data || []
     }
 
-    // Load finance products (6 items)
-    // 后端 FinanceProduct 字段为 productId/bankName/introduce/money/rate/repayment，
-    // 映射成卡片所需形状（title/description/features/amount），否则模板字段错位渲染空卡片
+    // Load finance products —— 首页融资服务最多展示 3 个
+    // 后端 FinanceProduct 字段为 productId/productName/bankName/introduce/money/rate/repayment，
+    // 产品名作为卡片标题、银行名作为副标题分别展示
     const financeRes = await getFinanceProducts({ page: 1, pageSize: 6 })
     if (financeRes.code === 200 && financeRes.data) {
       const records = financeRes.data.records || financeRes.data || []
-      financingItems.value = records.map(p => ({
+      financingItems.value = records.slice(0, 3).map(p => ({
         id: p.productId,
-        title: p.bankName || '融资产品',
+        title: p.productName || '融资产品',
+        bank: p.bankName || '',
         description: p.introduce || '',
         features: [
           p.rate ? `年利率 ${p.rate}%` : null,
@@ -1219,6 +1290,13 @@ onMounted(() => {
   font-size: 20px;
   font-weight: 600;
   color: var(--color-text);
+  margin: 0 0 4px;
+}
+
+.financing-bank {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-secondary);
   margin: 0 0 12px;
 }
 
@@ -1726,6 +1804,36 @@ onMounted(() => {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.6);
   margin: 0;
+}
+
+/* 页脚弹窗内容 */
+.footer-modal-content p {
+  margin: 8px 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--color-text, #1f2923);
+}
+.footer-modal-content ul {
+  margin: 12px 0;
+  padding-left: 20px;
+}
+.footer-modal-content li {
+  font-size: 14px;
+  line-height: 2;
+  color: var(--color-text-light, #6b7280);
+}
+.footer-modal-content .contact-label {
+  display: inline-block;
+  width: 84px;
+  color: var(--color-text-light, #6b7280);
+}
+.footer-modal-content .contact-tip {
+  margin-top: 16px;
+  padding: 12px;
+  background: #f7f5f0;
+  border-radius: 8px;
+  color: var(--color-text-light, #6b7280);
+  font-size: 13px;
 }
 
 /* ===== 响应式 ===== */

@@ -76,16 +76,16 @@
 
     <!-- 主要内容区 -->
     <div class="content-grid">
-      <!-- 推荐商品 -->
+      <!-- 我的购物车（真实数据，非"推荐"排序） -->
       <div class="content-card">
         <div class="card-header">
-          <h3 class="card-title">推荐商品</h3>
-          <router-link to="/buyer/market" class="card-link">查看更多</router-link>
+          <h3 class="card-title">我的购物车</h3>
+          <router-link to="/buyer/cart" class="card-link">去结算</router-link>
         </div>
         <div class="product-grid">
-          <div v-for="product in recommendedProducts" :key="product.productId" class="product-card" @click="goToProduct(product)">
+          <div v-for="item in cartItems" :key="item.cartId" class="product-card" @click="goToProduct(item)">
             <div class="product-image">
-              <img v-if="product.picPath" :src="product.picPath" :alt="product.title" />
+              <img v-if="item.picPath" :src="item.picPath" :alt="item.title" />
               <div v-else class="image-placeholder">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
@@ -94,10 +94,14 @@
               </div>
             </div>
             <div class="product-info">
-              <div class="product-name">{{ product.title }}</div>
-              <div class="product-desc">{{ product.content }}</div>
-              <div class="product-price">{{ product.type === 'goods' ? `¥${product.price}` : '面议' }}</div>
+              <div class="product-name">{{ item.title }}</div>
+              <div class="product-desc">数量 x{{ item.count }}</div>
+              <div class="product-price">¥{{ item.price }}</div>
             </div>
+          </div>
+          <div v-if="!cartItems.length" class="cart-empty">
+            <p>购物车还是空的，快去选购吧~</p>
+            <router-link to="/buyer/market" class="card-link">去逛市场</router-link>
           </div>
         </div>
       </div>
@@ -158,7 +162,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { Top } from '@element-plus/icons-vue'
-import { getProducts } from '@/api/product'
 import { getOrders } from '@/api/order'
 import { getCartList } from '@/api/cart'
 import RecentNotifications from '@/components/RecentNotifications.vue'
@@ -174,8 +177,8 @@ const stats = ref({
   expertCount: 0
 })
 
-// 推荐商品
-const recommendedProducts = ref([])
+// 购物车商品（首页「我的购物车」展示前 4 项，真实数据）
+const cartItems = ref([])
 
 // 加载状态
 const loading = ref(false)
@@ -236,12 +239,6 @@ const goToProduct = (product) => {
 const loadDashboardData = async () => {
   loading.value = true
   try {
-    // 加载推荐商品
-    const productRes = await getProducts({ page: 1, pageSize: 4, type: 'goods' })
-    if (productRes.code === 200) {
-      recommendedProducts.value = productRes.data.records || []
-    }
-
     // 加载订单用于统计（累计订单/累计消费），概览页不再展示最近订单列表
     const orderRes = await getOrders({ page: 1, pageSize: 5 })
     if (orderRes.code === 200) {
@@ -250,10 +247,12 @@ const loadDashboardData = async () => {
       stats.value.totalSpent = orders.reduce((sum, order) => sum + (order.totalPrice || 0), 0)
     }
 
-    // 加载购物车数量
+    // 加载购物车：既用于统计计数，也用于「我的购物车」卡片展示前 4 项
     const cartRes = await getCartList()
     if (cartRes.code === 200) {
-      stats.value.cartCount = cartRes.data?.length || 0
+      const list = cartRes.data || []
+      stats.value.cartCount = list.length
+      cartItems.value = list.slice(0, 4)
     }
   } catch (error) {
     console.error('加载仪表板数据失败:', error)
@@ -512,6 +511,18 @@ onMounted(() => {
   font-size: var(--font-size-sm, 14px);
   font-weight: var(--font-weight-bold, 700);
   color: var(--color-error, #b85c38);
+}
+
+.cart-empty {
+  grid-column: 1 / -1;
+  padding: var(--spacing-6, 24px);
+  text-align: center;
+  color: var(--color-text-tertiary, #6b7280);
+  font-size: var(--font-size-sm, 14px);
+}
+
+.cart-empty p {
+  margin: 0 0 var(--spacing-2, 8px);
 }
 
 /* ===== 快捷操作 ===== */

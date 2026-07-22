@@ -57,7 +57,6 @@ import {
   ChatLineSquare,
   Reading,
   DataAnalysis,
-  Promotion,
   Connection,
   Coin
 } from '@element-plus/icons-vue'
@@ -84,7 +83,6 @@ const menuItems = computed(() => {
   if (isFarmer.value || isBuyer.value) {
     items.push({ label: '专家咨询', icon: ChatLineSquare, color: '#909399', handler: goToExpertConsult })
     items.push({ label: '农业知识', icon: Reading, color: '#f56c6c', handler: goToKnowledge })
-    items.push({ label: '角色升级申请', icon: Promotion, color: '#b85c38', path: '/role-application' })
   }
   if (isFarmer.value) {
     items.push({ label: '我的融资', icon: Money, color: '#409eff', path: '/farmer/my-finance' })

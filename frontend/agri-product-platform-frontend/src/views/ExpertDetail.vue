@@ -26,14 +26,17 @@
             </div>
           </div>
           <div class="expert-actions">
-            <el-button type="primary" size="large" @click="handleAsk">
-              <el-icon><ChatDotRound /></el-icon>
-              向TA提问
-            </el-button>
-            <el-button type="primary" size="large" @click="handleReserve">
-              <el-icon><Calendar /></el-icon>
-              预约专家
-            </el-button>
+            <template v-if="canConsultEntry">
+              <el-button type="primary" size="large" @click="handleAsk">
+                <el-icon><ChatDotRound /></el-icon>
+                向TA提问
+              </el-button>
+              <el-button type="primary" size="large" @click="handleReserve">
+                <el-icon><Calendar /></el-icon>
+                预约专家
+              </el-button>
+            </template>
+            <span v-else class="consult-disabled-tip">仅农户与买家可咨询/预约专家</span>
           </div>
         </div>
       </el-card>
@@ -80,7 +83,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ChatDotRound, Calendar, OfficeBuilding, Medal, Select } from '@element-plus/icons-vue'
@@ -93,6 +96,9 @@ import BackBar from '@/components/BackBar.vue'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+
+// 仅农户/买家可咨询/预约专家；未登录时展示按钮并引导登录
+const canConsultEntry = computed(() => !userStore.isLoggedIn() || ['farmer', 'buyer'].includes(userStore.role))
 
 const expert = ref(null)
 const activeTab = ref('knowledge')
@@ -172,6 +178,10 @@ const handleAsk = () => {
     router.push({ path: '/login', query: { redirect: route.fullPath } })
     return
   }
+  if (!['farmer', 'buyer'].includes(userStore.role)) {
+    ElMessage.info('仅农户与买家可向专家提问')
+    return
+  }
   router.push(`/question/ask?expert=${expert.value?.userName}`)
 }
 
@@ -179,6 +189,10 @@ const handleReserve = () => {
   if (!userStore.isLoggedIn()) {
     ElMessage.info('请先登录')
     router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  if (!['farmer', 'buyer'].includes(userStore.role)) {
+    ElMessage.info('仅农户与买家可预约专家')
     return
   }
   router.push({ path: '/reserve', query: { expert: expert.value?.userName, from: route.fullPath } })
@@ -295,6 +309,12 @@ onMounted(() => {
   display: flex;
   gap: var(--spacing-3, 12px);
   flex-direction: column;
+}
+
+.consult-disabled-tip {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-tertiary, #6b7280);
+  white-space: nowrap;
 }
 
 .content-tabs {

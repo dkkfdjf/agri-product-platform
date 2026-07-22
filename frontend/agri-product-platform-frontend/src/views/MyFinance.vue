@@ -12,12 +12,24 @@
       </el-button>
     </div>
 
-    <!-- 我收到的联合贷款邀请：作为被邀请人同意/拒绝 -->
+    <!-- 我收到的联合贷款邀请：作为被邀请人同意/拒绝。
+         邀请较多时可折叠，避免数据栏不断叠加占据过多界面空间。 -->
     <div v-if="receivedInvitations.length" class="content-card invitation-card">
       <div class="card-header">
-        <h3 class="card-title">我收到的联合贷款邀请</h3>
+        <h3 class="card-title">
+          我收到的联合贷款邀请
+          <el-tag v-if="pendingInviteCount > 0" type="danger" size="small" effect="dark" class="invite-count">
+            {{ pendingInviteCount }} 条待处理
+          </el-tag>
+        </h3>
+        <el-button link type="primary" size="small" @click="invitationCollapsed = !invitationCollapsed">
+          {{ invitationCollapsed ? '展开' : '收起' }}
+          <el-icon class="el-icon--right">
+            <ArrowDown v-if="invitationCollapsed" /><ArrowUp v-else />
+          </el-icon>
+        </el-button>
       </div>
-      <div class="invitation-list">
+      <div v-show="!invitationCollapsed" class="invitation-list">
         <div v-for="inv in receivedInvitations" :key="inv.id" class="invitation-item">
           <div class="invitation-main">
             <div class="invitation-top">
@@ -267,8 +279,10 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Clock, Select, Close, Document } from '@element-plus/icons-vue'
+import { Plus, Clock, Select, Close, Document, ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import {
   getMyFinanceApplications,
   getFinanceProducts,
@@ -280,6 +294,9 @@ import {
   acceptJointInvitation,
   declineJointInvitation
 } from '@/api/finance'
+
+const router = useRouter()
+const userStore = useUserStore()
 
 const loading = ref(false)
 const detailVisible = ref(false)
@@ -304,6 +321,9 @@ const repayFileList = ref([])
 // 我收到的联合贷款邀请（作为被邀请人，本页为农户，需同意/拒绝）
 const receivedInvitations = ref([])
 const inviting = ref(false)
+// 邀请较多时折叠展示，避免数据栏不断叠加占据过多界面空间
+const invitationCollapsed = ref(false)
+const pendingInviteCount = computed(() => receivedInvitations.value.filter(i => i.status === 0).length)
 
 // 个人申请数量通常较少，一次性拉取后在前端做统计/筛选/分页
 const allList = ref([])
@@ -344,12 +364,29 @@ const loadReceivedInvitations = async () => {
   try {
     const res = await getMyJointInvitations()
     receivedInvitations.value = res.data || []
+    // 待处理邀请 >2 条时默认折叠，避免占据过多界面
+    invitationCollapsed.value = pendingInviteCount.value > 2
   } catch (e) {
     // 忽略
   }
 }
 
 const onAcceptInvitation = async (inv) => {
+  // 同意前必须已填写身份证号（同意后姓名/电话/身份证号会绑定到融资申请；后端也会校验）
+  // 缺失则不进入同意流程，引导去个人资料补填
+  if (!userStore.userInfo?.identityNum) {
+    try {
+      await ElMessageBox.confirm(
+        '同意联合贷款邀请前，请先在个人资料中填写您的身份证号（同意后将绑定到该融资申请）。是否现在前往填写？',
+        '请先填写身份证号',
+        { confirmButtonText: '去填写', cancelButtonText: '稍后', type: 'warning' }
+      )
+      router.push('/profile/edit')
+    } catch (e) {
+      // 用户选择"稍后"，不做任何操作
+    }
+    return
+  }
   try {
     await ElMessageBox.confirm(
       `确认作为 ${inv.applicantRealName || inv.applicantUserName} 的联合贷款人？同意后您的姓名/电话/身份证号将绑定到该融资申请。`,
@@ -740,6 +777,13 @@ const formatTime = (t) => {
   flex-direction: column;
   gap: var(--spacing-3, 12px);
   padding: var(--spacing-4, 16px);
+  /* 邀请较多时限制高度并内部滚动，避免占据过多界面 */
+  max-height: 360px;
+  overflow-y: auto;
+}
+.invite-count {
+  margin-left: var(--spacing-2, 8px);
+  vertical-align: middle;
 }
 .invitation-item {
   display: flex;

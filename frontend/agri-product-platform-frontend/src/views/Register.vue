@@ -105,7 +105,7 @@
             />
           </el-form-item>
 
-          <el-form-item prop="realName">
+          <el-form-item v-if="registerForm.role !== 'bank'" prop="realName">
             <label class="form-label">真实姓名</label>
             <el-input
               v-model="registerForm.realName"
@@ -158,9 +158,79 @@
                   <span class="role-desc">采购优质农产品</span>
                 </div>
               </el-option>
+              <el-option label="专家" value="expert">
+                <div class="role-option">
+                  <span class="role-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M12 14l9-5-9-5-9 5 9 5z"/>
+                      <path d="M12 14v7"/>
+                      <path d="M5 10v6c0 1 3 3 7 3s7-2 7-3v-6"/>
+                    </svg>
+                  </span>
+                  <span>专家</span>
+                  <span class="role-desc">在线答疑，知识分享</span>
+                </div>
+              </el-option>
+              <el-option label="银行" value="bank">
+                <div class="role-option">
+                  <span class="role-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M3 21h18"/>
+                      <path d="M3 10h18"/>
+                      <path d="M5 10l7-6 7 6"/>
+                      <path d="M6 10v8M10 10v8M14 10v8M18 10v8"/>
+                    </svg>
+                  </span>
+                  <span>银行</span>
+                  <span class="role-desc">提供融资产品</span>
+                </div>
+              </el-option>
             </el-select>
-            <p class="role-tip">想成为<span>专家</span>或<span>银行</span>角色？请先以农户/买家注册登录，再在「个人中心 → 角色申请」提交申请，由管理员审核开通。</p>
+            <p class="role-tip">选择<span>专家</span>或<span>银行</span>需上传资质材料，提交后由管理员审核，通过后方可登录。</p>
           </el-form-item>
+
+          <!-- 专家/银行「注册即申请」附加资质信息（仅选中专家/银行时显示） -->
+          <template v-if="registerForm.role === 'expert' || registerForm.role === 'bank'">
+            <el-form-item v-if="registerForm.role === 'bank'" prop="belong">
+              <label class="form-label">银行名称</label>
+              <el-input v-model="registerForm.belong" placeholder="如：青岛银行" size="large" class="form-input" />
+              <p class="field-tip">请填写银行的官方全称，该名称即为本行在平台的展示名（发布融资产品、审批、首页展示等均以此为准，不可冒用他行名称）。</p>
+            </el-form-item>
+            <template v-if="registerForm.role === 'expert'">
+              <el-form-item prop="profession">
+                <label class="form-label">专业方向</label>
+                <el-input v-model="registerForm.profession" placeholder="如：农学、植保" size="large" class="form-input" />
+              </el-form-item>
+              <el-form-item prop="position">
+                <label class="form-label">职位</label>
+                <el-input v-model="registerForm.position" placeholder="如：教授、农艺师" size="large" class="form-input" />
+              </el-form-item>
+              <el-form-item prop="belong">
+                <label class="form-label">所属单位</label>
+                <el-input v-model="registerForm.belong" placeholder="如：山东省农科院" size="large" class="form-input" />
+              </el-form-item>
+            </template>
+            <el-form-item prop="reason">
+              <label class="form-label">申请理由</label>
+              <el-input v-model="registerForm.reason" type="textarea" :rows="3" placeholder="简要说明您的资质情况与申请理由" class="form-input" />
+            </el-form-item>
+            <el-form-item>
+              <label class="form-label">资质材料（可选）</label>
+              <el-upload
+                action="/api/upload"
+                :on-success="onMaterialUploaded"
+                :on-remove="onMaterialRemoved"
+                :file-list="materialFileList"
+                :limit="3"
+                accept="image/*,.pdf"
+              >
+                <el-button type="primary" plain size="small">上传材料</el-button>
+                <template #tip>
+                  <div class="upload-tip">资质 / 执业证明等，最多 3 个文件（图片或 PDF）</div>
+                </template>
+              </el-upload>
+            </el-form-item>
+          </template>
 
           <el-form-item>
             <button
@@ -224,7 +294,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import Turnstile from '@/components/Turnstile.vue'
 
 const router = useRouter()
@@ -239,8 +309,15 @@ const registerForm = reactive({
   confirmPassword: '',
   realName: '',
   phone: '',
-  role: ''
+  role: '',
+  // 专家/银行「注册即申请」附加字段
+  profession: '',
+  position: '',
+  belong: '',
+  reason: '',
+  materials: ''
 })
+const materialFileList = ref([])
 
 // Cloudflare Turnstile 人机验证（点击「创建账号」且表单校验通过后弹窗）
 const turnstileDialogVisible = ref(false)
@@ -278,6 +355,41 @@ const validateConfirmPassword = (rule, value, callback) => {
   }
 }
 
+// 真实姓名：银行角色以「银行名称」作为名称（提交时同步写入 realName），故此处不再单独校验；
+// 其余角色（农户/买家/专家）仍要求填写真实姓名。
+const validateRealName = (rule, value, callback) => {
+  if (registerForm.role === 'bank') {
+    callback()
+  } else if (!value || !value.trim()) {
+    callback(new Error('请输入真实姓名'))
+  } else {
+    callback()
+  }
+}
+
+// 银行注册必填银行名称（农户/买家/专家不触发该校验）
+const validateBelong = (rule, value, callback) => {
+  if (registerForm.role === 'bank' && (!value || !value.trim())) {
+    callback(new Error('请填写银行名称'))
+  } else {
+    callback()
+  }
+}
+
+// 资质材料上传：/upload 返回 { data: { url } }，多个用逗号拼接
+const onMaterialUploaded = (res) => {
+  const url = res?.data?.url
+  if (url) {
+    registerForm.materials = registerForm.materials ? registerForm.materials + ',' + url : url
+  }
+}
+const onMaterialRemoved = (_file, fileList) => {
+  registerForm.materials = fileList
+    .map(f => f?.response?.data?.url || f?.url)
+    .filter(Boolean)
+    .join(',')
+}
+
 const rules = {
   userName: [
     { required: true, message: '请输入用户名', trigger: ['blur', 'change'] },
@@ -292,7 +404,7 @@ const rules = {
     { validator: validateConfirmPassword, trigger: ['blur', 'change'] }
   ],
   realName: [
-    { required: true, message: '请输入真实姓名', trigger: ['blur', 'change'] }
+    { validator: validateRealName, trigger: ['blur', 'change'] }
   ],
   phone: [
     { required: true, message: '请输入手机号', trigger: ['blur', 'change'] },
@@ -300,6 +412,9 @@ const rules = {
   ],
   role: [
     { required: true, message: '请选择角色类型', trigger: 'change' }
+  ],
+  belong: [
+    { validator: validateBelong, trigger: 'blur' }
   ]
 }
 
@@ -318,17 +433,38 @@ const handleRegister = async () => {
 const submitRegister = async () => {
   loading.value = true
   try {
-    const result = await userStore.registerUser({
+    const payload = {
       userName: registerForm.userName,
       password: registerForm.password,
-      realName: registerForm.realName,
+      // 银行：以「银行名称」作为 realName（即展示名），杜绝真实姓名与银行名两字段并存且不一致
+      realName: registerForm.role === 'bank' ? registerForm.belong : registerForm.realName,
       phone: registerForm.phone,
       role: registerForm.role,
       cfTurnstileToken: turnstileToken.value
-    })
+    }
+    // 专家/银行「注册即申请」：附带资质材料等信息
+    if (registerForm.role === 'expert' || registerForm.role === 'bank') {
+      payload.profession = registerForm.profession
+      payload.position = registerForm.position
+      payload.belong = registerForm.belong
+      payload.reason = registerForm.reason
+      payload.materials = registerForm.materials
+    }
+
+    const result = await userStore.registerUser(payload)
 
     if (result.success) {
-      ElMessage.success('注册成功，请登录')
+      // 专家/银行：注册即申请，账号需管理员审核通过方可登录，明确提示「等待审核」
+      const needsReview = registerForm.role === 'expert' || registerForm.role === 'bank'
+      if (needsReview) {
+        await ElMessageBox.alert(
+          '您的账号已创建，请等待管理员审核通过后即可登录。',
+          '申请已提交',
+          { confirmButtonText: '我知道了', type: 'success' }
+        )
+      } else {
+        ElMessage.success(result.message || '注册成功')
+      }
       router.push('/login')
     } else {
       ElMessage.error(result.message || '注册失败')
@@ -652,6 +788,24 @@ const submitRegister = async () => {
 .role-tip span {
   color: var(--color-primary);
   font-weight: 600;
+}
+
+.upload-tip {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-light);
+  line-height: 1.5;
+}
+
+.field-tip {
+  margin: 6px 2px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-light);
+  background: var(--color-bg);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border-left: 3px solid var(--color-secondary);
 }
 
 /* 提交按钮 */

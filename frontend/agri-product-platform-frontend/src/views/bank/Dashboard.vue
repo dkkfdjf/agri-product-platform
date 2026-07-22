@@ -93,7 +93,7 @@
               <el-button type="success" size="small" @click="handleApproval(approval.id, 'approve')">
                 通过
               </el-button>
-              <el-button type="danger" size="plain" @click="handleApproval(approval.id, 'reject')">
+              <el-button type="danger" plain size="small" @click="handleApproval(approval.id, 'reject')">
                 拒绝
               </el-button>
             </div>

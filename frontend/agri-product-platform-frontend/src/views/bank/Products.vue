@@ -22,7 +22,10 @@
         <div v-if="products.length > 0" class="products-grid">
           <div v-for="product in products" :key="product.productId" class="product-card">
             <div class="product-top">
-              <div class="product-bank">{{ product.bankName }}</div>
+              <div class="product-main">
+                <div class="product-name">{{ product.productName || '未命名产品' }}</div>
+                <div class="product-bank">{{ product.bankName }}</div>
+              </div>
               <div class="product-top-tags">
                 <el-tag :type="product.status === 1 ? 'info' : 'success'" effect="plain" size="small">
                   {{ product.status === 1 ? '已暂停' : '在售' }}
@@ -90,12 +93,18 @@
         type="warning"
         :closable="false"
         show-icon
-        title="核心条款（名称 / 额度 / 利率 / 期限）发布后不可修改，仅可调整产品介绍与联系电话。如需调整条款，请暂停后重新发布。"
+        title="核心条款（额度 / 利率 / 期限）发布后不可修改；产品名称、介绍与联系电话可随时调整。如需调整核心条款，请暂停后重新发布。"
         style="margin-bottom: 16px"
       />
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="银行名称" prop="bankName">
-          <el-input v-model="form.bankName" placeholder="如：青岛银行 / 惠农贷" maxlength="100" show-word-limit :disabled="!!editingId" />
+        <el-form-item label="产品名称" prop="productName">
+          <el-input v-model="form.productName" placeholder="如：助农贷 / 春耕贷" maxlength="100" show-word-limit />
+        </el-form-item>
+        <el-form-item label="银行名称">
+          <el-input :model-value="form.bankName" disabled>
+            <template #append>固定为注册银行</template>
+          </el-input>
+          <div class="form-tip">银行名称取自注册信息（不可冒名修改），产品名由本行自行命名。</div>
         </el-form-item>
         <el-form-item label="产品介绍" prop="introduce">
           <el-input
@@ -138,6 +147,11 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getBankProducts, publishFinanceProduct, updateBankProduct, setBankProductStatus } from '@/api/finance'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
+// 银行名称固定取自注册信息（realName），不可在发布时手填，杜绝冒名
+const bankName = userStore.userInfo?.realName || ''
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -155,7 +169,8 @@ const pagination = reactive({
 
 // 字段与后端 FinanceProductRequest / tb_finance_product 对齐
 const form = reactive({
-  bankName: '',
+  productName: '',
+  bankName,
   introduce: '',
   bankPhone: '',
   money: 100000,
@@ -164,7 +179,7 @@ const form = reactive({
 })
 
 const rules = {
-  bankName: [{ required: true, message: '请输入银行/产品名称', trigger: 'blur' }],
+  productName: [{ required: true, message: '请输入产品名称', trigger: 'blur' }],
   introduce: [{ required: true, message: '请输入产品介绍', trigger: 'blur' }],
   bankPhone: [{ required: true, message: '请输入联系电话', trigger: 'blur' }],
   money: [{ required: true, type: 'number', min: 1, message: '可贷额度须大于 0', trigger: 'blur' }],
@@ -198,7 +213,8 @@ const openPublish = () => {
 const openEdit = (product) => {
   editingId.value = product.productId
   Object.assign(form, {
-    bankName: product.bankName || '',
+    productName: product.productName || '',
+    bankName: product.bankName || bankName,
     introduce: product.introduce || '',
     bankPhone: product.bankPhone || '',
     money: Number(product.money) || 0,
@@ -210,7 +226,8 @@ const openEdit = (product) => {
 
 const resetForm = () => {
   Object.assign(form, {
-    bankName: '',
+    productName: '',
+    bankName,
     introduce: '',
     bankPhone: '',
     money: 100000,
@@ -227,14 +244,16 @@ const submitForm = async () => {
     submitting.value = true
     try {
       if (editingId.value) {
-        // 编辑模式：核心条款已锁定，仅提交可修改的介绍与联系电话
+        // 编辑模式：核心条款(额度/利率/期限)已锁定，仅提交可修改的产品名称、介绍与联系电话
         await updateBankProduct(editingId.value, {
+          productName: form.productName,
           introduce: form.introduce,
           bankPhone: form.bankPhone
         })
         ElMessage.success('产品已更新')
       } else {
         const payload = {
+          productName: form.productName,
           bankName: form.bankName,
           introduce: form.introduce,
           bankPhone: form.bankPhone,
@@ -259,7 +278,7 @@ const toggleStatus = async (product, status) => {
   const action = status === 1 ? '暂停供应' : '恢复供应'
   try {
     await ElMessageBox.confirm(
-      `确认${action}产品「${product.bankName}」？` + (status === 1
+      `确认${action}产品「${product.productName || product.bankName}」？` + (status === 1
         ? '暂停后农户将无法再申请该产品，但已有申请仍保留在审批列表中。'
         : '恢复后农户可重新申请该产品。'),
       `${action}确认`,
@@ -363,10 +382,21 @@ const formatNumber = (num) => {
   gap: 6px;
   flex-shrink: 0;
 }
-.product-bank {
+.product-main {
+  min-width: 0;
+}
+.product-name {
   font-size: var(--font-size-lg, 20px);
   font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary, #1f2923);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.product-bank {
+  font-size: var(--font-size-sm, 14px);
   color: var(--color-bank, #2d5a3d);
+  margin-top: 2px;
 }
 .product-introduce {
   font-size: var(--font-size-sm, 14px);
@@ -404,6 +434,13 @@ const formatNumber = (num) => {
   margin-left: var(--spacing-2, 8px);
   color: var(--color-text-tertiary, #6b7280);
   font-size: var(--font-size-sm, 14px);
+}
+
+.form-tip {
+  margin-top: 4px;
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-tertiary, #6b7280);
+  line-height: 1.5;
 }
 
 @media (max-width: 640px) {

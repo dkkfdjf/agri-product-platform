@@ -38,12 +38,14 @@
                 </div>
                 <div class="expert-actions">
                   <el-button
+                    v-if="canConsultEntry"
                     type="primary"
                     @click="handleReserve(expert)"
                     :disabled="!userStore.isLoggedIn()"
                   >
                     立即预约
                   </el-button>
+                  <span v-else class="consult-disabled-tip">仅农户/买家可预约</span>
                   <el-button @click="handleViewDetail(expert)">
                     查看详情
                   </el-button>
@@ -257,6 +259,9 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
+// 仅农户/买家可预约专家；未登录时展示按钮（禁用）引导登录
+const canConsultEntry = computed(() => !userStore.isLoggedIn() || ['farmer', 'buyer'].includes(userStore.role))
+
 const activeTab = ref('experts')
 const loadingExperts = ref(false)
 const loadingReserves = ref(false)
@@ -359,6 +364,10 @@ const handleReserve = (expert) => {
   if (!userStore.isLoggedIn()) {
     ElMessage.info('请先登录后预约')
     router.push({ path: '/login', query: { redirect: `/reserve?expert=${expert.userName}` } })
+    return
+  }
+  if (!['farmer', 'buyer'].includes(userStore.role)) {
+    ElMessage.info('仅农户与买家可预约专家')
     return
   }
 
@@ -642,6 +651,13 @@ onMounted(async () => {
   display: flex;
   gap: var(--spacing-2, 8px);
   justify-content: center;
+  align-items: center;
+}
+
+.consult-disabled-tip {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-tertiary, #6b7280);
+  white-space: nowrap;
 }
 
 /* ===== 预约列表 ===== */
