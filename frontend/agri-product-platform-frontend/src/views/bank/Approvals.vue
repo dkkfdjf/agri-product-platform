@@ -122,7 +122,6 @@
           <el-table-column label="期限" width="90" align="right">
             <template #default="{ row }">{{ row.repayment ? row.repayment + ' 个月' : '—' }}</template>
           </el-table-column>
-          <el-table-column prop="purpose" label="融资用途" min-width="160" show-overflow-tooltip />
           <el-table-column label="状态" width="100" align="center">
             <template #default="{ row }">
               <el-tag :type="statusType(row.status)" size="small">{{ statusText(row.status) }}</el-tag>

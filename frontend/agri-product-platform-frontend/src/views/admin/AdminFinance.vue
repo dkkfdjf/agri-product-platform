@@ -36,10 +36,9 @@
         </template>
       </el-table-column>
       <el-table-column prop="createTime" label="申请时间" width="170" />
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column label="操作" width="100" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="viewDetail(row)">详情</el-button>
-          <el-button v-if="row.status === 0" link type="success" @click="openApprove(row)">审核</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -63,45 +62,19 @@
       </template>
     </el-dialog>
 
-    <!-- 审核 -->
-    <el-dialog v-model="approveVisible" title="审核融资申请" width="500px">
-      <el-form :model="approveForm" label-width="90px">
-        <el-form-item label="申请人">{{ currentFinance.realName || currentFinance.ownName }}（¥{{ currentFinance.money }}）</el-form-item>
-        <el-form-item label="审核结果">
-          <el-radio-group v-model="approveForm.status">
-            <el-radio :value="1">通过</el-radio>
-            <el-radio :value="2">驳回</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="审核备注">
-          <el-input v-model="approveForm.remark" type="textarea" :rows="3" placeholder="可选：填写审核意见" maxlength="255" show-word-limit />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="approveVisible = false">取消</el-button>
-        <el-button :type="approveForm.status === 1 ? 'success' : 'danger'" @click="submitApprove" :loading="approving">提交</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getAdminFinances, approveFinance } from '@/api/admin'
+import { getAdminFinances } from '@/api/admin'
 
 const loading = ref(false)
-const approving = ref(false)
 const finances = ref([])
 const statusFilter = ref(-1)
 const detailVisible = ref(false)
-const approveVisible = ref(false)
 const currentFinance = ref({})
-
-const approveForm = reactive({
-  status: 1,
-  remark: ''
-})
 
 const statusText = (s) => ({ 0: '申请中', 1: '已通过', 2: '已驳回' }[s] ?? '未知')
 const statusType = (s) => ({ 0: 'warning', 1: 'success', 2: 'danger' }[s] || 'info')
@@ -127,30 +100,6 @@ const loadFinances = async () => {
 const viewDetail = (finance) => {
   currentFinance.value = finance
   detailVisible.value = true
-}
-
-const openApprove = (finance) => {
-  currentFinance.value = finance
-  approveForm.status = 1
-  approveForm.remark = ''
-  approveVisible.value = true
-}
-
-const submitApprove = async () => {
-  approving.value = true
-  try {
-    await approveFinance(currentFinance.value.financeId, {
-      status: approveForm.status,
-      remark: approveForm.remark
-    })
-    ElMessage.success(approveForm.status === 1 ? '已通过' : '已驳回')
-    approveVisible.value = false
-    await loadFinances()
-  } catch (error) {
-    ElMessage.error(error.message || '审核失败')
-  } finally {
-    approving.value = false
-  }
 }
 </script>
 

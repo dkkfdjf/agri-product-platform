@@ -37,13 +37,6 @@
       <el-table-column label="价格" width="110">
         <template #default="{ row }">¥{{ row.price }}</template>
       </el-table-column>
-      <el-table-column label="交易状态" width="100">
-        <template #default="{ row }">
-          <el-tag :type="orderStatusType(row.orderStatus)" size="small">
-            {{ orderStatusText(row.orderStatus) }}
-          </el-tag>
-        </template>
-      </el-table-column>
       <el-table-column prop="ownName" label="发布人" width="120" />
       <el-table-column prop="createTime" label="发布时间" width="170" />
       <el-table-column label="操作" width="150" fixed="right">
@@ -69,13 +62,6 @@
           <el-select v-model="form.type" style="width: 100%">
             <el-option label="货源（出售）" value="goods" />
             <el-option label="需求（求购）" value="demand" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="交易状态">
-          <el-select v-model="form.orderStatus" style="width: 100%">
-            <el-option label="待交易" :value="0" />
-            <el-option label="交易中" :value="1" />
-            <el-option label="已完成" :value="2" />
           </el-select>
         </el-form-item>
         <el-form-item label="商品图片">
@@ -148,13 +134,10 @@ const form = reactive({
   content: '',
   price: 0,
   picPath: '',
-  type: 'goods',
-  orderStatus: 0
+  type: 'goods'
 })
 
 const typeText = (t) => ({ goods: '货源', demand: '需求' }[t] || t || '—')
-const orderStatusText = (s) => ({ 0: '待交易', 1: '交易中', 2: '已完成' }[s] ?? '—')
-const orderStatusType = (s) => ({ 0: 'warning', 1: 'primary', 2: 'success' }[s] || 'info')
 
 onMounted(() => {
   loadProducts()
@@ -188,8 +171,7 @@ const editProduct = (product) => {
     content: product.content || '',
     price: product.price ?? 0,
     picPath: product.picPath || '',
-    type: product.type || 'goods',
-    orderStatus: product.orderStatus ?? 0
+    type: product.type || 'goods'
   })
   dialogVisible.value = true
 }

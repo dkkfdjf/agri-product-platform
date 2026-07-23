@@ -68,83 +68,14 @@
         <el-button type="primary" @click="saveProfile" :loading="saving">保存修改</el-button>
       </div>
     </el-card>
-
-    <!-- 预约管理 -->
-    <el-card class="reservations-card">
-      <template #header>
-        <div class="card-header">
-          <span>预约管理</span>
-          <el-tag type="info">共 {{ total }} 条预约</el-tag>
-        </div>
-      </template>
-
-      <el-radio-group v-model="filterStatus" @change="loadReservations" class="filter-bar">
-        <el-radio-button :value="-1">全部</el-radio-button>
-        <el-radio-button :value="0">待处理</el-radio-button>
-        <el-radio-button :value="1">已完成</el-radio-button>
-        <el-radio-button :value="2">已拒绝</el-radio-button>
-        <el-radio-button :value="3">已过期</el-radio-button>
-      </el-radio-group>
-
-      <el-table :data="reservations" v-loading="loading" style="margin-top: 16px">
-        <el-table-column prop="questioner" label="预约人" width="110" />
-        <el-table-column prop="phone" label="联系电话" width="130" />
-        <el-table-column prop="plantName" label="农作物" width="100" />
-        <el-table-column prop="area" label="面积" width="90" />
-        <el-table-column prop="address" label="地址" show-overflow-tooltip />
-        <el-table-column prop="status" label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="170" fixed="right">
-          <template #default="{ row }">
-            <el-button v-if="row.status === 0" type="success" size="small" @click="handleStatus(row, 1)">接受</el-button>
-            <el-button v-if="row.status === 0" type="danger" size="small" @click="handleStatus(row, 2)">拒绝</el-button>
-            <el-button type="info" size="small" @click="viewDetail(row)">详情</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div class="pagination-container" v-if="total > 0">
-        <el-pagination
-          v-model:current-page="page"
-          v-model:page-size="pageSize"
-          :total="total"
-          :page-sizes="[10, 20, 50]"
-          layout="total, sizes, prev, pager, next"
-          @size-change="loadReservations"
-          @current-change="loadReservations"
-        />
-      </div>
-    </el-card>
-
-    <!-- 预约详情对话框 -->
-    <el-dialog v-model="detailDialogVisible" title="预约详情" width="560px">
-      <el-descriptions :column="1" border v-if="currentReservation">
-        <el-descriptions-item label="预约人">{{ currentReservation.questioner }}</el-descriptions-item>
-        <el-descriptions-item label="联系电话">{{ currentReservation.phone }}</el-descriptions-item>
-        <el-descriptions-item label="农作物">{{ currentReservation.plantName }}</el-descriptions-item>
-        <el-descriptions-item label="面积">{{ currentReservation.area }}</el-descriptions-item>
-        <el-descriptions-item label="地址">{{ currentReservation.address }}</el-descriptions-item>
-        <el-descriptions-item label="土壤条件">{{ currentReservation.soilCondition }}</el-descriptions-item>
-        <el-descriptions-item label="作物条件">{{ currentReservation.plantCondition }}</el-descriptions-item>
-        <el-descriptions-item label="作物详情">{{ currentReservation.plantDetail }}</el-descriptions-item>
-        <el-descriptions-item label="留言" v-if="currentReservation.message">{{ currentReservation.message }}</el-descriptions-item>
-        <el-descriptions-item label="专家回复" v-if="currentReservation.answer">{{ currentReservation.answer }}</el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="getStatusType(currentReservation.status)">{{ getStatusText(currentReservation.status) }}</el-tag>
-        </el-descriptions-item>
-      </el-descriptions>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Edit, Close, Camera } from '@element-plus/icons-vue'
-import { getExpertInfo, updateExpertInfo, getExpertReserveList, updateReserveStatus } from '@/api/expert'
+import { getExpertInfo, updateExpertInfo } from '@/api/expert'
 import { updateUserInfo } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 
@@ -152,10 +83,7 @@ const userStore = useUserStore()
 
 const editMode = ref(false)
 const saving = ref(false)
-const loading = ref(false)
 const uploading = ref(false)
-const detailDialogVisible = ref(false)
-const currentReservation = ref(null)
 
 // 头像：来源 tb_user.avatar（由 /user/info 返回）。专家头像复用用户表头像字段，无需新表。
 const avatarUrl = ref(userStore.userInfo?.avatar || '')
@@ -164,13 +92,7 @@ const avatarFallback = computed(() => {
   return name.charAt(0)
 })
 
-const filterStatus = ref(-1)
-const page = ref(1)
-const pageSize = ref(10)
-const total = ref(0)
-
 const expertInfo = ref({})
-const reservations = ref([])
 
 const form = reactive({
   realName: '',
@@ -182,7 +104,6 @@ const form = reactive({
 
 onMounted(() => {
   loadExpertInfo()
-  loadReservations()
 })
 
 const loadExpertInfo = async () => {
@@ -262,56 +183,6 @@ const onAvatarError = () => {
   uploading.value = false
   ElMessage.error('头像上传失败，请重试')
 }
-
-const loadReservations = async () => {
-  try {
-    loading.value = true
-    const params = { page: page.value, pageSize: pageSize.value }
-    if (filterStatus.value !== -1) {
-      params.status = filterStatus.value
-    }
-    const res = await getExpertReserveList(params)
-    reservations.value = res.data?.records || []
-    total.value = res.data?.total || 0
-  } catch (error) {
-    ElMessage.error('加载预约列表失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleStatus = async (row, status) => {
-  const action = status === 1 ? '接受' : '拒绝'
-  try {
-    await ElMessageBox.confirm(`确定要${action}这个预约吗？`, '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    await updateReserveStatus(row.id, status)
-    ElMessage.success(`${action}成功`)
-    await loadReservations()
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('操作失败')
-    }
-  }
-}
-
-const viewDetail = (row) => {
-  currentReservation.value = row
-  detailDialogVisible.value = true
-}
-
-const getStatusType = (status) => {
-  const map = { 0: 'warning', 1: 'success', 2: 'danger', 3: 'info' }
-  return map[status] || 'info'
-}
-
-const getStatusText = (status) => {
-  const map = { 0: '待处理', 1: '已完成', 2: '已拒绝', 3: '已过期' }
-  return map[status] || '未知'
-}
 </script>
 
 <style scoped>
@@ -373,19 +244,5 @@ const getStatusText = (status) => {
 .save-actions {
   margin-top: 20px;
   text-align: right;
-}
-
-.reservations-card {
-  margin-top: 20px;
-}
-
-.filter-bar {
-  margin-bottom: 4px;
-}
-
-.pagination-container {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
 }
 </style>

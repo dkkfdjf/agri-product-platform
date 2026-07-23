@@ -10,6 +10,10 @@
           <el-option label="专家" value="expert" />
           <el-option label="银行" value="bank" />
         </el-select>
+        <el-select v-model="filterStatus" placeholder="全部状态" clearable style="width: 130px" @change="loadUsers">
+          <el-option label="正常" :value="1" />
+          <el-option label="禁用" :value="0" />
+        </el-select>
         <el-input
           v-model="searchKeyword"
           placeholder="搜索用户名/姓名/手机号"
@@ -33,6 +37,12 @@
       <el-table-column prop="role" label="角色" width="90">
         <template #default="{ row }">
           <el-tag :type="getRoleType(row.role)">{{ getRoleLabel(row.role) }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="信用分" width="90">
+        <template #default="{ row }">
+          <span v-if="row.role === 'farmer'">{{ row.credit ?? 5 }}</span>
+          <span v-else style="color: #c0c4cc">—</span>
         </template>
       </el-table-column>
       <el-table-column prop="status" label="状态" width="80">
@@ -84,6 +94,10 @@
         <el-form-item label="地址">
           <el-input v-model="form.address" />
         </el-form-item>
+        <el-form-item label="信用分" v-if="form.role === 'farmer'">
+          <el-input-number v-model="form.credit" :min="0" :max="5" :step="1" />
+          <span class="unit-text">0-5 分（影响农户的融资智能匹配）</span>
+        </el-form-item>
         <el-form-item label="状态" v-if="isEditing">
           <el-radio-group v-model="form.status">
             <el-radio :value="1">正常</el-radio>
@@ -121,6 +135,7 @@ const submitting = ref(false)
 const users = ref([])
 const searchKeyword = ref('')
 const filterRole = ref('')
+const filterStatus = ref(null)
 const dialogVisible = ref(false)
 const isEditing = ref(false)
 const formRef = ref(null)
@@ -134,6 +149,7 @@ const form = reactive({
   address: '',
   role: 'farmer',
   status: 1,
+  credit: 5,
   profession: '',
   position: '',
   belong: ''
@@ -160,6 +176,9 @@ const loadUsers = async () => {
     const params = {}
     if (searchKeyword.value) params.keyword = searchKeyword.value
     if (filterRole.value) params.role = filterRole.value
+    if (filterStatus.value !== null && filterStatus.value !== '' && filterStatus.value !== undefined) {
+      params.status = filterStatus.value
+    }
     const res = await getUsers(params)
     users.value = res.data || []
   } catch (error) {
@@ -188,6 +207,7 @@ const resetForm = () => {
   form.address = ''
   form.role = 'farmer'
   form.status = 1
+  form.credit = 5
   form.profession = ''
   form.position = ''
   form.belong = ''
@@ -209,6 +229,7 @@ const handleEdit = (row) => {
   form.address = row.address || ''
   form.role = row.role
   form.status = row.status
+  form.credit = row.credit ?? 5
   form.profession = row.profession || ''
   form.position = row.position || ''
   form.belong = row.belong || ''
@@ -227,6 +248,7 @@ const submitForm = async () => {
         address: form.address,
         role: form.role,
         status: form.status,
+        credit: form.credit,
         profession: form.profession,
         position: form.position,
         belong: form.belong
@@ -320,5 +342,11 @@ const handleDelete = async (user) => {
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.unit-text {
+  margin-left: 8px;
+  color: #909399;
+  font-size: 13px;
 }
 </style>

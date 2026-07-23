@@ -112,10 +112,21 @@
         </el-form-item>
 
         <el-form-item label="封面图片">
-          <el-input
-            v-model="formData.picPath"
-            placeholder="请输入图片URL（可选）"
-          />
+          <el-upload
+            class="cover-uploader"
+            :show-file-list="false"
+            :before-upload="beforeCoverUpload"
+            :on-success="handleCoverSuccess"
+            action="/api/upload"
+            accept="image/*"
+          >
+            <img v-if="formData.picPath" :src="formData.picPath" class="cover-preview" />
+            <div v-else class="cover-placeholder">
+              <el-icon><Plus /></el-icon>
+              <span>上传封面图片</span>
+            </div>
+          </el-upload>
+          <div class="cover-tip">支持 jpg/png，≤5MB；发布后在知识列表与详情页展示。</div>
         </el-form-item>
 
         <el-form-item label="状态">
@@ -298,6 +309,30 @@ const handleCloseDialog = () => {
   formRef.value?.resetFields()
 }
 
+// 封面图片上传前校验：仅图片、≤5MB
+const beforeCoverUpload = (rawFile) => {
+  const isImage = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(rawFile.type)
+  if (!isImage) {
+    ElMessage.error('只能上传 JPG/PNG 格式的图片')
+    return false
+  }
+  if (rawFile.size / 1024 / 1024 > 5) {
+    ElMessage.error('图片大小不能超过 5MB')
+    return false
+  }
+  return true
+}
+
+// 封面图片上传成功：写入 picPath
+const handleCoverSuccess = (response) => {
+  if (response.code === 200 && response.data?.url) {
+    formData.picPath = response.data.url
+    ElMessage.success('封面图片上传成功')
+  } else {
+    ElMessage.error(response.message || '封面图片上传失败')
+  }
+}
+
 // 提交表单
 const submitForm = async () => {
   try {
@@ -474,5 +509,42 @@ onMounted(() => {
 .detail-image img {
   max-width: 100%;
   border-radius: var(--radius-base, 8px);
+}
+
+/* ===== 封面图片上传 ===== */
+.cover-uploader :deep(.el-upload) {
+  border: 1px dashed var(--color-border, #d9d9d9);
+  border-radius: var(--radius-base, 8px);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.cover-uploader :deep(.el-upload):hover {
+  border-color: var(--color-primary, #2d5a3d);
+}
+.cover-preview {
+  width: 200px;
+  height: 120px;
+  object-fit: cover;
+  display: block;
+}
+.cover-placeholder {
+  width: 200px;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--color-text-tertiary, #6b7280);
+  font-size: 13px;
+}
+.cover-placeholder .el-icon {
+  font-size: 28px;
+}
+.cover-tip {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-tertiary, #6b7280);
 }
 </style>

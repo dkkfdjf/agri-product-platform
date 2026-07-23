@@ -30,7 +30,8 @@
               </div>
             </div>
             <div class="expert-actions">
-              <el-button type="primary" size="small" @click.stop="handleAskExpert(expert)">提问</el-button>
+              <el-button v-if="canConsultEntry" type="primary" size="small" @click.stop="handleAskExpert(expert)">提问</el-button>
+              <span v-else class="consult-disabled-tip">仅农户/买家可提问</span>
             </div>
           </div>
         </div>
@@ -59,7 +60,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
@@ -71,11 +72,18 @@ const userStore = useUserStore()
 
 const loading = ref(false)
 
+// 仅农户/买家可向专家提问；未登录时展示按钮并引导登录
+const canConsultEntry = computed(() => !userStore.isLoggedIn() || ['farmer', 'buyer'].includes(userStore.role))
+
 // 处理向专家提问
 const handleAskExpert = (expert) => {
   if (!userStore.isLoggedIn()) {
     ElMessage.info('请先登录后向专家提问')
     router.push({ path: '/login', query: { redirect: `/question/ask?expert=${expert.id}` } })
+    return
+  }
+  if (!['farmer', 'buyer'].includes(userStore.role)) {
+    ElMessage.info('仅农户与买家可向专家提问')
     return
   }
   router.push(`/question/ask?expert=${expert.id}`)
@@ -260,6 +268,12 @@ onMounted(() => {
 .stat-item {
   font-size: var(--font-size-xs, 12px);
   color: var(--color-text-tertiary, #6b7280);
+}
+
+.consult-disabled-tip {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-tertiary, #6b7280);
+  white-space: nowrap;
 }
 
 /* ===== 知识列表 ===== */

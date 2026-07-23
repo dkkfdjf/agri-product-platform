@@ -37,7 +37,9 @@ export const useUserStore = defineStore('user', () => {
     try {
       const res = await register(registerForm)
       if (res.code === 200) {
-        return { success: true }
+        // 后端 UserController 用 Result.success(message) 返回，提示语落在 data 字段
+        // （专家/银行为「申请已提交…」，农户/买家为「注册成功」）
+        return { success: true, message: res.data || res.message }
       } else {
         return { success: false, message: res.message }
       }

@@ -89,7 +89,9 @@
             <div class="order-info">
               <div class="order-product">{{ order.product }}</div>
               <div class="order-meta">
-                <span class="order-id">订单号：{{ order.id }}</span>
+                <span class="order-buyer">买家：{{ order.buyer }}</span>
+                <span class="order-price">¥{{ order.totalPrice }}</span>
+                <span class="order-id">#{{ order.id }}</span>
                 <span class="order-time">{{ order.time }}</span>
               </div>
             </div>
@@ -157,7 +159,7 @@ import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { Top } from '@element-plus/icons-vue'
 import { getProducts } from '@/api/product'
-import { getOrders } from '@/api/order'
+import { getReceivedOrders } from '@/api/order'
 import { getMyFinanceApplications } from '@/api/finance'
 import RecentNotifications from '@/components/RecentNotifications.vue'
 
@@ -193,7 +195,9 @@ const loadDashboardData = async () => {
     }
 
     // 获取订单列表和统计
-    const orderRes = await getOrders({ page: 1, pageSize: 10 })
+    // 注意：农户要用「收到的订单」（别人买了我商品的订单），而非 getOrders（那是买家视角、按 purchase.ownName=自己 过滤，
+    // 农户不能下单故恒为空）——此前销售额/待处理/最近订单全部为空即因此而来
+    const orderRes = await getReceivedOrders({ page: 1, pageSize: 10 })
     if (orderRes.code === 200) {
       // 处理分页数据
       const orderData = orderRes.data
@@ -213,12 +217,21 @@ const loadDashboardData = async () => {
         })
         .reduce((sum, o) => sum + (o.totalPrice ? Number(o.totalPrice) : 0), 0)
 
-      // 格式化最近订单数据
+      // 格式化最近订单数据：展示商品名(多个拼接)、买家姓名、金额；订单号降为次要信息
       recentOrders.value = orders.slice(0, 5).map(order => {
         const statusText = getStatusText(order.purchaseStatus)
+        const productNames = (order.items || [])
+          .map(i => i.productName)
+          .filter(Boolean)
+        const product = productNames.length > 2
+          ? productNames.slice(0, 2).join('、') + ` 等${productNames.length}种`
+          : (productNames.join('、') || '—')
         return {
           id: order.purchaseId || order.id,
-          product: `订单 #${order.purchaseId || order.id}`,
+          product,
+          // 对方=买家（这是农户收到的订单）；优先真实姓名，回退登录账号
+          buyer: order.buyerRealName || order.ownName || '—',
+          totalPrice: order.totalPrice ?? 0,
           time: formatTime(order.createTime),
           status: statusText,
           statusClass: getStatusClass(statusText)
@@ -491,9 +504,15 @@ onMounted(() => {
 
 .order-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--spacing-3, 12px);
   font-size: var(--font-size-xs, 12px);
   color: var(--color-text-tertiary, #6b7280);
+}
+
+.order-price {
+  color: var(--color-error, #b85c38);
+  font-weight: var(--font-weight-semibold, 600);
 }
 
 .order-status {

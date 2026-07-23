@@ -38,12 +38,14 @@
                 </div>
                 <div class="expert-actions">
                   <el-button
+                    v-if="canConsultEntry"
                     type="primary"
                     @click="handleReserve(expert)"
                     :disabled="!userStore.isLoggedIn()"
                   >
                     立即预约
                   </el-button>
+                  <span v-else class="consult-disabled-tip">仅农户/买家可预约</span>
                   <el-button @click="handleViewDetail(expert)">
                     查看详情
                   </el-button>
@@ -158,10 +160,19 @@
             <template #suffix>亩</template>
           </el-input>
         </el-form-item>
-        <el-form-item label="地址" prop="address">
+        <el-form-item label="所在地区" prop="region">
+          <el-cascader
+            v-model="reserveForm.region"
+            :options="regionOptions"
+            :props="{ expandTrigger: 'hover', value: 'label', label: 'label' }"
+            placeholder="请选择 省 / 市 / 县"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="详细地址" prop="addressDetail">
           <el-input
-            v-model="reserveForm.address"
-            placeholder="请输入详细地址"
+            v-model="reserveForm.addressDetail"
+            placeholder="请输入街道、村组、门牌等详细地址"
           />
         </el-form-item>
         <el-form-item label="电话" prop="phone">
@@ -177,6 +188,7 @@
             placeholder="选择期望的咨询时间"
             format="YYYY-MM-DD HH:mm"
             value-format="YYYY-MM-DD HH:mm"
+            :disabled-date="disabledPastDate"
             style="width: 100%"
           />
         </el-form-item>
@@ -240,11 +252,15 @@ import {
 import { useRoute } from 'vue-router'
 import { getExpertList } from '@/api/expert'
 import { makeReservation, getMyReserves, cancelReserve } from '@/api/reserve'
+import { regionData } from 'element-china-area-data'
 import BackBar from '@/components/BackBar.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+
+// 仅农户/买家可预约专家；未登录时展示按钮（禁用）引导登录
+const canConsultEntry = computed(() => !userStore.isLoggedIn() || ['farmer', 'buyer'].includes(userStore.role))
 
 const activeTab = ref('experts')
 const loadingExperts = ref(false)
@@ -261,7 +277,8 @@ const reserveForm = reactive({
   expertName: '',
   plantName: '',
   area: '',
-  address: '',
+  region: [],          // 省/市/县（label 数组）
+  addressDetail: '',   // 详细地址（街道、村组、门牌等）
   phone: '',
   preferredTime: '',
   soilCondition: '',
@@ -277,7 +294,11 @@ const reserveFormRules = {
   area: [
     { required: true, message: '请输入种植面积', trigger: 'blur' }
   ],
-  address: [
+  region: [
+    // el-cascader v-model 为数组；空数组 [] 是 truthy，须用 type:'array' 才能校验"未选"
+    { type: 'array', required: true, message: '请选择所在地区', trigger: 'change' }
+  ],
+  addressDetail: [
     { required: true, message: '请输入详细地址', trigger: 'blur' }
   ],
   phone: [
@@ -294,6 +315,16 @@ const reserveFormRules = {
     { required: true, message: '请详细描述作物情况', trigger: 'blur' },
     { min: 10, message: '作物详情至少10个字符', trigger: 'blur' }
   ]
+}
+
+// 省市县三级下拉数据（element-china-area-data）
+const regionOptions = regionData
+
+// 期望时间不可选当前日期之前（今天可选）
+const disabledPastDate = (date) => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return date.getTime() < today.getTime()
 }
 
 // 获取预约状态文本 - 使用整数状态码与后端保持一致
@@ -335,13 +366,18 @@ const handleReserve = (expert) => {
     router.push({ path: '/login', query: { redirect: `/reserve?expert=${expert.userName}` } })
     return
   }
+  if (!['farmer', 'buyer'].includes(userStore.role)) {
+    ElMessage.info('仅农户与买家可预约专家')
+    return
+  }
 
   selectedExpert.value = expert
   // expert_name 存储专家 userName
   reserveForm.expertName = expert.userName
   reserveForm.plantName = ''
   reserveForm.area = ''
-  reserveForm.address = userStore.userInfo?.address || '' // 默认带入个人中心地址（可改）
+  reserveForm.region = []                // 省市县三级下拉（label 数组）
+  reserveForm.addressDetail = ''         // 详细地址
   reserveForm.phone = userStore.userInfo?.phone || ''
   reserveForm.preferredTime = ''
   reserveForm.soilCondition = ''
@@ -368,7 +404,8 @@ const handleSubmitReserve = async () => {
       expertName: reserveForm.expertName,
       plantName: reserveForm.plantName,
       area: reserveForm.area,
-      address: reserveForm.address,
+      address: [...(reserveForm.region || []), (reserveForm.addressDetail || '').trim()]
+        .filter(Boolean).join(''),
       phone: reserveForm.phone,
       preferredTime: reserveForm.preferredTime,
       soilCondition: reserveForm.soilCondition,
@@ -614,6 +651,13 @@ onMounted(async () => {
   display: flex;
   gap: var(--spacing-2, 8px);
   justify-content: center;
+  align-items: center;
+}
+
+.consult-disabled-tip {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-tertiary, #6b7280);
+  white-space: nowrap;
 }
 
 /* ===== 预约列表 ===== */

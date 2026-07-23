@@ -105,6 +105,7 @@
             <div class="order-info">
               <div class="time">{{ formatTime(order.createTime) }}</div>
               <div class="total-price">总价: ¥{{ order.totalPrice }}</div>
+              <div v-if="order.sellerName" class="seller">发货人: {{ order.sellerName }}</div>
               <div v-if="order.address" class="address">配送至: {{ order.address }}</div>
             </div>
           </div>
@@ -115,6 +116,14 @@
               size="small"
               @click="viewOrderDetail(order.purchaseId)"
             >查看详细</el-button>
+            <!-- 待收货：可直接在列表确认收货，无需进入详情 -->
+            <el-button
+              v-if="order.purchaseStatus === 3"
+              size="small"
+              type="success"
+              :loading="confirmingId === order.purchaseId"
+              @click="confirmReceipt(order)"
+            >确认收货</el-button>
             <el-button
               v-if="order.purchaseStatus === 1"
               size="small"
@@ -244,7 +253,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ShoppingCart, Box, Loading, ArrowLeft } from '@element-plus/icons-vue'
-import { getOrders, cancelOrder as cancelOrderApi } from '@/api/order'
+import { getOrders, cancelOrder as cancelOrderApi, updateOrderStatus } from '@/api/order'
 import { payOrder, queryPay } from '@/api/alipay'
 import QRCode from 'qrcode'
 import { getMyProducts, deleteProduct as deleteProductApi, updateProduct } from '@/api/product'
@@ -266,6 +275,7 @@ const orders = ref([])
 const demandCount = ref(0)
 const orderCount = ref(0)
 const payingId = ref(null)
+const confirmingId = ref(null)
 const payQrVisible = ref(false)
 const qrImgSrc = ref('')
 const payOrderInfo = ref(null)
@@ -572,6 +582,28 @@ const cancelOrder = async (order) => {
   }
 }
 
+// 确认收货：买家在列表直接确认（status 3→4），无需进入详情页
+const confirmReceipt = async (order) => {
+  try {
+    await ElMessageBox.confirm(
+      '确认已收到商品吗？确认后订单将完成。',
+      '确认收货',
+      { type: 'info' }
+    )
+    confirmingId.value = order.purchaseId
+    await updateOrderStatus(order.purchaseId, { status: 4 })
+    ElMessage.success('确认收货成功')
+    await loadOrders()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('确认收货失败:', error)
+      ElMessage.error(error?.response?.data?.message || error?.message || '确认收货失败')
+    }
+  } finally {
+    confirmingId.value = null
+  }
+}
+
 // 发起支付宝扫码支付：生成二维码并在弹窗展示，同时轮询支付结果
 const payOrderNow = async (order) => {
   payingId.value = order.purchaseId
@@ -851,6 +883,11 @@ const goBack = () => {
 .address {
   color: #909399;
   font-size: 12px;
+}
+
+.seller {
+  color: #606266;
+  font-size: 13px;
 }
 
 .el-pagination {

@@ -169,6 +169,12 @@ const handleSubmit = async () => {
   try {
     await formRef.value.validate()
 
+    // 仅农户/买家可向专家提问
+    if (userStore.isLoggedIn() && !['farmer', 'buyer'].includes(userStore.role)) {
+      ElMessage.info('仅农户与买家可向专家提问')
+      return
+    }
+
     submitting.value = true
 
     await askQuestion({
@@ -194,6 +200,12 @@ onMounted(() => {
   if (!userStore.isLoggedIn()) {
     ElMessage.info('请先登录后提问')
     router.push({ path: '/login', query: { redirect: '/question/ask' } })
+    return
+  }
+  // 仅农户/买家可提问；银行/管理员/专家无此入口，直接引导离开
+  if (!['farmer', 'buyer'].includes(userStore.role)) {
+    ElMessage.info('仅农户与买家可向专家提问')
+    router.push('/')
     return
   }
   // 联系电话默认带入个人资料手机号（用户可自行修改）

@@ -24,9 +24,18 @@
         </template>
       </el-table-column>
       <el-table-column prop="reason" label="申请理由" show-overflow-tooltip />
-      <el-table-column label="材料" width="70">
+      <el-table-column label="材料" width="90">
         <template #default="{ row }">
-          <el-link v-if="row.materials" :href="row.materials" target="_blank" type="primary">查看</el-link>
+          <template v-if="row.materials">
+            <el-link
+              v-for="(url, i) in splitMaterials(row.materials)"
+              :key="i"
+              :href="url"
+              target="_blank"
+              type="primary"
+              style="margin-right: 8px"
+            >材料{{ splitMaterials(row.materials).length > 1 ? i + 1 : '' }}</el-link>
+          </template>
           <span v-else style="color:#c0c4cc">—</span>
         </template>
       </el-table-column>
@@ -52,7 +61,16 @@
       <el-form label-width="90px">
         <el-form-item label="申请人">{{ current?.userName }}（{{ roleMap[current?.targetRole] }}）</el-form-item>
         <el-form-item label="相关材料">
-          <el-link v-if="current?.materials" :href="current.materials" target="_blank" type="primary">查看上传材料</el-link>
+          <template v-if="current?.materials">
+            <el-link
+              v-for="(url, i) in splitMaterials(current.materials)"
+              :key="i"
+              :href="url"
+              target="_blank"
+              type="primary"
+              style="margin-right: 12px"
+            >材料{{ splitMaterials(current.materials).length > 1 ? i + 1 : '' }}</el-link>
+          </template>
           <span v-else style="color:#909399">未上传</span>
         </el-form-item>
         <el-form-item label="审核备注">
@@ -84,6 +102,8 @@ const current = ref(null)
 const roleMap = { expert: '专家', bank: '银行' }
 const statusText = (s) => ({ 0: '待审核', 1: '已通过', 2: '已驳回' }[s] || '未知')
 const statusType = (s) => ({ 0: 'warning', 1: 'success', 2: 'danger' }[s] || 'info')
+// 材料可能为多个 URL（逗号拼接），拆分后逐个展示
+const splitMaterials = (m) => (m ? String(m).split(',').map(s => s.trim()).filter(Boolean) : [])
 
 const loadApplications = async () => {
   loading.value = true
