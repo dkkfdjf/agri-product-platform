@@ -15,6 +15,7 @@
         </div>
       </main>
     </div>
+    <AIAssistant v-if="userStore.isLoggedIn()" />
   </div>
 </template>
 
@@ -23,6 +24,10 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from './components/AppHeader.vue'
 import AppSidebar from './components/AppSidebar.vue'
+import { AIAssistant } from '@/components/AIAssistant'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
 
 const props = defineProps({
   sidebarTitle: {
