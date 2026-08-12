@@ -3,10 +3,15 @@
     sidebar-title="银行工作台"
     :menu-items="bankMenuItems"
   />
+  <AIAssistant v-if="userStore.isLoggedIn()" />
 </template>
 
 <script setup>
 import MainLayout from './MainLayout.vue'
+import { AIAssistant } from '@/components/AIAssistant'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
 
 const bankMenuItems = [
   {
