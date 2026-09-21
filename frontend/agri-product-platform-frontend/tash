@@ -1,0 +1,181 @@
+[33mcommit 1383949fcfd7f38339d1b5e6e967d737a7f5f532[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/ui-improvements-v2[m[33m, [m[1;31morigin/feature/ui-improvements-v2[m[33m)[m
+Author: Your Name <you@example.com>
+Date:   Mon Jul 20 23:02:14 2026 +0800
+
+    feat: 添加农户订单确认收货功能
+    
+    - 添加确认收货按钮（状态为待收货时显示）
+    - 点击后订单状态从 3(待收货) 更新为 4(已完成)
+
+[33mcommit a56884ffe781571bac6ea58a2cf9b5b8d9d861ef[m
+Author: Your Name <you@example.com>
+Date:   Mon Jul 20 19:39:56 2026 +0800
+
+    fix: 实现农户订单发货功能
+    
+    - 添加 updateOrderStatus API 调用
+    - 将订单状态从 2(待发货) 更新为 3(待收货)
+
+[33mcommit 977e1d50d2efcbd12a14641e755c592eef319729[m
+Author: Your Name <you@example.com>
+Date:   Mon Jul 20 19:18:03 2026 +0800
+
+    fix: 修复农户订单路由 - 使用正确的组件
+    
+    - FarmerOrders 路由现在使用 farmer/Orders.vue 而不是 OrderList.vue
+    - 这样农户可以看到别人购买他们商品的订单
+
+[33mcommit 11a90a14668e987a17c1588b5951535c0243b973[m
+Author: Your Name <you@example.com>
+Date:   Mon Jul 20 19:14:14 2026 +0800
+
+    fix: 更新农户订单页面使用正确的 API
+    
+    - 添加 getReceivedOrders API 调用
+    - 更新模板结构以支持多个商品的订单
+    - 修正字段映射（statusText, totalPrice, ownName 等）
+
+[33mcommit 3783a395411febe8b2f007a247d50ce2186291f6[m
+Author: Your Name <you@example.com>
+Date:   Mon Jul 20 19:07:41 2026 +0800
+
+    feat: UI 改进和购物车功能优化
+    
+    - 订单详情页面 UI 大幅改进，添加步骤条和更好的布局
+    - 订单列表页面改进，添加状态筛选和更好的展示
+    - 管理员产品页面改进
+    - 地址管理页面重构
+    - 购物车功能优化
+    - 新增 Checkout 结账页面
+    - 改进 API 调用和请求处理
+
+[33mcommit abddecb3720e1227b7d68736e0bc2e3bab72428d[m
+Author: xuzhili835 <3394843856@qq.com>
+Date:   Fri Jul 17 22:41:56 2026 +0800
+
+    fix(cart): 接通购物车结算（原为占位桩）
+    
+    - buyer/Cart.vue 结算按钮改为真下单：勾选商品 → 输入收货地址 → createOrder(purchaseType=2) → 清掉已购购物车项 → 跳转订单列表
+
+[33mcommit ef06fb5631d4cf1f871e088902ec7de56a6f17c3[m
+Author: xuzhili835 <3394843856@qq.com>
+Date:   Fri Jul 17 21:25:14 2026 +0800
+
+    feat(payment): 接入支付宝扫码支付(二维码 + 轮询)
+    
+    - 新增 api/alipay.js: payOrder 生成二维码 / queryPay 查询结果
+    - OrderList「去支付」改为二维码弹窗(qrcode 渲染), 每 2.5s 轮询 /alipay/query
+    - 支付成功自动关闭弹窗并刷新订单状态
+    - 新增 qrcode 依赖
+
+[33mcommit 5fda5076492149d7cc093eb6ad7baa416904fceb[m
+Merge: e63b3fd 94811ff
+Author: xuzhili835 <019f35419e727e7fa9544a4363dfe7e8@example.com>
+Date:   Thu Jul 16 22:02:39 2026 +0800
+
+    merge feature/ui-improvements-v2 into master
+    
+    MR-title: feat: 优化前端功能和用户体验- 修改首页轮播图样式，优化图片显示- 市场页面添加返回按钮（仅公开市场）- 个人中心页面移除返回按钮- 管理员轮播图页面优化图片选择功能- 买家仪表板使用真实API数据- AppHeader下拉菜单改为返回首页- 修复admin API参数格式问题
+    Created-by: a5eb3e8b901e4477902c7de25453e6e3
+    Author-id: 1387906
+    MR-id: 1540290
+    Commit-by: Your Name
+    Merged-by: xuzhili835
+    Description: merge "feature/ui-improvements-v2" into "master"
+    feat: 优化前端功能和用户体验
+    
+    - 修改首页轮播图样式，优化图片显示
+    - 市场页面添加返回按钮（仅公开市场）
+    - 个人中心页面移除返回按钮
+    - 管理员轮播图页面优化图片选择功能
+    - 买家仪表板使用真实API数据
+    - AppHeader下拉菜单改为返回首页
+    - 修复admin API参数格式问题
+    
+    See merge request: e33f05e3bb8d40919ea18fffab68c5cd/agri-product-platform-frontend!6
+
+[33mcommit e63b3fdf676feb0caf4246dd38ebe9a6538a67f4[m
+Author: xuzhili835 <3394843856@qq.com>
+Date:   Thu Jul 16 21:54:53 2026 +0800
+
+    feat: 专家模块整改——追问多轮对话/真实姓名/预约期望时间/合并冗余页面/返回键修复
+    
+    - 新增公共组件 ExpertWorkspace，合并 farmer/buyer 重复的 Expert 页
+    - 问答改为多轮追问对话流（回复列表 + 底部输入，关闭后禁回复）
+    - 提问者/预约人/专家统一显示真实姓名（realName 冗余，缺省回退 userName）
+    - 预约支持选择期望时间，列表/管理页同步展示
+    - 新增 BackBar 统一返回键，改为"回到来路"(from) 修复各详情页返回传送问题
+    - 我的问题增加关键词搜索与状态筛选
+    - 删除 5 个零引用的 admin 冗余页面
+
+[33mcommit 94811ffd875ad1b5ab11a797283ea517ea73f2be[m
+Author: Your Name <you@example.com>
+Date:   Thu Jul 16 15:23:56 2026 +0800
+
+    feat: 优化前端功能和用户体验
+    
+    - 修改首页轮播图样式，优化图片显示
+    - 市场页面添加返回按钮（仅公开市场）
+    - 个人中心页面移除返回按钮
+    - 管理员轮播图页面优化图片选择功能
+    - 买家仪表板使用真实API数据
+    - AppHeader下拉菜单改为返回首页
+    - 修复admin API参数格式问题
+
+[33mcommit 9234a2954cdb2c1b116053862a1c709ad776bec3[m
+Merge: 54ef61d ec81461
+Author: xuzhili835 <019f35419e727e7fa9544a4363dfe7e8@example.com>
+Date:   Thu Jul 16 11:04:46 2026 +0800
+
+    merge feature/ui-improvements into master
+    
+    MR-title: feat: 前端UI改进和功能完善- 优化购物车功能，完善商品增删改逻辑- 改进订单列表页面，增强用户交互体验- 更新市场页面UI和商品展示- 完善商品详情页功能- 优化买家仪表板和布局组件- 更新API调用逻辑和路由配置
+    Created-by: a5eb3e8b901e4477902c7de25453e6e3
+    Author-id: 1387906
+    MR-id: 1539983
+    Commit-by: Your Name
+    Merged-by: xuzhili835
+    Description: merge "feature/ui-improvements" into "master"
+    feat: 前端UI改进和功能完善
+    
+    - 优化购物车功能，完善商品增删改逻辑
+    - 改进订单列表页面，增强用户交互体验
+    - 更新市场页面UI和商品展示
+    - 完善商品详情页功能
+    - 优化买家仪表板和布局组件
+    - 更新API调用逻辑和路由配置
+    
+    See merge request: e33f05e3bb8d40919ea18fffab68c5cd/agri-product-platform-frontend!5
+
+[33mcommit ec814616531bdad81742c6657883ebdd3871b2da[m[33m ([m[1;31morigin/feature/ui-improvements[m[33m, [m[1;32mfeature/ui-improvements[m[33m)[m
+Author: Your Name <you@example.com>
+Date:   Thu Jul 16 11:01:01 2026 +0800
+
+    feat: 前端UI改进和功能完善
+    
+    - 优化购物车功能，完善商品增删改逻辑
+    - 改进订单列表页面，增强用户交互体验
+    - 更新市场页面UI和商品展示
+    - 完善商品详情页功能
+    - 优化买家仪表板和布局组件
+    - 更新API调用逻辑和路由配置
+
+[33mcommit 54ef61df6ad74e03778a90e88df8a05fe88b2b1c[m
+Author: xuzhili835 <3394843856@qq.com>
+Date:   Thu Jul 16 10:25:48 2026 +0800
+
+    feat(register): 接入 Cloudflare Turnstile 人机验证
+    
+    - 新增可复用 Turnstile 组件；注册页点击「创建账号」并通过表单校验后弹窗验证
+    - 验证通过拿到一次性 token 后再提交注册；失败/过期自动重置组件
+    - index.html 引入 Turnstile api.js
+    - .env 存公有 Site Key（可提交），.env.example 为团队模板
+
+[33mcommit 0a98f95013408b06c20620fe6dd8c853a14c7df7[m
+Author: xuzhili835 <3394843856@qq.com>
+Date:   Wed Jul 15 09:19:26 2026 +0800
+
+    统一商品图为 picPath + 删除前端所有硬编码/示例数据
+    
+    - AdminProduct.vue 商品图字段 picture→picPath
+    - 删除硬编码数据：Home.vue（精选产品/融资/专家/知识/问答及轮播兜底全部改为 API 驱动，含已失效的 banner1-3.jpg）、ExpertHelp.vue（专家/问题/知识示例数组清空，仅用 API）、AdminBanner.vue 与 farmer/Products.vue 的 via.placeholder 外�

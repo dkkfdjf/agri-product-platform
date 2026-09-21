@@ -1,0 +1,21 @@
+# 依赖与构建产物
+node_modules/
+dist/
+*.local
+**/target/
+
+# 环境与密钥（真实密钥只走 application-local.yml / .env，均不入库）
+.env
+.env.*
+!.env.example
+application-local.yml
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# 日志与系统文件
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,496 @@
+{
+  "timestamp": "2026-08-21T08:17:57.600Z",
+  "summary": {
+    "total_tests": 25,
+    "successful_tests": 25,
+    "failed_tests": 0,
+    "avg_keyword_recall": 0.4902857142857143,
+    "avg_action_accuracy": 0.88,
+    "intent_accuracy": 0.96,
+    "overall_precision": 0.7767619047619047,
+    "overall_recall": 0.4902857142857143,
+    "f1_score": 0.6011380465595739
+  },
+  "by_category": {
+    "农业业务咨询": {
+      "count": 8,
+      "avg_keyword_recall": 0.4827380952380953,
+      "avg_action_accuracy": 1
+    },
+    "平台操作指导": {
+      "count": 8,
+      "avg_keyword_recall": 0.6166666666666666,
+      "avg_action_accuracy": 0.625
+    },
+    "融资服务": {
+      "count": 5,
+      "avg_keyword_recall": 0.29238095238095235,
+      "avg_action_accuracy": 1
+    },
+    "专家服务": {
+      "count": 4,
+      "avg_keyword_recall": 0.5,
+      "avg_action_accuracy": 1
+    }
+  },
+  "detailed_results": [
+    {
+      "id": 1,
+      "question": "如何防治水稻稻飞虱？",
+      "category": "农业业务咨询",
+      "response": "稻飞虱是水稻的主要害虫之一，防治方法包括：1) 选用抗虫品种 2) 适时播种，避开害虫高峰期 3) 科学施肥，避免过迟施氮肥 4) 保护天敌，如蜘蛛、寄生蜂等 5) 必要时使用噻嗪酮、吡虫啉等药剂防治，注意轮换用药。",
+      "keyword_recall": 0.42857142857142855,
+      "keywords_found": [
+        "稻飞虱",
+        "防治",
+        "水稻"
+      ],
+      "keywords_total": 7,
+      "action_accuracy": 1,
+      "actions_found": [],
+      "actions_total": 0,
+      "intent_correct": true,
+      "expected_intent": "病虫害防治咨询"
+    },
+    {
+      "id": 2,
+      "question": "小麦什么时候播种最好？",
+      "category": "农业业务咨询",
+      "response": "小麦一般在秋季10-11月播种，具体时间根据当地气候条件确定。播种前要整地施肥，保证土壤墒情。播种深度3-5厘米为宜。",
+      "keyword_recall": 0.5,
+      "keywords_found": [
+        "小麦",
+        "播种",
+        "时间"
+      ],
+      "keywords_total": 6,
+      "action_accuracy": 1,
+      "actions_found": [],
+      "actions_total": 0,
+      "intent_correct": true,
+      "expected_intent": "种植技术咨询"
+    },
+    {
+      "id": 3,
+      "question": "玉米价格现在是多少？",
+      "category": "农业业务咨询",
+      "response": "农产品价格会根据市场供需、季节、地区等因素波动。建议您关注平台的市场行情板块，或联系客服获取最新报价。",
+      "keyword_recall": 0.6666666666666666,
+      "keywords_found": [
+        "价格",
+        "市场",
+        "波动",
+        "地区"
+      ],
+      "keywords_total": 6,
+      "action_accuracy": 1,
+      "actions_found": [],
+      "actions_total": 0,
+      "intent_correct": true,
+      "expected_intent": "市场价格咨询"
+    },
+    {
+      "id": 4,
+      "question": "我该怎么发布农产品？",
+      "category": "平台操作指导",
+      "response": "感谢您的提问。关于这个问题，建议您提供更多具体信息，或者联系我们的专家进行深入咨询。您也可以在【个人中心】查看相关功能。",
+      "keyword_recall": 0.16666666666666666,
+      "keywords_found": [
+        "信息"
+      ],
+      "keywords_total": 6,
+      "action_accuracy": 0,
+      "actions_found": [],
+      "actions_total": 1,
+      "intent_correct": true,
+      "expected_intent": "产品发布指导"
+    },
+    {
+      "id": 5,
+      "question": "如何下单购买农产品？",
+      "category": "平台操作指导",
+      "response": "购买流程：1) 浏览商品加入【购物车】 2) 结算时填写收货地址 3) 选择支付方式 4) 确认订单。完成后可在【查看订单】中跟踪物流状态。",
+      "keyword_recall": 0.6666666666666666,
+      "keywords_found": [
+        "购买",
+        "购物车",
+        "订单",
+        "支付"
+      ],
+      "keywords_total": 6,
+      "action_accuracy": 1,
+      "actions_found": [
+        "【购物车】",
+        "【查看订单】"
+      ],
+      "actions_total": 2,
+      "intent_correct": true,
+      "expected_intent": "购买流程指导"
+    },
+    {
+      "id": 6,
+      "question": "我想申请贷款，有什么条件？",
+      "category": "融资服务",
+      "response": "申请农业贷款需要满足以下条件：1) 年满18周岁，具有完全民事行为能力 2) 有稳定的农业经营收入 3) 信用记录良好 4) 能提供相关经营证明材料。您可以【申请融资】查看具体产品。",
+      "keyword_recall": 0.42857142857142855,
+      "keywords_found": [
+        "贷款",
+        "申请",
+        "条件"
+      ],
+      "keywords_total": 7,
+      "action_accuracy": 1,
+      "actions_found": [
+        "【申请融资】"
+      ],
+      "actions_total": 1,
+      "intent_correct": true,
+      "expected_intent": "贷款条件咨询"
+    },
+    {
+      "id": 7,
+      "question": "还款方式有哪些？",
+      "category": "融资服务",
+      "response": "支持多种还款方式：1) 等额本息 2) 等额本金 3) 按月付息到期还本。还款期限根据产品不同，一般为1-36个月。您可以在个人中心查看还款计划。",
+      "keyword_recall": 0.8333333333333334,
+      "keywords_found": [
+        "还款",
+        "方式",
+        "等额本息",
+        "等额本金",
+        "期限"
+      ],
+      "keywords_total": 6,
+      "action_accuracy": 1,
+      "actions_found": [],
+      "actions_total": 0,
+      "intent_correct": true,
+      "expected_intent": "还款方式咨询"
+    },
+    {
+      "id": 8,
+      "question": "贷款利率是多少？",
+      "category": "融资服务",
+      "response": "申请农业贷款需要满足以下条件：1) 年满18周岁，具有完全民事行为能力 2) 有稳定的农业经营收入 3) 信用记录良好 4) 能提供相关经营证明材料。您可以【申请融资】查看具体产品。",
+      "keyword_recall": 0.2,
+      "keywords_found": [
+        "产品"
+      ],
+      "keywords_total": 5,
+      "action_accuracy": 1,
+      "actions_found": [],
+      "actions_total": 0,
+      "intent_correct": true,
+      "expected_intent": "利率咨询"
+    },
+    {
+      "id": 9,
+      "question": "如何预约农业专家？",
+      "category": "专家服务",
+      "response": "预约专家步骤：1) 浏览专家列表，查看专长领域 2) 选择合适的时间和专家 3) 填写咨询问题描述 4) 确认预约。您可以通过【专家预约】功能进行操作。",
+      "keyword_recall": 0.8333333333333334,
+      "keywords_found": [
+        "预约",
+        "专家",
+        "时间",
+        "专长",
+        "咨询"
+      ],
+      "keywords_total": 6,
+      "action_accuracy": 1,
+      "actions_found": [
+        "【专家预约】"
+      ],
+      "actions_total": 1,
+      "intent_correct": true,
+      "expected_intent": "专家预约指导"
+    },
+    {
+      "id": 10,
+      "question": "有哪些专家可以咨询？",
+      "category": "专家服务",
+      "response": "平台拥有多位农业技术专家，涵盖种植技术、病虫害防治、农产品加工等领域。您可以在【专家预约】页面查看所有专家的详细介绍和用户评价。",
+      "keyword_recall": 0.6666666666666666,
+      "keywords_found": [
+        "专家",
+        "领域",
+        "农业",
+        "技术"
+      ],
+      "keywords_total": 6,
+      "action_accuracy": 1,
+      "actions_found": [
+        "【专家预约】"
+      ],
+      "actions_total": 1,
+      "intent_correct": true,
+      "expected_intent": "专家查询"
+    },
+    {
+      "id": 11,
+      "question": "如何修改个人资料？",
+      "category": "平台操作指导",
+      "response": "修改个人资料请进入【个人中心】，点击编辑按钮即可修改头像、姓名、联系方式等信息。如需更改身份信息，需要重新提交认证材料。",
+      "keyword_recall": 0.8333333333333334,
+      "keywords_found": [
+        "个人资料",
+        "修改",
+        "头像",
+        "姓名",
+        "认证"
+      ],
+      "keywords_total": 6,
+      "action_accuracy": 1,
+      "actions_found": [
+        "【个人中心】"
+      ],
+      "actions_total": 1,
+      "intent_correct": true,
+      "expected_intent": "个人设置指导"
+    },
+    {
+      "id": 12,
+      "question": "番茄种植需要注意什么？",
+      "category": "农业业务咨询",
+      "response": "感谢您的提问。关于这个问题，建议您提供更多具体信息，或者联系我们的专家进行深入咨询。您也可以在【个人中心】查看相关功能。",
+      "keyword_recall": 0,
+      "keywords_found": [],
+      "keywords_total": 7,
+      "action_accuracy": 1,
+      "actions_found": [],
+      "actions_total": 0,
+      "intent_correct": true,
+      "expected_intent": "种植技术咨询"
+    },
+    {
+      "id": 13,
+      "question": "怎么联系客服？",
+      "category": "平台操作指导",
+      "response": "您可以通过【联系客服】获取帮助。我们提供7×16小时在线客服服务，也可以拨打客服热线400-XXX-XXXX。",
+      "keyword_recall": 0.6666666666666666,
+      "keywords_found": [
+        "客服",
+        "联系",
+        "在线",
+        "帮助"
+      ],
+      "keywords_total": 6,
+      "action_accuracy": 1,
+      "actions_found": [
+        "【联系客服】"
+      ],
+      "actions_total": 1,
+      "intent_correct": true,
+      "expected_intent": "客服联系"
+    },
+    {
+      "id": 14,
+      "question": "草莓什么时候上市？",
+      "category": "农业业务咨询",
+      "response": "感谢您的提问。关于这个问题，建议您提供更多具体信息，或者联系我们的专家进行深入咨询。您也可以在【个人中心】查看相关功能。",
+      "keyword_recall": 0,
+      "keywords_found": [],
+      "keywords_total": 5,
+      "action_accuracy": 1,
+      "actions_found": [],
+      "actions_total": 0,
+      "intent_correct": true,
+      "expected_intent": "上市时间咨询"
+    },
+    {
+      "id": 15,
+      "question": "我的订单在哪里查看？",
+      "category": "平台操作指导",
+      "response": "所有订单都可以在【查看订单】页面查看，包括待付款、待发货、已完成等状态的订单。",
+      "keyword_recall": 0.6,
+      "keywords_found": [
+        "订单",
+        "查看",
+        "状态"
+      ],
+      "keywords_total": 5,
+      "action_accuracy": 1,
+      "actions_found": [
+        "【查看订单】"
+      ],
+      "actions_total": 1,
+      "intent_correct": false,
+      "expected_intent": "订单查询指导"
+    },
+    {
+      "id": 16,
+      "question": "什么是绿色食品认证？",
+      "category": "农业业务咨询",
+      "response": "绿色食品认证是中国特有的农产品质量安全认证，要求产自优良生态环境、按照绿色食品标准生产、实行全程质量控制。需要经过专门机构认证并许可使用绿色食品标志。",
+      "keyword_recall": 0.6,
+      "keywords_found": [
+        "绿色食品",
+        "认证",
+        "标准"
+      ],
+      "keywords_total": 5,
+      "action_accuracy": 1,
+      "actions_found": [],
+      "actions_total": 0,
+      "intent_correct": true,
+      "expected_intent": "认证知识咨询"
+    },
+    {
+      "id": 17,
+      "question": "提前还款有违约金吗？",
+      "category": "融资服务",
+      "response": "支持多种还款方式：1) 等额本息 2) 等额本金 3) 按月付息到期还本。还款期限根据产品不同，一般为1-36个月。您可以在个人中心查看还款计划。",
+      "keyword_recall": 0,
+      "keywords_found": [],
+      "keywords_total": 5,
+      "action_accuracy": 1,
+      "actions_found": [],
+      "actions_total": 0,
+      "intent_correct": true,
+      "expected_intent": "提前还款咨询"
+    },
+    {
+      "id": 18,
+      "question": "专家咨询要收费吗？",
+      "category": "专家服务",
+      "response": "平台拥有多位农业技术专家，涵盖种植技术、病虫害防治、农产品加工等领域。您可以在【专家预约】页面查看所有专家的详细介绍和用户评价。",
+      "keyword_recall": 0,
+      "keywords_found": [],
+      "keywords_total": 5,
+      "action_accuracy": 1,
+      "actions_found": [],
+      "actions_total": 0,
+      "intent_correct": true,
+      "expected_intent": "专家费用咨询"
+    },
+    {
+      "id": 19,
+      "question": "农产品需要什么资质才能发布？",
+      "category": "平台操作指导",
+      "response": "发布农产品需要：1) 个人实名认证 2) 农户身份认证 3) 产品相关资质证明（如有机认证、产地证明等）。【发布产品】时系统会引导您完成认证。",
+      "keyword_recall": 0.6,
+      "keywords_found": [
+        "资质",
+        "发布",
+        "认证"
+      ],
+      "keywords_total": 5,
+      "action_accuracy": 1,
+      "actions_found": [
+        "【发布产品】"
+      ],
+      "actions_total": 1,
+      "intent_correct": true,
+      "expected_intent": "发布资质咨询"
+    },
+    {
+      "id": 20,
+      "question": "病虫害综合防治是什么？",
+      "category": "农业业务咨询",
+      "response": "病虫害综合防治(IPM)是采用农业防治、生物防治、物理防治和化学防治相结合的策略，优先使用非化学方法，合理使用农药，实现经济、生态和社会效益的统一。",
+      "keyword_recall": 0.8333333333333334,
+      "keywords_found": [
+        "病虫害",
+        "综合防治",
+        "IPM",
+        "生物",
+        "化学"
+      ],
+      "keywords_total": 6,
+      "action_accuracy": 1,
+      "actions_found": [],
+      "actions_total": 0,
+      "intent_correct": true,
+      "expected_intent": "防治技术咨询"
+    },
+    {
+      "id": 21,
+      "question": "如何申请成为认证农户？",
+      "category": "平台操作指导",
+      "response": "申请成为认证农户需要：1) 完成实名认证 2) 提供土地承包证明或种植证明 3) 通过平台审核。认证农户享有更多权益，如优先展示、融资优惠等。",
+      "keyword_recall": 0.6,
+      "keywords_found": [
+        "认证农户",
+        "申请",
+        "审核"
+      ],
+      "keywords_total": 5,
+      "action_accuracy": 0,
+      "actions_found": [],
+      "actions_total": 1,
+      "intent_correct": true,
+      "expected_intent": "认证申请指导"
+    },
+    {
+      "id": 22,
+      "question": "有机蔬菜和无机蔬菜有什么区别？",
+      "category": "农业业务咨询",
+      "response": "有机蔬菜是指不使用化学合成农药、化肥、生长调节剂等物质生产的蔬菜，经过有机认证机构认证。无机蔬菜（常规蔬菜）可能使用常规农业生产投入品。两者在安全标准上都有保障。",
+      "keyword_recall": 0.8333333333333334,
+      "keywords_found": [
+        "有机",
+        "无机",
+        "化肥",
+        "农药",
+        "标准"
+      ],
+      "keywords_total": 6,
+      "action_accuracy": 1,
+      "actions_found": [],
+      "actions_total": 0,
+      "intent_correct": true,
+      "expected_intent": "产品知识咨询"
+    },
+    {
+      "id": 23,
+      "question": "农户小额贷款额度是多少？",
+      "category": "融资服务",
+      "response": "申请农业贷款需要满足以下条件：1) 年满18周岁，具有完全民事行为能力 2) 有稳定的农业经营收入 3) 信用记录良好 4) 能提供相关经营证明材料。您可以【申请融资】查看具体产品。",
+      "keyword_recall": 0,
+      "keywords_found": [],
+      "keywords_total": 5,
+      "action_accuracy": 1,
+      "actions_found": [],
+      "actions_total": 0,
+      "intent_correct": true,
+      "expected_intent": "贷款额度咨询"
+    },
+    {
+      "id": 24,
+      "question": "购物车商品可以保存多久？",
+      "category": "平台操作指导",
+      "response": "购物车商品会保存7天，超过7天未结算可能会因库存变动而失效，建议及时下单。商品售罄时会自动从购物车移除。",
+      "keyword_recall": 0.8,
+      "keywords_found": [
+        "购物车",
+        "保存",
+        "失效",
+        "库存"
+      ],
+      "keywords_total": 5,
+      "action_accuracy": 0,
+      "actions_found": [],
+      "actions_total": 1,
+      "intent_correct": true,
+      "expected_intent": "购物车使用咨询"
+    },
+    {
+      "id": 25,
+      "question": "专家可以提供哪些方面的帮助？",
+      "category": "专家服务",
+      "response": "平台拥有多位农业技术专家，涵盖种植技术、病虫害防治、农产品加工等领域。您可以在【专家预约】页面查看所有专家的详细介绍和用户评价。",
+      "keyword_recall": 0.5,
+      "keywords_found": [
+        "专家",
+        "领域",
+        "技术"
+      ],
+      "keywords_total": 6,
+      "action_accuracy": 1,
+      "actions_found": [],
+      "actions_total": 0,
+      "intent_correct": true,
+      "expected_intent": "专家服务范围咨询"
+    }
+  ]
+}

@@ -1,0 +1,190 @@
+{
+  "test_cases": [
+    {
+      "id": 1,
+      "category": "农业业务咨询",
+      "question": "如何防治水稻稻飞虱？",
+      "expected_keywords": ["稻飞虱", "防治", "水稻", "农药", "田间管理", "排水", "晒田"],
+      "expected_intent": "病虫害防治咨询"
+    },
+    {
+      "id": 2,
+      "category": "农业业务咨询",
+      "question": "小麦什么时候播种最好？",
+      "expected_keywords": ["小麦", "播种", "时间", "季节", "气温", "秋播"],
+      "expected_intent": "种植技术咨询"
+    },
+    {
+      "id": 3,
+      "category": "农业业务咨询",
+      "question": "玉米价格现在是多少？",
+      "expected_keywords": ["玉米", "价格", "市场", "波动", "地区", "查询"],
+      "expected_intent": "市场价格咨询"
+    },
+    {
+      "id": 4,
+      "category": "平台操作指导",
+      "question": "我该怎么发布农产品？",
+      "expected_keywords": ["发布产品", "农产品", "上传", "信息", "审核", "平台"],
+      "expected_actions": ["【发布产品】"],
+      "expected_intent": "产品发布指导"
+    },
+    {
+      "id": 5,
+      "category": "平台操作指导",
+      "question": "如何下单购买农产品？",
+      "expected_keywords": ["下单", "购买", "农产品", "购物车", "订单", "支付"],
+      "expected_actions": ["【购物车】", "【查看订单】"],
+      "expected_intent": "购买流程指导"
+    },
+    {
+      "id": 6,
+      "category": "融资服务",
+      "question": "我想申请贷款，有什么条件？",
+      "expected_keywords": ["贷款", "申请", "条件", "资质", "审核", "额度", "利率"],
+      "expected_actions": ["【申请融资】"],
+      "expected_intent": "贷款条件咨询"
+    },
+    {
+      "id": 7,
+      "category": "融资服务",
+      "question": "还款方式有哪些？",
+      "expected_keywords": ["还款", "方式", "等额本息", "等额本金", "期限", "银行卡"],
+      "expected_intent": "还款方式咨询"
+    },
+    {
+      "id": 8,
+      "category": "融资服务",
+      "question": "贷款利率是多少？",
+      "expected_keywords": ["利率", "年化", "优惠", "期限", "产品"],
+      "expected_intent": "利率咨询"
+    },
+    {
+      "id": 9,
+      "category": "专家服务",
+      "question": "如何预约农业专家？",
+      "expected_keywords": ["预约", "专家", "时间", "专长", "咨询", "费用"],
+      "expected_actions": ["【专家预约】"],
+      "expected_intent": "专家预约指导"
+    },
+    {
+      "id": 10,
+      "category": "专家服务",
+      "question": "有哪些专家可以咨询？",
+      "expected_keywords": ["专家", "列表", "专长", "领域", "农业", "技术"],
+      "expected_actions": ["【专家预约】"],
+      "expected_intent": "专家查询"
+    },
+    {
+      "id": 11,
+      "category": "平台操作指导",
+      "question": "如何修改个人资料？",
+      "expected_keywords": ["个人资料", "修改", "设置", "头像", "姓名", "认证"],
+      "expected_actions": ["【个人中心】"],
+      "expected_intent": "个人设置指导"
+    },
+    {
+      "id": 12,
+      "category": "农业业务咨询",
+      "question": "番茄种植需要注意什么？",
+      "expected_keywords": ["番茄", "种植", "浇水", "施肥", "温度", "光照", "病虫害"],
+      "expected_intent": "种植技术咨询"
+    },
+    {
+      "id": 13,
+      "category": "平台操作指导",
+      "question": "怎么联系客服？",
+      "expected_keywords": ["客服", "联系", "电话", "在线", "咨询", "帮助"],
+      "expected_actions": ["【联系客服】"],
+      "expected_intent": "客服联系"
+    },
+    {
+      "id": 14,
+      "category": "农业业务咨询",
+      "question": "草莓什么时候上市？",
+      "expected_keywords": ["草莓", "上市", "季节", "时间", "供应"],
+      "expected_intent": "上市时间咨询"
+    },
+    {
+      "id": 15,
+      "category": "平台操作指导",
+      "question": "我的订单在哪里查看？",
+      "expected_keywords": ["订单", "查看", "列表", "状态", "历史"],
+      "expected_actions": ["【查看订单】"],
+      "expected_intent": "订单查询指导"
+    },
+    {
+      "id": 16,
+      "category": "农业业务咨询",
+      "question": "什么是绿色食品认证？",
+      "expected_keywords": ["绿色食品", "认证", "标准", "申请", "流程"],
+      "expected_intent": "认证知识咨询"
+    },
+    {
+      "id": 17,
+      "category": "融资服务",
+      "question": "提前还款有违约金吗？",
+      "expected_keywords": ["提前还款", "违约金", "手续费", "规定", "政策"],
+      "expected_intent": "提前还款咨询"
+    },
+    {
+      "id": 18,
+      "category": "专家服务",
+      "question": "专家咨询要收费吗？",
+      "expected_keywords": ["收费", "费用", "免费", "付费", "标准"],
+      "expected_intent": "专家费用咨询"
+    },
+    {
+      "id": 19,
+      "category": "平台操作指导",
+      "question": "农产品需要什么资质才能发布？",
+      "expected_keywords": ["资质", "发布", "认证", "营业执照", "许可证"],
+      "expected_actions": ["【发布产品】"],
+      "expected_intent": "发布资质咨询"
+    },
+    {
+      "id": 20,
+      "category": "农业业务咨询",
+      "question": "病虫害综合防治是什么？",
+      "expected_keywords": ["病虫害", "综合防治", "IPM", "预防", "生物", "化学"],
+      "expected_intent": "防治技术咨询"
+    },
+    {
+      "id": 21,
+      "category": "平台操作指导",
+      "question": "如何申请成为认证农户？",
+      "expected_keywords": ["认证农户", "申请", "审核", "材料", "流程"],
+      "expected_actions": ["【个人中心】"],
+      "expected_intent": "认证申请指导"
+    },
+    {
+      "id": 22,
+      "category": "农业业务咨询",
+      "question": "有机蔬菜和无机蔬菜有什么区别？",
+      "expected_keywords": ["有机", "无机", "区别", "化肥", "农药", "标准"],
+      "expected_intent": "产品知识咨询"
+    },
+    {
+      "id": 23,
+      "category": "融资服务",
+      "question": "农户小额贷款额度是多少？",
+      "expected_keywords": ["小额贷款", "额度", "农户", "上限", "审批"],
+      "expected_intent": "贷款额度咨询"
+    },
+    {
+      "id": 24,
+      "category": "平台操作指导",
+      "question": "购物车商品可以保存多久？",
+      "expected_keywords": ["购物车", "保存", "失效", "时间", "库存"],
+      "expected_actions": ["【购物车】"],
+      "expected_intent": "购物车使用咨询"
+    },
+    {
+      "id": 25,
+      "category": "专家服务",
+      "question": "专家可以提供哪些方面的帮助？",
+      "expected_keywords": ["专家", "帮助", "领域", "技术", "咨询", "指导"],
+      "expected_intent": "专家服务范围咨询"
+    }
+  ]
+}
