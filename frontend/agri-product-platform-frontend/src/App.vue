@@ -41,6 +41,7 @@ onMounted(async () => {
 
 :root {
   --color-primary: #2D5A3D;
+  --color-primary-light: #4A7C59;
   --color-primary-dark: #1F4229;
   --color-gold: #C9A661;
   --color-bg: #F7F5F0;

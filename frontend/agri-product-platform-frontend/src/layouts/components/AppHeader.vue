@@ -50,6 +50,11 @@
     </div>
 
     <div class="header-right">
+      <!-- 主题切换器 - 所有用户可见 -->
+      <div class="theme-toggle-wrapper">
+        <ThemeSwitcher size="small" />
+      </div>
+
       <div v-if="userStore.isLoggedIn()" class="user-actions">
         <el-badge :value="notificationCount" :hidden="notificationCount === 0" class="notification-badge">
           <el-button circle class="notification-btn" @click="showNotifications">
@@ -140,6 +145,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { HomeFilled } from '@element-plus/icons-vue'
+import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 import {
   getMessages,
   getUnreadCount,
@@ -381,6 +387,19 @@ const handleUserCommand = (command) => {
   display: flex;
   align-items: center;
   gap: var(--spacing-4, 16px);
+}
+
+/* 主题切换器 */
+.theme-toggle-wrapper {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-2, 8px);
+  border-radius: var(--radius-base, 8px);
+  transition: background var(--transition-fast, 150ms ease);
+}
+
+.theme-toggle-wrapper:hover {
+  background: var(--color-bg-secondary, #f7f5f0);
 }
 
 /* 登录状态 */

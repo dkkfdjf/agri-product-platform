@@ -1,5 +1,5 @@
 <template>
-  <div :class="['ai-message', message.role === 'user' ? 'user-message' : 'assistant-message']">
+  <div :class="['ai-message', message.role === 'user' ? 'user-message' : 'assistant-message', `message-${message.id}`]">
     <div class="message-header">
       <el-icon class="message-icon">
         <User v-if="message.role === 'user'" />
@@ -22,9 +22,13 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { ChatDotRound, User } from '@element-plus/icons-vue'
 import { markdownToHtml } from '@/utils/markdown'
+
+const router = useRouter()
 
 const props = defineProps({
   message: {
@@ -38,7 +42,39 @@ const props = defineProps({
 })
 
 const renderedContent = computed(() => {
-  return props.message.role === 'assistant' ? markdownToHtml(props.message.content) : ''
+  if (props.message.role !== 'assistant') return ''
+
+  let content = props.message.content
+
+  // 识别快捷操作标记并转换为可点击的按钮
+  const actions = {
+    '【申请融资】': { name: '申请融资', route: '/finance/apply' },
+    '【发布产品】': { name: '发布产品', route: '/farmer/products' },
+    '【联系客服】': { name: '联系客服', action: 'contact' },
+    '【查看订单】': { name: '查看订单', route: '/order' },
+    '【购物车】': { name: '购物车', route: '/cart' },
+    '【专家预约】': { name: '专家预约', route: '/expert-help' },
+    '【个人中心】': { name: '个人中心', route: '/profile' },
+    '【查看知识】': { name: '查看知识', route: '/knowledge' }
+  }
+
+  // 替换快捷操作标记为HTML按钮
+  Object.keys(actions).forEach(key => {
+    const action = actions[key]
+    if (action.route) {
+      content = content.replace(
+        key,
+        `<button class="quick-action-btn" data-route="${action.route}">${action.name}</button>`
+      )
+    } else if (action.action === 'contact') {
+      content = content.replace(
+        key,
+        `<button class="quick-action-btn" data-action="contact">${action.name}</button>`
+      )
+    }
+  })
+
+  return markdownToHtml(content)
 })
 
 const formatTimestamp = (timestamp) => {
@@ -63,6 +99,29 @@ const formatTimestamp = (timestamp) => {
     minute: '2-digit'
   })
 }
+
+// 处理快捷操作按钮点击
+onMounted(() => {
+  const messageContent = document.querySelector(`.message-${props.message.id} .markdown-content`)
+  if (messageContent) {
+    messageContent.addEventListener('click', (e) => {
+      if (e.target.classList.contains('quick-action-btn')) {
+        const route = e.target.dataset.route
+        const action = e.target.dataset.action
+
+        if (route) {
+          router.push(route)
+          ElMessage.success('正在跳转...')
+        } else if (action === 'contact') {
+          ElMessage.info({
+            message: '客服联系方式：\n电话：400-888-8888\n邮箱：service@agri-platform.com',
+            duration: 5000
+          })
+        }
+      }
+    })
+  }
+})
 </script>
 
 <style scoped>
@@ -86,7 +145,8 @@ const formatTimestamp = (timestamp) => {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--color-text-light);
+  color: var(--color-text-tertiary);
+  transition: color var(--transition-base, 250ms ease);
 }
 
 .message-icon {
@@ -117,14 +177,15 @@ const formatTimestamp = (timestamp) => {
 
 .user-message .message-content {
   background-color: var(--color-primary);
-  color: white;
+  color: var(--color-text-inverse, white);
   border-bottom-right-radius: 4px;
 }
 
 .assistant-message .message-content {
-  background-color: #F3F4F6;
-  color: var(--color-text);
+  background-color: var(--color-bg-tertiary, #F3F4F6);
+  color: var(--color-text-primary);
   border-bottom-left-radius: 4px;
+  transition: background-color var(--transition-base, 250ms ease);
 }
 
 .markdown-content {
@@ -225,5 +286,30 @@ const formatTimestamp = (timestamp) => {
 .text-content {
   white-space: pre-wrap;
   line-height: 1.6;
+}
+
+/* 快捷操作按钮样式 */
+.markdown-content :deep(.quick-action-btn) {
+  display: inline-block;
+  padding: 4px 12px;
+  margin: 4px;
+  background: linear-gradient(135deg, #2D5A3D 0%, #4a7c5f 100%);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(45, 90, 61, 0.2);
+}
+
+.markdown-content :deep(.quick-action-btn:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(45, 90, 61, 0.3);
+}
+
+.markdown-content :deep(.quick-action-btn:active) {
+  transform: translateY(0);
 }
 </style>

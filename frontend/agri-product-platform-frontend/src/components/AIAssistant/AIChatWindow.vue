@@ -167,13 +167,26 @@ const handleClearHistory = async () => {
 
 <style scoped>
 .ai-chat-window {
+  position: fixed;
+  right: 24px;
+  bottom: 90px;
+  width: 380px;
+  max-width: calc(100vw - 48px);
+  height: 600px;
+  max-height: calc(100vh - 120px);
   display: flex;
   flex-direction: column;
-  height: 600px;
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-primary, #FFFFFF);
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  transition: background-color var(--transition-base, 250ms ease);
+  z-index: 1000;
+}
+
+/* 深色模式下的阴影 */
+:root[data-theme='dark'] .ai-chat-window {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 /* 头部 */
@@ -182,7 +195,7 @@ const handleClearHistory = async () => {
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
   color: white;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -229,20 +242,28 @@ const handleClearHistory = async () => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background-color: #F9FAFB;
+  background-color: var(--color-bg-secondary, #F9FAFB);
+  transition: background-color var(--transition-base, 250ms ease);
 }
 
 /* 底部输入区域 */
 .chat-window-footer {
-  background-color: #FFFFFF;
-  border-top: 1px solid #E5E7EB;
+  background-color: var(--color-bg-primary, #FFFFFF);
+  border-top: 1px solid var(--color-border, #E5E7EB);
+  transition: background-color var(--transition-base, 250ms ease);
 }
 
 /* 响应式 */
 @media (max-width: 768px) {
   .ai-chat-window {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     height: 100vh;
     border-radius: 0;
+    z-index: var(--z-modal, 1050);
   }
 
   .chat-window-header {
@@ -270,6 +291,10 @@ const handleClearHistory = async () => {
   .header-button {
     font-size: 16px;
     padding: 4px;
+  }
+
+  .chat-window-body {
+    padding: 0;
   }
 }
 </style>

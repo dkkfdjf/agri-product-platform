@@ -34,7 +34,7 @@ const handleClose = () => {
 
 <style scoped>
 .ai-assistant {
-  position: relative;
+  position: static;
 }
 
 .window-slide-enter-active,

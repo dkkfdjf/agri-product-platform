@@ -50,9 +50,11 @@
 
 <script setup>
 import { ref, watch, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import { ChatDotRound, WarningFilled } from '@element-plus/icons-vue'
 import AIMessage from './AIMessage.vue'
 import AILoading from './AILoading.vue'
+import { useUserStore } from '@/stores/user'
 
 // Props
 const props = defineProps({
@@ -73,13 +75,95 @@ const props = defineProps({
 // Events
 const emit = defineEmits(['send-message', 'retry'])
 
-// 建议问题列表
-const suggestedQuestions = ref([
-  '如何发布农产品？',
+// 建议问题列表 - 根据用户角色和当前页面动态生成
+const route = useRoute()
+const userStore = useUserStore()
+
+// 基础建议问题
+const baseQuestions = [
   '平台有哪些功能？',
-  '如何联系客服？',
-  '农产品如何分类？'
-])
+  '如何联系客服？'
+]
+
+// 根据角色定制的建议问题
+const roleQuestions = {
+  farmer: [
+    '如何发布农产品？',
+    '如何申请融资？',
+    '融资流程是怎样的？',
+    '怎样查看我的订单？'
+  ],
+  buyer: [
+    '如何购买农产品？',
+    '如何使用购物车？',
+    '支付方式有哪些？',
+    '怎样查看订单状态？'
+  ],
+  expert: [
+    '如何发布知识文章？',
+    '如何回答用户问题？',
+    '怎样查看预约记录？',
+    '如何设置专家专长？'
+  ],
+  bank: [
+    '如何审批融资申请？',
+    '怎样查看贷款产品？',
+    '如何管理还款记录？',
+    '融资匹配规则是什么？'
+  ],
+  admin: [
+    '如何管理用户？',
+    '如何审核专家申请？',
+    '怎样管理系统配置？',
+    '如何管理轮播图？'
+  ]
+}
+
+// 根据当前页面定制的建议问题
+const pageQuestions = {
+  'FarmerProducts': ['如何发布新产品？', '如何编辑商品信息？', '怎样设置商品价格？'],
+  'FarmerFinance': ['如何申请贷款？', '贷款利率是多少？', '需要什么材料？'],
+  'FarmerOrders': ['如何处理订单？', '发货流程是什么？', '如何查看物流？'],
+  'BuyerCart': ['如何修改购物车？', '结算流程是什么？', '如何使用优惠券？'],
+  'BuyerCheckout': ['如何添加收货地址？', '支付方式有哪些？', '可以使用积分吗？'],
+  'ExpertKnowledge': ['如何发布新文章？', '文章格式要求是什么？', '如何插入图片？'],
+  'ExpertQuestions': ['如何回答问题？', '回答规范是什么？', '如何获得更多积分？'],
+  'BankApprovals': ['审批标准是什么？', '如何查看农户信用？', '如何拒绝申请？'],
+  'BankMatching': ['如何进行融资匹配？', '匹配规则是什么？', '如何调整利率？'],
+  'AdminUser': ['如何禁用用户？', '如何修改用户角色？', '用户数据如何导出？']
+}
+
+const suggestedQuestions = ref([])
+
+// 根据当前路由和角色生成建议问题
+const generateSuggestedQuestions = () => {
+  const questions = [...baseQuestions]
+
+  // 添加角色相关建议
+  const userRole = userStore.role
+  if (userRole && roleQuestions[userRole]) {
+    questions.push(...roleQuestions[userRole].slice(0, 2))
+  }
+
+  // 添加页面相关建议
+  const currentRouteName = route.name
+  if (currentRouteName && pageQuestions[currentRouteName]) {
+    questions.push(...pageQuestions[currentRouteName].slice(0, 2))
+  }
+
+  // 限制建议问题数量
+  return questions.slice(0, 4)
+}
+
+// 监听路由变化，更新建议问题
+watch(() => route.name, () => {
+  suggestedQuestions.value = generateSuggestedQuestions()
+}, { immediate: true })
+
+// 监听用户角色变化，更新建议问题
+watch(() => userStore.role, () => {
+  suggestedQuestions.value = generateSuggestedQuestions()
+}, { immediate: true })
 
 // 处理发送建议问题
 const handleSendMessage = (question) => {
@@ -141,13 +225,15 @@ watch(() => props.isLoading, () => {
 .welcome-message h3 {
   font-size: 24px;
   margin: 0 0 10px 0;
-  color: #303133;
+  color: var(--color-text-primary, #303133);
+  transition: color var(--transition-base, 250ms ease);
 }
 
 .welcome-message p {
   font-size: 14px;
-  color: #606266;
+  color: var(--color-text-secondary, #606266);
   margin: 0 0 30px 0;
+  transition: color var(--transition-base, 250ms ease);
 }
 
 .suggested-questions {
@@ -199,11 +285,12 @@ watch(() => props.isLoading, () => {
   align-items: center;
   gap: 10px;
   padding: 12px 20px;
-  background-color: #fef0f0;
-  border: 1px solid #fde2e2;
+  background-color: var(--color-error-light, #fef0f0);
+  border: 1px solid var(--color-error, #fde2e2);
   border-radius: 4px;
   margin: 10px 20px;
-  color: #f56c6c;
+  color: var(--color-error, #f56c6c);
+  transition: background-color var(--transition-base, 250ms ease);
 }
 
 .error-icon {

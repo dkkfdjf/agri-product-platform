@@ -40,7 +40,7 @@ const handleClick = () => {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #2D5A3D 0%, #4a7c5f 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
   box-shadow: 0 4px 12px rgba(45, 90, 61, 0.4);
   display: flex;
   align-items: center;
@@ -63,6 +63,42 @@ const handleClick = () => {
 .ai-chat-button--open {
   background: linear-gradient(135deg, #666 0%, #888 100%);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* 深色模式 */
+:root[data-theme='dark'] .ai-chat-button {
+  box-shadow: 0 4px 12px rgba(45, 90, 61, 0.6);
+}
+
+:root[data-theme='dark'] .ai-chat-button:hover {
+  box-shadow: 0 6px 16px rgba(45, 90, 61, 0.7);
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .ai-chat-button {
+    right: 16px;
+    bottom: 16px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .ai-chat-button :deep(.el-icon) {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ai-chat-button {
+    right: 12px;
+    bottom: 12px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .ai-chat-button :deep(.el-icon) {
+    font-size: 22px;
+  }
 }
 
 .icon-fade-enter-active,
