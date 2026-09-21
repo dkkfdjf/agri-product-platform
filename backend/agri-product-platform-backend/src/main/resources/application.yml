@@ -50,6 +50,24 @@ server:
   servlet:
     context-path: /api
 
+# 腾讯云 MaaS API 配置
+tencent:
+  maas:
+    api-key: ${TENCENT_API_KEY:}
+    api-url: ${TENCENT_API_URL:https://tokenhub.tencentmaas.com/v1/chat/completions}
+    model: ${TENCENT_MODEL:hy3-preview}
+    embedding-url: ${TENCENT_EMBEDDING_URL:https://tokenhub.tencentmaas.com/v1/embeddings}
+    embedding-model: ${TENCENT_EMBEDDING_MODEL:bge-m3}
+    timeout: 30000
+
+# RAG 配置
+rag:
+  enabled: true
+  chunk-size: 500
+  max-results: 3
+  min-similarity: 0.6
+  batch-size: 10
+
 # Cloudflare Turnstile 人机验证（Secret Key 走环境变量注入，不写进文件）
 turnstile:
   enabled: ${TURNSTILE_ENABLED:true}

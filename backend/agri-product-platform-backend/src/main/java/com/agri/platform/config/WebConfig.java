@@ -62,4 +62,16 @@ public class WebConfig implements WebMvcConfigurer {
         factory.setReadTimeout(8000);     // 8s
         return new RestTemplate(factory);
     }
+
+    /**
+     * AI/向量化专用 HTTP 客户端：大模型生成与批量 embedding 响应远慢于普通接口，
+     * 读取超时取 tencent.maas.timeout（默认30s），不能与上面 8s 的通用客户端混用。
+     */
+    @Bean
+    public RestTemplate aiRestTemplate(TencentMaaProperties tencentMaaProperties) {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);  // 5s
+        factory.setReadTimeout(tencentMaaProperties.getTimeout());
+        return new RestTemplate(factory);
+    }
 }
