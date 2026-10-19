@@ -18,18 +18,18 @@
 | 向量检索 | 余弦相似度检索 | `service/VectorSearchService.java` |
 | AI 效果评估 | Node 评估器 + 25 条测试数据集，量化意图 / 动作准确率 | `tests/ai-evaluator.js` |
 
-## AI 问答效果（真实评估数据）
+## AI 问答效果（真实 API 评估）
 
-基于 `tests/ai-test-dataset.json`（25 条真实业务问题）的自动化评估报告（`tests/ai-evaluation-report-*.json`）：
+使用 `tests/ai-evaluator-real.mjs`（逐字复刻前端 SYSTEM_PROMPT，直调生产同源腾讯云 MaaS 接口，模型 hy4-preview）对 25 条测试集逐题实测，**24 条取得有效应答**（1 条因网络超时）：
 
 | 指标 | 结果 |
 |---|---|
-| 测试通过率 | **25 / 25（100%）** |
-| 意图识别准确率 | **96%** |
-| 动作准确率 | **88%** |
-| 关键词召回 | 49% |
+| 关键词召回率（均值） | **82.4%**（8 题 100%、14 题 60–99%、2 题 <60%） |
+| 快捷操作准确率 | **100%**（期望的【操作】全部正确触发） |
+| 意图命中（严格口径） | **100%**（应答有效且命中期望关键词） |
 
-> 评估脚本：`node tests/ai-evaluator.js`，可直接复跑验证。
+> 复现：`node tests/ai-evaluator-real.mjs hy4-preview`。报告：`tests/ai-evaluation-report-real-final.json`。
+> 对照：旧版 `ai-evaluator.js` 为模拟应答版（召回 49% / 动作 88%），真实模型显著更优。
 
 ## 核心特性
 
