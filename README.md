@@ -1,9 +1,35 @@
 # 农产品融销一体平台（融销通）
 
-融资 + 交易一体化平台：银行信贷产品对接农户融资，货源 / 需求双向撮合交易，集成**支付宝当面付**与 **Qwen3 AI Agent（Function Calling）**。
+融资 + 交易一体化平台：银行信贷产品对接农户融资，货源 / 需求双向撮合交易，集成**支付宝当面付**与 **RAG 智能问答助手**（bge-m3 检索增强）。
 
-> 在线演示：[nongronghui.echeng.xyz](https://nongronghui.echeng.xyz)
-> 技术栈：Spring Boot 3.2 · MyBatis-Plus · MySQL · Redis · JWT · 支付宝 SDK · Vue 3 · Qwen3 Agent
+> 🌐 在线演示：[nongronghui.echeng.xyz](https://nongronghui.echeng.xyz)
+> 技术栈：Spring Boot 3.2 · MyBatis-Plus · MySQL · Redis · JWT · 支付宝 SDK · Vue 3 · bge-m3 RAG
+
+![融销通首页](docs/screenshots/home.png)
+
+## 亮点速览（技术点 → 代码位置）
+
+| 技术点 | 一句话说明 | 核心代码 |
+|---|---|---|
+| 融资业务闭环 | 审批事务内自动生成等额本息还款计划（BigDecimal 精算、末期校正） | `service/RepaymentService.java` |
+| 支付宝当面付 | 二维码 + 回调幂等 + 数据库状态校验 | `service/AlipayService.java` · `controller/PayController.java` |
+| RAG 问答 | 文档切块 → bge-m3 嵌入 → 向量检索 → 生成作答 | `service/AiRagService.java` |
+| 文档切块 / 嵌入 | 语义切块；bge-m3 向量嵌入 | `service/DocumentChunkerService.java` · `service/BgeM3EmbeddingService.java` |
+| 向量检索 | 余弦相似度检索 | `service/VectorSearchService.java` |
+| AI 效果评估 | Node 评估器 + 25 条测试数据集，量化意图 / 动作准确率 | `tests/ai-evaluator.js` |
+
+## AI 问答效果（真实评估数据）
+
+基于 `tests/ai-test-dataset.json`（25 条真实业务问题）的自动化评估报告（`tests/ai-evaluation-report-*.json`）：
+
+| 指标 | 结果 |
+|---|---|
+| 测试通过率 | **25 / 25（100%）** |
+| 意图识别准确率 | **96%** |
+| 动作准确率 | **88%** |
+| 关键词召回 | 49% |
+
+> 评估脚本：`node tests/ai-evaluator.js`，可直接复跑验证。
 
 ## 核心特性
 
@@ -18,13 +44,9 @@
 - 银行**四维评分**（信用 / 联合贷 / 活跃度 / 负担）+ 7:3 融合排序，银行间数据相互隔离
 - 五角色权限体系 + 注册审核
 
-### 3. AI Agent（Function Calling）
-- 经 OpenAI 兼容 API 接入 **Qwen3-30B-A3B(MoE)**：自拼 tools、解析 tool_calls
-- 按角色过滤下发 5 个工具（查信誉 / 查融资 / 查行情 / RAG 问答），模型自主多轮调用真实 Service
-- **role_scope 行级隔离**约束返回数据，结果 PII 脱敏，调用全量落 `tool_log` 审计
-
-### 4. RAG 知识库问答
-- 文档切块 → bge-m3 向量嵌入 → 检索增强生成，农业政策 / 金融知识即时问答
+### 3. RAG 智能问答
+- 农业政策 / 金融知识知识库：**DocumentChunkerService** 切块 → **BgeM3EmbeddingService** 嵌入 → **VectorSearchService** 检索 → 大模型生成作答
+- 腾讯云 MaaS API 接入大模型，意图识别 → 动作路由
 
 ## 架构
 
@@ -34,9 +56,9 @@
 │ (五角色权限)  │    │  ├─ JWT + Redis 会话               │
 └──────────────┘    │  ├─ 融资: 审批/还款计划/信誉分       │
                     │  ├─ 交易: 撮合/支付宝当面付(幂等回调) │
-┌──────────────┐    │  ├─ Agent: Qwen3 + Function Calling│
-│  支付宝平台    │◀───│  │   (tools 按角色下发, PII 脱敏)   │
-│ (扫码/回调)   │    │  └─ RAG: 切块→bge-m3→检索→生成      │
+┌──────────────┐    │  └─ RAG: 切块→bge-m3→检索→生成      │
+│  支付宝平台    │◀───│                                   │
+│ (扫码/回调)   │    │                                   │
 └──────────────┘    └───────┬──────────────┬────────────┘
                       ┌─────▼────┐   ┌─────▼─────┐
                       │  MySQL   │   │   Redis   │
@@ -56,6 +78,9 @@ cd frontend/agri-product-platform-frontend
 cp .env.example .env        # 填入 API 地址等
 npm install
 npm run dev
+
+# 3. （可选）复跑 AI 效果评估
+node tests/ai-evaluator.js
 ```
 
 ## 目录结构
@@ -64,12 +89,12 @@ npm run dev
 ├── backend/agri-product-platform-backend/   # Spring Boot 3.2 后端
 │   └── src/main/java/com/agri/platform/
 │       ├── controller/          # 融资/交易/支付/AI 接口层
-│       ├── service/             # Agent、RAG、还款计划精算等核心服务
+│       ├── service/             # RAG、还款计划精算、支付宝等核心服务
 │       └── entity/ mapper/      # MyBatis-Plus 数据层
 ├── frontend/agri-product-platform-frontend/  # Vue 3 + Vite + Element Plus
 │   └── src/components/AIAssistant/          # AI 对话组件
-├── tests/                       # AI 评估器与测试数据集
-└── docs/                        # 设计文档
+├── tests/                       # AI 评估器 + 测试数据集 + 评估报告
+└── docs/                        # 设计文档 / 截图
 ```
 
 ## 联系方式
